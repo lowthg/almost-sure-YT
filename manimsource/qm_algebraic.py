@@ -1066,6 +1066,55 @@ class AliceState(Scene):
                   run_time=1)
         self.wait()
 
+class Testing(Scene):
+    def construct(self):
+        self.add(Dot())
+        arc = Arc(start_angle=0, angle=PI)
+        self.play(Create(arc))
+        self.wait(2)
+
+class Electron(ThreeDScene):
+    def construct(self):
+        r = 1
+        r1 = r * 0.5
+        r2 = r * 1.5
+        s1 = Sphere(radius=r1, resolution=[10, 10], checkerboard_colors=[WHITE, YELLOW])
+        arr1 = Arrow3D(start=OUT*r1, end=OUT*r2, thickness=0.07 * r, height=0.5*r, base_radius=0.2 * r)
+        fl = []
+        n = 5
+        sw = 5
+        so = 0.3
+        for r3, dth in ((1.5*r, PI/n), (0.8*r, 0)):
+            th1 = math.asin(r1 / (2 * r3)) * 2
+            angles = [(th1 + PI, 2*PI-2*th1)] if r3 < 4 else [(th1 + PI, PI/2-th1), (PI/2, PI/2-th1)]
+            for th2, th3 in angles:
+                arc = Arc(radius=r3, stroke_color=BLUE, stroke_width=sw, stroke_opacity=so, start_angle=th2,
+                      angle=th3).shift(RIGHT*r3).rotate(PI/2, RIGHT, about_point=ORIGIN)#.shift(RIGHT*r3)
+                fl += [arc.copy().rotate(2*PI*i/n + dth, OUT, about_point=ORIGIN) for i in range(n)]
+            fl.append(Line(IN*r1, IN*r2, stroke_width=sw, stroke_color=BLUE, stroke_opacity=so))
+
+        self.set_camera_orientation(phi=70*DEGREES, theta=20*DEGREES)
+
+        gp = VGroup(s1, arr1, *fl)
+
+        tval = ValueTracker(0.)
+        def f():
+            t = tval.get_value()
+            theta = t * PI * 2
+            phi = min(max(3 * t - 1, 0), 1) * PI / 2
+            return gp.copy().rotate(theta, OUT, about_point=ORIGIN).rotate(phi, LEFT, about_point=ORIGIN)
+
+        elec = always_redraw(f)
+
+        self.add(elec)
+        self.play(tval.animate(rate_func=linear).set_value(1),
+                  run_time=2)
+
+        # self.add(gp)
+        # self.begin_ambient_camera_rotation(rate=PI)
+        # self.wait(2)
+
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
         AliceState().render()
