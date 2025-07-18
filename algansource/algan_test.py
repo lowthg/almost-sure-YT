@@ -35,9 +35,9 @@ def test3():
 
 def test4():
     mob1 = Square().spawn()
-    mob2 = Circle().spawn()
+    mob2 = Circle().spawn().move(OUT * 1e-3)
 
-    with Sync(run_time=4):
+    with Sync():
         mob1.rotate(360, OUT)
         mob2.move(RIGHT)
 
@@ -59,5 +59,11 @@ def test5():
     Sphere(radius=1)
     return 'test5'
 
-fn = test5()
-render_to_file(file_name=fn, render_settings=LD)
+
+# algan.defaults.batch_defaults.DEFAULT_BATCH_SIZE_ACTORS = 1
+# algan.defaults.batch_defaults.DEFAULT_BATCH_SIZE_FRAMES = 1
+# render_to_file(render_settings=PREVIEW)
+DEFAULT_PORTION_MEMORY_USED_FOR_ANIMATING = 1
+
+fn = test4()
+render_to_file(file_name=fn, render_settings=PREVIEW)

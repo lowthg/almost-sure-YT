@@ -1,6 +1,9 @@
 from algan import *
 import manim as mn
 import math
+from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
+from functools import partial
+
 
 def electron():
     r = 1
@@ -27,12 +30,12 @@ def electron():
     elec = Group(*fl, s1)
 
     with Off():
-        for _ in elec.get_descendants():
-            _.set_non_recursive(color=_.color.set_opacity((
-                0.7 * (1 - (_.location - ORIGIN).norm(p=2, dim=-1, keepdim=True) / 2)).clamp(min=0.1)))
+        # for _ in elec.get_descendants():
+        #     _.set_non_recursive(color=_.color.set_opacity((
+        #         0.7 * (1 - (_.location - ORIGIN).norm(p=2, dim=-1, keepdim=True) / 2)).clamp(min=0.1)))
         elec.spawn()
 
-    elec.wait()
+    s1.glow = 1
 
     with Sync(run_time=2, same_run_time=True, rate_func=rate_funcs.identity):
         elec.orbit_around_point(ORIGIN, 360, OUT)
@@ -43,4 +46,9 @@ def electron():
 
 if __name__ == "__main__":
     electron()
-    render_to_file('electron', render_settings=MD)
+    # render_to_file('electron3', render_settings=MD, background_color=TRANSPARENT, file_extension='mov')
+    render_to_file('electron', post_processes=[partial(bloom_filter, strength=4, scale_factor=32)],
+                   background_color=TRANSPARENT, file_extension='mov')
+    # render_to_file(post_processes=[
+    #     partial(bloom_filter_premultiply, num_iterations=3, kernel_size=31, strength=4, scale_factor=32)],
+    #                background_color=TRANSPARENT, file_extension='mov')
