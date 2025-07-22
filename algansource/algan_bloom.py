@@ -16,6 +16,7 @@ def electron():
     n = 5
     sw = 5
     so = 0.15
+    # so=1
     for r3, dth in ((1.5, PI/n), (0.8, 0)):
         th1 = math.asin(r1 / (2 * r3)) * 2
         arc = ManimMob(mn.Arc(radius=r3, stroke_color=mn.BLUE, stroke_width=sw, stroke_opacity=so, start_angle=th1 + PI,
@@ -39,16 +40,23 @@ def electron():
 
     with Sync(run_time=2, same_run_time=True, rate_func=rate_funcs.identity):
         elec.orbit_around_point(ORIGIN, 360, OUT)
-        with Seq():
-            elec.wait(1)
-            elec.orbit_around_point(ORIGIN, 90, UP)
+        # with Seq():
+        #     elec.wait(1)
+        #     elec.orbit_around_point(ORIGIN, 90, UP)
 
 
 if __name__ == "__main__":
     electron()
+    # COMPUTING_DEFAULTS.render_device = torch.device('cpu')
+    COMPUTING_DEFAULTS.render_device = torch.device('mps')
+    COMPUTING_DEFAULTS.max_animate_batch_size = 10
+    LOGGING_DEFAULTS.verbosity = 'max'
+    # COMPUTING_DEFAULTS.portion_of_memory_used_for_animating = 0.05
+    # COMPUTING_DEFAULTS.portion_of_memory_used_for_rendering = 0.5
+    render_to_file('electron', render_settings=MD)
     # render_to_file('electron3', render_settings=MD, background_color=TRANSPARENT, file_extension='mov')
-    render_to_file('electron', post_processes=[partial(bloom_filter, strength=4, scale_factor=32)],
-                   background_color=TRANSPARENT, file_extension='mov')
-    # render_to_file(post_processes=[
-    #     partial(bloom_filter_premultiply, num_iterations=3, kernel_size=31, strength=4, scale_factor=32)],
-    #                background_color=TRANSPARENT, file_extension='mov')
+    #render_to_file('electron', post_processes=[partial(bloom_filter, strength=4, scale_factor=32)],
+    #               background_color=TRANSPARENT, file_extension='mov')
+    # render_to_file('electron4', post_processes=[
+    #    partial(bloom_filter, num_iterations=3, kernel_size=31, strength=4, scale_factor=32)],
+    #               background_color=TRANSPARENT, file_extension='mov')  # bloom_filter_premultiply
