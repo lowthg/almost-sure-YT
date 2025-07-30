@@ -24,7 +24,7 @@ dir_angle = {
     LEFT: 270
 }
 
-def create_electron(r=1, bloom=True) -> Mob:
+def create_electron(r=1, bloom=True) -> tuple[Mob, Mob]:
     r1 = r * 0.5
     r2 = r * 1.5
     r4 = r * 0.8
@@ -69,17 +69,13 @@ def create_electron(r=1, bloom=True) -> Mob:
                                                 keepdim=True)) / (r_max - r1)).clamp_(
             0, 1)))
 
-    return Group(s1, arr1, *efl, *fl)
+    return Group(s1, arr1), Group(*efl, *fl)
 
 def electron(start=UP, end=RIGHT, r=1., show_field=False):
-    elec = create_electron(r, True)
+    bare, field = create_electron(r, True)
+    elec = Group(bare, field) if show_field else Group(bare)
 
     th1 = 20 * PI / 180
-    c = math.cos(th1)
-    s = math.sin(th1)
-    elec_back = UP * c + RIGHT * s
-    elec_up = OUT * c + DOWN * s
-    elec_right = RIGHT * c + DOWN * s
     d_angle = dir_angle[end] - dir_angle[start]
     if d_angle <= -180:
         d_angle += 360
@@ -88,14 +84,14 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False):
 
     with Off():
         elec.orbit_around_point(ORIGIN, th1 * RADIANS, RIGHT)
+        elec_back = elec.get_upwards_direction()
         elec.orbit_around_point(ORIGIN, dir_angle[start], elec_back)
         Scene.get_camera().set_euler_angles(90, 0, 0)
         elec.spawn()
 
     elec_pos = ORIGIN
-    # elec_pos = IN
-    # elec.move(elec_pos)
 
+    elec_up = -elec.get_forward_direction()
     with Sync(run_time=2, same_run_time=True, rate_func=rate_funcs.identity):
         elec.orbit_around_point(elec_pos, 360, elec_up)
         if d_angle != 0:
@@ -103,17 +99,19 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False):
                 elec.orbit_around_point(elec_pos, d_angle, elec_back)
 
     tag = '' if show_field else 'NF'
-    return 'electron{}{}{}'.format(tag, dir_str[start], dir_str[end])
+    tag2 = 'B' if big else ''
+    return 'electron{}{}{}{}'.format(tag2, tag, dir_str[start], dir_str[end])
 
 
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     quality = HD
-    show_field=False
-    bgcol = TRANSPARENT
-    r = 0.4
-    # r = 1
+    show_field = True
+    bgcol = BLACK
+    big = False
+
+    r = 1. if big else 0.5
 
     kernel_size = int(93/0.4 * r)
     if bgcol.tolist()[-1] < 1:
@@ -123,8 +121,7 @@ if __name__ == "__main__":
     else:
         bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
 
-    for start in [UP]: # [UP, DOWN, LEFT, RIGHT]:
-        for end in [UP]: # [UP, DOWN, LEFT, RIGHT]:
-            name = electron(start, end, r=r, show_field=show_field)
-            render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
+    for start, end in [(UP, DOWN)]:
+        name = electron(start, end, r=r, show_field=show_field)
+        render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
         # render_to_file(name, render_settings=quality, background_color=TRANSPARENT, file_extension='mov')
