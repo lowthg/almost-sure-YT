@@ -71,7 +71,7 @@ def create_electron(r=1, bloom=True) -> Mob:
 
     return Group(s1, arr1, *efl, *fl)
 
-def electron(start=UP, end=RIGHT, r=1.):
+def electron(start=UP, end=RIGHT, r=1., show_field=False):
     elec = create_electron(r, True)
 
     th1 = 20 * PI / 180
@@ -102,17 +102,29 @@ def electron(start=UP, end=RIGHT, r=1.):
             with Sync(run_time=2, rate_func=rate_funcs.smooth):
                 elec.orbit_around_point(elec_pos, d_angle, elec_back)
 
-    return 'electron{}{}'.format(dir_str[start], dir_str[end])
+    tag = '' if show_field else 'NF'
+    return 'electron{}{}{}'.format(tag, dir_str[start], dir_str[end])
 
 
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     quality = HD
-    bloom_new = partial(bloom_filter_premultiply, num_iterations=7, kernel_size=93, strength=15, scale_factor=6)
+    show_field=False
+    bgcol = TRANSPARENT
+    r = 0.4
+    # r = 1
+
+    kernel_size = int(93/0.4 * r)
+    if bgcol.tolist()[-1] < 1:
+        print('transparent')
+        print('kernel_size', kernel_size)
+        bloom_new = partial(bloom_filter_premultiply, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
+    else:
+        bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
 
     for start in [UP]: # [UP, DOWN, LEFT, RIGHT]:
         for end in [UP]: # [UP, DOWN, LEFT, RIGHT]:
-            name = electron(start, end, r=0.4)
-            render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=TRANSPARENT)
+            name = electron(start, end, r=r, show_field=show_field)
+            render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
         # render_to_file(name, render_settings=quality, background_color=TRANSPARENT, file_extension='mov')
