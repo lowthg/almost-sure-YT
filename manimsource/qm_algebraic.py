@@ -926,7 +926,7 @@ class AliceState(Scene):
         eq6 = MathTex(r'P_B(M)', r'=', r'\frac14\left(\left(\langle{\rm up}\vert + \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle + \vert{\rm down}\rangle\right)',
                                        r'+\left(\langle{\rm up}\vert - \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle - \vert{\rm down}\rangle\right)\right)')
         mh.align_sub(eq6, eq6[1], eq5[1])
-        mh.align_sub(eq6, eq6[2][5], eq1[2][6], coor_mask=RIGHT)
+        mh.align_sub(eq6, eq6[2][5], eq1[2][4], coor_mask=RIGHT)
         mh.align_sub(eq6[3], eq6[3][0], eq5[3][0])
         mh.align_sub(eq6[3], eq6[3][2], eq6[2][5], coor_mask=RIGHT)
         eq6[2].submobjects[3] = eq5[2][3].copy().move_to(eq6[2][3], coor_mask=RIGHT)
@@ -1060,12 +1060,9 @@ class AliceState(Scene):
                   FadeOut(eq7[4][0], shift=mh.diff(eq7[4][1], eq7[2][4])),
                   eq7[5][-1].animate.shift(mh.diff(eq7[5][-2], eq7[2][-1])),
                   mh.fade_replace(eq7[2][2], eq7_1),
-                  # FadeOut(eq7[2][2]),
-                  # eq7[2][3:6].animate.move_to(eq7[2][2:6], coor_mask=RIGHT),
                   run_time=1.4)
         self.wait(0.1)
         self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][:2], eq8[2][:2], eq7_1, eq8[2][2],
-                                #eq7[2][3:6], eq8[2][2:5],
                                 eq7[2][4:], eq8[2][4:-1]),
                   mh.stretch_replace(eq7[2][3], eq8[2][3]),
                   mh.stretch_replace(eq7[5][-1], eq8[2][-1]),
