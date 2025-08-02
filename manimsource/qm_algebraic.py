@@ -909,9 +909,9 @@ class AliceState(Scene):
         Tex.set_default(font_size=55)
         MathTex.set_default(font_size=55)
 
-        eq1 = MathTex(r'P_A(M)', r'=', r'\frac1{\sqrt2}\left(\langle{\rm up}\vert M\vert{\rm up}\rangle +'
+        eq1 = MathTex(r'P_A(M)', r'=', r'\frac12\left(\langle{\rm up}\vert M\vert{\rm up}\rangle +'
                                        r'\langle{\rm down}\vert M\vert{\rm down}\rangle\right)')
-        eq2 = MathTex(r'P_B(M)', r'=', r'\frac1{\sqrt2}\left(\langle{\rm left}\vert M\vert{\rm left}\rangle',
+        eq2 = MathTex(r'P_B(M)', r'=', r'\frac12\left(\langle{\rm left}\vert M\vert{\rm left}\rangle',
                                        r'+\langle{\rm right}\vert M\vert{\rm right}\rangle\right)')
         eq3 = MathTex(r'\vert{\rm left}\rangle', r'=', r'\frac1{\sqrt2}\left(\vert{\rm up}\rangle+\vert{\rm down}\rangle\right)')
         eq4 = MathTex(r'\vert{\rm right}\rangle', r'=', r'\frac1{\sqrt2}\left(\vert{\rm up}\rangle-\vert{\rm down}\rangle\right)')
@@ -919,32 +919,32 @@ class AliceState(Scene):
         eq2.next_to(eq1, DOWN)
         eq3.next_to(eq2, DOWN)
         eq4.next_to(eq3, DOWN)
-        eq5 = MathTex(r'P_B(M)', r'=', r'\frac1{\sqrt2}\left(\frac12\left(\langle{\rm up}\vert + \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle + \vert{\rm down}\rangle\right)',
+        eq5 = MathTex(r'P_B(M)', r'=', r'\frac12\left(\frac12\left(\langle{\rm up}\vert + \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle + \vert{\rm down}\rangle\right)',
                                        r'+\frac12\left(\langle{\rm up}\vert - \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle - \vert{\rm down}\rangle\right)\right)')
         mh.align_sub(eq5, eq5[1], eq2[1]).shift(LEFT*0.5)
         eq5[3].next_to(eq5[2], DOWN, buff=0.1).align_to(eq5[2], RIGHT)
-        eq6 = MathTex(r'P_B(M)', r'=', r'\frac1{2\sqrt2}\left(\left(\langle{\rm up}\vert + \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle + \vert{\rm down}\rangle\right)',
+        eq6 = MathTex(r'P_B(M)', r'=', r'\frac14\left(\left(\langle{\rm up}\vert + \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle + \vert{\rm down}\rangle\right)',
                                        r'+\left(\langle{\rm up}\vert - \langle{\rm down}\vert\right) M\left(\vert{\rm up}\rangle - \vert{\rm down}\rangle\right)\right)')
         mh.align_sub(eq6, eq6[1], eq5[1])
-        mh.align_sub(eq6, eq6[2][8], eq1[2][6], coor_mask=RIGHT)
+        mh.align_sub(eq6, eq6[2][5], eq1[2][6], coor_mask=RIGHT)
         mh.align_sub(eq6[3], eq6[3][0], eq5[3][0])
-        mh.align_sub(eq6[3], eq6[3][2], eq6[2][8], coor_mask=RIGHT)
-        eq6[2].submobjects[6] = eq5[2][5].copy().move_to(eq6[2][6], coor_mask=RIGHT)
+        mh.align_sub(eq6[3], eq6[3][2], eq6[2][5], coor_mask=RIGHT)
+        eq6[2].submobjects[3] = eq5[2][3].copy().move_to(eq6[2][3], coor_mask=RIGHT)
         eq6[3].submobjects[-1] = eq5[3][-1].copy().move_to(eq6[3][-1], coor_mask=RIGHT)
 
-        eq7 = MathTex(r'P_B(M)', r'=', r'\frac1{2\sqrt2}\left(\langle{\rm up}\vert M\vert{\rm up}\rangle+\langle{\rm down}\vert M\vert{\rm down}\rangle',
+        eq7 = MathTex(r'P_B(M)', r'=', r'\frac14\left(\langle{\rm up}\vert M\vert{\rm up}\rangle+\langle{\rm down}\vert M\vert{\rm down}\rangle',
                       r'+ \langle{\rm up}\vert M\vert{\rm down}\rangle + \langle{\rm down}\vert M\vert{\rm up}\rangle',
                       r'+ \langle{\rm up}\vert M\vert{\rm up}\rangle+\langle{\rm down}\vert M\vert{\rm down}\rangle',
                       r'- \langle{\rm up}\vert M\vert{\rm down}\rangle - \langle{\rm down}\vert M\vert{\rm up}\rangle\right)')
         mh.align_sub(eq7, eq7[1], eq6[1])
-        mh.align_sub(eq7, eq7[2][7], eq1[2][6], coor_mask=RIGHT)
-        eq7[2].submobjects[6] = eq5[2][5].copy().move_to(eq7[2][6], coor_mask=RIGHT)
-        eq7[3].next_to(eq7[2][7:], DOWN, buff=0.25).to_edge(RIGHT)
-        mh.align_sub(eq7[4], eq7[4][1], eq7[2][7]).next_to(eq7[3], DOWN, buff=0.35, coor_mask=UP)
+        mh.align_sub(eq7, eq7[2][4], eq1[2][4], coor_mask=RIGHT)
+        eq7[2].submobjects[3] = eq5[2][3].copy().move_to(eq7[2][3], coor_mask=RIGHT)
+        eq7[3].next_to(eq7[2][4:], DOWN, buff=0.25).to_edge(RIGHT)
+        mh.align_sub(eq7[4], eq7[4][1], eq7[2][4]).next_to(eq7[3], DOWN, buff=0.35, coor_mask=UP)
         mh.align_sub(eq7[5], eq7[5][1], eq7[3][1]).next_to(eq7[4], DOWN, buff=0.25, coor_mask=UP)
         eq7[5].submobjects[-1] = eq5[3][-1].copy().move_to(eq7[5][-1])
 
-        eq8 = MathTex(r'P_B(M)', r'=', r'\frac1{\sqrt2}\left(\langle{\rm up}\vert M\vert{\rm up}\rangle +'
+        eq8 = MathTex(r'P_B(M)', r'=', r'\frac12\left(\langle{\rm up}\vert M\vert{\rm up}\rangle +'
                                        r'\langle{\rm down}\vert M\vert{\rm down}\rangle\right)')
         mh.align_sub(eq8, eq8[1], eq1[1])
         mh.align_sub(eq8, eq8[1], eq7[1], coor_mask=UP)
@@ -961,23 +961,23 @@ class AliceState(Scene):
         eq3_1 = eq3[2].copy()
         eq4_1 = eq4[2].copy()
         eq5_1 = eq5[2].copy()
-        self.play(mh.rtransform(eq2[:2], eq5[:2], eq2[2][:5], eq5[2][:5],
-                                eq2[2][12], eq5[2][22], eq2[2][13], eq5[2][24],
-                                eq2[2][18], eq5[2][27], eq2[2][6], eq5[2][10],
-                                eq2[2][11], eq5[2][13]),
-                  mh.rtransform(eq3[2][5:18], eq5[2][23:36]),
-                  mh.stretch_replace(eq2[2][5], eq5[2][5]),
-                  FadeOut(eq2[2][14:18], target_position=eq5[2][25:27]),
-                  FadeOut(eq2[2][7:11], shift=mh.diff(eq2[2][7:11], eq5[2][11:13], coor_mask=RIGHT)),
-                  mh.rtransform(eq3_1[5], eq5[2][9], eq3_1[7:9], eq5[2][11:13],
-                                eq3_1[10], eq5[2][14], eq3_1[12:16], eq5[2][16:20],
-                                eq3_1[17], eq5[2][20], eq3[2][:2], eq5[2][6:8],
-                                eq3[2][4], eq5[2][8]),
-                  mh.fade_replace(eq3_1[6], eq5_1[10]),
-                  mh.fade_replace(eq3_1[9], eq5_1[13]),
-                  mh.fade_replace(eq3_1[11], eq5[2][15]),
-                  mh.fade_replace(eq3_1[16], eq5[2][21]),
-                  FadeOut(eq3[2][2:4], shift=mh.diff(eq3[2][4], eq5[2][8])),
+        self.play(mh.rtransform(eq2[:2], eq5[:2], eq2[2][:3], eq5[2][:3],
+                                eq2[2][10], eq5[2][20], eq2[2][11], eq5[2][22],
+                                eq2[2][16], eq5[2][25], eq2[2][4], eq5[2][8],
+                                eq2[2][9], eq5[2][11]),
+                  mh.rtransform(eq3[2][5:18], eq5[2][21:34]),
+                  mh.stretch_replace(eq2[2][3], eq5[2][3]),
+                  FadeOut(eq2[2][12:16], target_position=eq5[2][23:25]),
+                  FadeOut(eq2[2][5:9], shift=mh.diff(eq2[2][5:9], eq5[2][9:11], coor_mask=RIGHT)),
+                  mh.rtransform(eq3_1[5], eq5[2][7], eq3_1[7:9], eq5[2][9:11],
+                                eq3_1[10], eq5[2][12], eq3_1[12:16], eq5[2][14:18],
+                                eq3_1[17], eq5[2][18], eq3[2][:2], eq5[2][4:6],
+                                eq3[2][4], eq5[2][6]),
+                  mh.fade_replace(eq3_1[6], eq5_1[8]),
+                  mh.fade_replace(eq3_1[9], eq5_1[11]),
+                  mh.fade_replace(eq3_1[11], eq5[2][13]),
+                  mh.fade_replace(eq3_1[16], eq5[2][19]),
+                  FadeOut(eq3[2][2:4], shift=mh.diff(eq3[2][4], eq5[2][6])),
                   FadeOut(eq3[:2]),
                   mh.stretch_replace(eq2[3][-1], eq5[3][-1]),
                   eq2[3][:-1].animate.shift(mh.diff(eq2[3][-2], eq5[3][-3])),
@@ -1002,26 +1002,29 @@ class AliceState(Scene):
                   FadeOut(eq4[:2]),
                   run_time=2)
         self.wait(0.1)
-        self.play(mh.rtransform(eq5[:2], eq6[:2], eq5[2][:2], eq6[2][:2], eq5[2][2:5], eq6[2][3:6],
-                                eq5[2][5], eq6[2][6], eq5[2][9:], eq6[2][7:]),
-                  mh.rtransform(eq5[2][6:8], eq6[2][:2], eq5[2][8], eq6[2][2]),
+        self.play(mh.rtransform(eq5[:2], eq6[:2], eq5[2][:2], eq6[2][:2], # eq5[2][2:5], eq6[2][3:6],
+                                eq5[2][3], eq6[2][3], eq5[2][7:], eq6[2][4:]),
+                  mh.rtransform(eq5[2][4:6], eq6[2][:2]),
                   mh.rtransform(eq5[3][0], eq6[3][0], eq5[3][1:3], eq6[2][:2],
-                                eq5[3][3], eq6[2][5], eq5[3][4:], eq6[3][1:]),
+                                eq5[3][4:], eq6[3][1:]),
+                  mh.fade_replace(eq5[2][2], eq6[2][2]),
+                  FadeOut(eq5[3][3], target_position=eq6[2][2]),
+                  FadeOut(eq5[2][6], target_position=eq6[2][2]),
                   run_time=1.4)
         self.wait(0.1)
-        self.play(mh.rtransform(eq6[:2], eq7[:2], eq6[2][:7], eq7[2][:7],
-                                eq6[2][8:12], eq7[2][7:11], eq6[2][20], eq7[2][11],
-                                eq6[2][22:26], eq7[2][12:16], eq6[2][12:19], eq7[2][16:23],
-                                eq6[2][20].copy(), eq7[2][23], eq6[2][27:33], eq7[2][24:30],
-                                eq6[2][26], eq7[3][0], eq6[2][8:12].copy(), eq7[3][1:5],
-                                eq6[2][20].copy(), eq7[3][5], eq6[2][27:33].copy(), eq7[3][6:12],
-                                eq6[2][12:19].copy(), eq7[3][12:19], eq6[2][20].copy(), eq7[3][19],
-                                eq6[2][22:26].copy(), eq7[3][20:24]
+        self.play(mh.rtransform(eq6[:2], eq7[:2], eq6[2][:4], eq7[2][:4],
+                                eq6[2][5:9], eq7[2][4:8], eq6[2][17], eq7[2][8],
+                                eq6[2][19:23], eq7[2][9:13], eq6[2][9:16], eq7[2][13:20],
+                                eq6[2][17].copy(), eq7[2][20], eq6[2][24:30], eq7[2][21:27],
+                                eq6[2][23], eq7[3][0], eq6[2][5:9].copy(), eq7[3][1:5],
+                                eq6[2][17].copy(), eq7[3][5], eq6[2][24:30].copy(), eq7[3][6:12],
+                                eq6[2][9:16].copy(), eq7[3][12:19], eq6[2][17].copy(), eq7[3][19],
+                                eq6[2][19:23].copy(), eq7[3][20:24]
                                 ),
-                  FadeOut(eq6[2][7], shift=mh.diff(eq6[2][8], eq7[2][7])),
-                  FadeOut(eq6[2][19], shift=mh.diff(eq6[2][18], eq7[2][22])),
-                  FadeOut(eq6[2][33], shift=mh.diff(eq6[2][32], eq7[2][29])),
-                  FadeOut(eq6[2][21], shift=mh.diff(eq6[2][22], eq7[3][20])),
+                  FadeOut(eq6[2][4], shift=mh.diff(eq6[2][5], eq7[2][4])),
+                  FadeOut(eq6[2][16], shift=mh.diff(eq6[2][15], eq7[2][19])),
+                  FadeOut(eq6[2][30], shift=mh.diff(eq6[2][29], eq7[2][26])),
+                  FadeOut(eq6[2][18], shift=mh.diff(eq6[2][19], eq7[3][20])),
                   eq6[3].animate.shift(mh.diff(eq6[3][0], eq7[4][0], coor_mask=UP)),
                   run_time=1.6)
         self.wait(0.1)
@@ -1052,16 +1055,19 @@ class AliceState(Scene):
         self.wait(0.1)
         self.play(FadeOut(*lines, eq7[3], eq7[5][:-1]), run_time=1.5)
         self.wait(0.1)
-        self.play(mh.rtransform(eq7[4][1:], eq7[2][7:]),
-                  FadeOut(eq7[4][0], shift=mh.diff(eq7[4][1], eq7[2][7])),
+        eq7_1 = eq8[2][2].copy().move_to(eq7[2][2])
+        self.play(mh.rtransform(eq7[4][1:], eq7[2][4:]),
+                  FadeOut(eq7[4][0], shift=mh.diff(eq7[4][1], eq7[2][4])),
                   eq7[5][-1].animate.shift(mh.diff(eq7[5][-2], eq7[2][-1])),
-                  FadeOut(eq7[2][2]),
-                  eq7[2][3:6].animate.move_to(eq7[2][2:6], coor_mask=RIGHT),
+                  mh.fade_replace(eq7[2][2], eq7_1),
+                  # FadeOut(eq7[2][2]),
+                  # eq7[2][3:6].animate.move_to(eq7[2][2:6], coor_mask=RIGHT),
                   run_time=1.4)
         self.wait(0.1)
-        self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][:2], eq8[2][:2],
-                                eq7[2][3:6], eq8[2][2:5], eq7[2][7:], eq8[2][6:-1]),
-                  mh.stretch_replace(eq7[2][6], eq8[2][5]),
+        self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][:2], eq8[2][:2], eq7_1, eq8[2][2],
+                                #eq7[2][3:6], eq8[2][2:5],
+                                eq7[2][4:], eq8[2][4:-1]),
+                  mh.stretch_replace(eq7[2][3], eq8[2][3]),
                   mh.stretch_replace(eq7[5][-1], eq8[2][-1]),
                   run_time=1)
         self.wait()
@@ -1073,7 +1079,7 @@ class Testing(Scene):
         self.play(Create(arc))
         self.wait(2)
 
-class Electron(ThreeDScene):
+class ElectronMN(ThreeDScene):
     def construct(self):
         r = 1
         r1 = r * 0.5
@@ -1113,6 +1119,12 @@ class Electron(ThreeDScene):
         # self.add(gp)
         # self.begin_ambient_camera_rotation(rate=PI)
         # self.wait(2)
+
+class Test3D(ThreeDScene):
+    def construct(self):
+        s1 = Sphere(radius=0.5)
+        self.play(FadeIn(s1))
+        self.play(s1.animate.shift(RIGHT*6.5))
 
 
 if __name__ == "__main__":
