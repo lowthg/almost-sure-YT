@@ -509,6 +509,7 @@ class Pdefinition(Scene):
 
         MathTex.set_default(font_size=DEFAULT_FONT_SIZE * 1.1)
 
+        MathTex.set_default(font_size=80)
 
         eq1_1 = MathTex(r'{\rm\ expected\ value\ of\ }A', r'=', r'\langle\Psi\vert A\vert\Psi\rangle')
         eq2 = MathTex(r'P(A)', r'=', r'\langle\Psi\vert A\vert\Psi\rangle')
@@ -530,6 +531,7 @@ class Pdefinition(Scene):
         mh.align_sub(eq9, eq9[1], eq7[1])
 
         box1 = SurroundingRectangle(VGroup(eq1_1, eq2, eq4, eq6), fill_color=BLACK, stroke_opacity=0, fill_opacity=self.box_op, corner_radius=0.15)
+        VGroup(box1, eq1_1, eq2, eq4, eq5, eq6, eq7, eq8, eq9).to_edge(DOWN, buff=0.2)
 
 
         eq10 = MathTex(r'\pi_V', r'=', r'{\rm orthogonal\ projection\ onto\ }V')
@@ -788,12 +790,59 @@ class Pdefinition(Scene):
         self.wait()
         return VGroup()
 
+class Conditional(Pdefinition):
+    def construct(self):
+        MathTex.set_default(font_size=80)
+        eq1 = MathTex(r'\mathbb P(A\vert B)', r'=', r'\mathbb P(A\cap B)/\mathbb P(B)').set_z_index(1)
+        eq2 = MathTex(r'\mathbb E[A\vert B]', r'=', r'\mathbb E[1_BA1_B]/\mathbb P(B)').set_z_index(1)
+        mh.align_sub(eq2, eq2[1], eq1[1])
+
+        eq22 = MathTex(r'P^\prime(A)', r'=', r"P(\pi_V A\pi_V)/ P(\pi_V)").next_to(eq2, DOWN)
+        mh.align_sub(eq22, eq22[1], eq2[1], coor_mask=RIGHT)
+        eq2[2][2:4].move_to(eq22[2][2:4], coor_mask=RIGHT)
+        eq2[2][4].move_to(eq22[2][4], coor_mask=RIGHT)
+        eq2[2][5:7].move_to(eq22[2][5:7], coor_mask=RIGHT)
+        eq2[2][7].move_to(eq22[2][7], coor_mask=RIGHT)
+        eq2[2][8].move_to(eq22[2][8], coor_mask=RIGHT)
+        eq2[2][9].move_to(eq22[2][9], coor_mask=RIGHT)
+        eq2[2][10].move_to(eq22[2][10], coor_mask=RIGHT)
+        eq2[2][11].move_to(eq22[2][11:13], coor_mask=RIGHT)
+        eq2[2][12].move_to(eq22[2][13], coor_mask=RIGHT)
+
+
+        eq2_1 = eq2[2].copy()
+        mh.align_sub(eq2[2][7:], eq2[2][8], eq1[2][6], coor_mask=RIGHT)
+        eq2[2][4:7].move_to(VGroup(eq2[2][1], eq2[2][7]), coor_mask=RIGHT)
+        box1 = SurroundingRectangle(eq1, eq2, eq2_1, fill_color=BLACK, stroke_opacity=0, fill_opacity=self.box_op, corner_radius=0.15)
+
+
+        self.add(eq1, box1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[0][2:5], eq2[0][2:5], eq1[1], eq2[1],
+                                eq1[2][2], eq2[2][4], eq1[2][4], eq2[2][6],
+                                eq1[2][6:], eq2[2][8:]),
+                  mh.fade_replace(eq1[0][0], eq2[0][0]),
+                  mh.fade_replace(eq1[0][1], eq2[0][1]),
+                  mh.fade_replace(eq1[0][-1], eq2[0][-1]),
+                  mh.fade_replace(eq1[2][0], eq2[2][0]),
+                  mh.fade_replace(eq1[2][1], eq2[2][1]),
+                  mh.fade_replace(eq1[2][5], eq2[2][7]),
+                  mh.fade_replace(eq1[2][3], eq2[2][5], coor_mask=RIGHT),
+                  run_rime=1.4)
+        self.wait(0.1)
+        self.play(mh.transform(eq2[2][4:], eq2_1[4:]),
+                  mh.rtransform(eq2[2][5:7].copy(), eq2[2][2:4]),
+                  # FadeIn(eq22),
+                  run_time=1)
+        self.wait()
+
 
 class MixedP(Pdefinition):
     def construct(self):
-        eqs = self.create_eqs()
-        self.add(eqs)
+        self.create_eqs(anim=True)
 
+    def create_eqs(self, anim=False):
+        eqs = Pdefinition.create_eqs(self)
         fs = DEFAULT_FONT_SIZE * 0.9
         eq8 = MathTex(r'P(A)', r'\!=', r'\!\sum_kp_k\langle\Psi_k\vert A\vert\Psi_k\rangle', font_size=fs).set_z_index(1)
         mh.align_sub(eq8, eq8[1], eqs[0][1]).align_to(eqs[:-1], RIGHT)
@@ -801,6 +850,11 @@ class MixedP(Pdefinition):
         box2 = SurroundingRectangle(eqs2, corner_radius=0.15, fill_color=BLACK, fill_opacity=self.box_op,
                                     stroke_opacity=0)
         eqs2 = VGroup(*eqs2[:], box2)
+
+        if not anim:
+            return eqs2
+
+        self.add(eqs)
 
 
         Tex.set_default(font_size=60)
@@ -918,7 +972,47 @@ class MixedP(Pdefinition):
                   run_time=2)
 
         self.wait()
+        return eqs2
 
+
+class MixedProps(MixedP):
+    def construct(self):
+        eqs = self.create_eqs()
+        self.add(eqs)
+
+        MathTex.set_default(font_size=80)
+        eq1 = MathTex(r'{\rm probability}', r'=', r'P(\pi)').set_z_index(1)
+        box1 = SurroundingRectangle(eq1, corner_radius=0.15, fill_color=BLACK, fill_opacity=self.box_op,
+                                    stroke_opacity=0, buff=0.15)
+
+        VGroup(box1, eq1).move_to(ORIGIN).to_edge(DOWN, buff=0.15)
+
+        self.wait(0.5)
+        self.play(mh.rtransform(eqs[2].copy(), eq1), FadeIn(box1), run_time=2)
+        self.wait(0.1)
+        self.play(FadeOut(box1, eq1), run_time=1)
+        self.wait(0.1)
+        self.play(eqs[5].animate(rate_func=rate_functions.there_and_back_with_pause).scale(1.4, scale_stroke=True,
+                                                                                           about_point=eqs[5].get_center() + RIGHT*0.3),
+                  run_time=3)
+        self.wait(0.1)
+
+        eq2 = MathTex(r'P^\prime(A)', r'=', r'P(\pi A\pi)/P(\pi)').set_z_index(1)
+        eq3 = MathTex(r'P^\prime(A)P(\pi)', r'=', r'P(\pi A\pi)').set_z_index(1)
+        mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=UP)
+        box2 = SurroundingRectangle(VGroup(eq3, eq2), corner_radius=0.15, fill_color=BLACK, fill_opacity=self.box_op,
+                                    stroke_opacity=0, buff=0.15)
+        VGroup(eq2, eq3, box2).move_to(ORIGIN).to_edge(DOWN, buff=0.15)
+
+        self.play(mh.rtransform(eqs[3].copy(), eq2), FadeIn(box2), run_time=2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[0][:], eq3[0][:5], eq2[1], eq3[1], eq2[2][:-5], eq3[2][:], eq2[2][-4:], eq3[0][-4:]),
+                  FadeOut(eq2[2][-5]),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(FadeOut(eq3, box2))
+
+        self.wait()
 
 class Projection(Pdefinition):
     def construct(self):
@@ -1017,8 +1111,9 @@ class Unitary(Pdefinition):
 
 class Hamiltonian(Pdefinition):
     def construct(self):
-        Tex.set_default(font_size=DEFAULT_FONT_SIZE*1.1)
-        MathTex.set_default(font_size=DEFAULT_FONT_SIZE*1.1)
+        # Tex.set_default(font_size=DEFAULT_FONT_SIZE*1.1)
+        # MathTex.set_default(font_size=DEFAULT_FONT_SIZE*1.1)
+        MathTex.set_default(font_size=60)
 
         eq1 = MathTex(r'i\hbar\frac{d}{dt}\Psi = H\Psi')
         eq2 = MathTex(r'\Psi_t', r'=', r'e^{-\frac{iHt}{\hbar} }\Psi_0')
