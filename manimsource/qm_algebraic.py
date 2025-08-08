@@ -9,6 +9,278 @@ from sorcery import switch
 sys.path.append('../')
 import manimhelper as mh
 
+class Hilbert2(Scene):
+    fs1 = 120
+    fs2 = 80
+    def construct(self):
+        fs1 = self.fs1
+        eq1 = MathTex(r'\mathcal H', font_size=200)[0]
+        eq2 = MathTex(r'\Psi\in\mathcal H', font_size=fs1)[0]
+        mh.align_sub(eq2, eq2[-1], eq1[-1], coor_mask = UP).shift(UP*0.2)
+        eq3 = MathTex(r'\Phi,\Psi\in\mathcal H', font_size=fs1)[0]
+        mh.align_sub(eq3, eq3[-1], eq2[-1], coor_mask = UP)
+        eq5 = MathTex(r'a,b\in\mathbb C', font_size=fs1)[0]
+        mh.align_sub(eq5, eq5[-2], eq3[-2]).next_to(eq3, RIGHT, coor_mask=RIGHT, buff=1)
+        VGroup(eq3, eq5).move_to(ORIGIN, coor_mask=RIGHT)
+        eq6 = MathTex(r'a\Phi + b\Psi\in\mathcal H', font_size=fs1)[0]
+        eq6.next_to(eq3, DOWN, buff=0.35, coor_mask=UP)
+        eq7 = MathTex(r'\langle\Phi\vert\Psi\rangle\in\mathbb C', font_size=fs1)[0]
+        eq7.next_to(eq6, DOWN, buff = 0.5, coor_mask=UP)
+
+        self.wait(0.2)
+        self.play(FadeIn(eq1, rate_func=linear))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[-1], eq2[-1]),
+                  FadeIn(eq2[:2], shift=(eq2[-1].get_left()-eq1[-1].get_left()) * RIGHT),
+                  run_time=1.2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:], eq3[2:]),
+                  FadeIn(eq3[:2], shift=mh.diff(eq2[0], eq3[2])),
+                  FadeIn(eq5),
+                  run_time=0.8)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[0].copy(), eq6[1], eq3[2:].copy(), eq6[4:]),
+                  FadeIn(eq6[2], target_position=eq3[:3]),
+                  mh.rtransform(eq5[0].copy(), eq6[0], eq5[2].copy(), eq6[3]),
+                  run_time=1.5)
+        self.wait(0.1)
+        gp1 = VGroup(eq3, eq5, eq6, eq7).copy().move_to(ORIGIN, coor_mask=UP)
+        eq7 = gp1[3]
+        self.play(mh.rtransform(eq3[0].copy(), eq7[1], eq3[2].copy(), eq7[3], eq3[-2].copy(), eq7[-2]),
+                  FadeIn(eq7[0], shift=mh.diff(eq3[0], eq7[1])),
+                  FadeIn(eq7[4], shift=mh.diff(eq3[2], eq7[3])),
+                  FadeIn(eq7[2], target_position=eq3[:3]),
+                  FadeIn(eq7[-1], target_position=eq3[-1]),
+                  mh.transform(eq3, gp1[0], eq5, gp1[1], eq6, gp1[2]),
+                  run_time=1.5)
+
+        eq7_1 = mh.circle_eq(eq7[:-2])
+        eq7_2 = Tex(r'probability amplitude', font_size=fs1).next_to(eq7[:-2], DOWN, buff=0.4).scale(0.75)
+        self.play(Create(eq7_1), FadeIn(eq7_2), rate_func=linear)
+
+        eq8 = MathTex(r'{\rm probability}', r'=', r'\lvert\langle\Phi\vert\Psi\rangle\rvert^2', font_size=fs1)
+        mh.align_sub(eq8, eq8[2][1], eq7[0], coor_mask=UP).move_to(ORIGIN, coor_mask=RIGHT)
+        eq8[0].scale(0.85, about_edge=RIGHT)
+        self.wait(0.1)
+        eq9 = MathTex(r'\langle{\rm spin\ right}\vert{\rm spin\ up}\rangle', r'=', r'1/\sqrt2', font_size=fs1)
+        eq9.scale(0.9).scale(0.8).move_to(eq7_2, coor_mask=UP)
+        self.play(FadeOut(eq7_2), FadeIn(eq9), run_time=1.2)
+        self.wait(0.1)
+        self.play(LaggedStart(FadeOut(eq7[5:]),
+                              AnimationGroup(mh.rtransform(eq7[:5], eq8[2][1:6]),
+                  FadeIn(eq8[2][0], shift=mh.diff(eq7[0], eq8[2][1])),
+                  FadeIn(eq8[2][-2:], shift=mh.diff(eq7[-3], eq8[2][-3])),
+                  FadeOut(eq7_1, shift=mh.diff(eq7[-3], eq8[2][-3])),
+                  ),
+                  FadeIn(eq8[:2]),
+                              lag_ratio=0.3),
+                  FadeOut(eq9),
+                  run_time=2.2)
+
+        eq10 = MathTex(r'{\rm normalization}\!\!\!\,\,:', r'\lVert\Psi\rVert^2', r'\equiv', r'\langle\Psi\vert\Psi\rangle', r'=1', font_size=fs1)
+        eq10.scale(0.7)
+        eq10[0].scale(0.9, about_edge=RIGHT)
+        mh.align_sub(eq10, eq10[4][0], eq9[1]).to_edge(LEFT).shift(UP*0.2)#.move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(FadeIn(eq10), rate_func=linear, run_time=1.4)
+
+        self.wait()
+
+
+class Hilbert3(Hilbert2):
+    def construct(self):
+        fs1 = self.fs1
+        eq1 = MathTex(r'{\rm observable\ }', r'A', font_size=fs1)
+        eq1[0].scale(0.9, about_edge=DR).set_color(RED)
+        mh.align_sub(eq1, eq1[0], ORIGIN).move_to(ORIGIN, coor_mask=RIGHT)
+        eq2 = eq1[0].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        eq3 = MathTex(r'A\colon\mathcal H\to\mathcal H', font_size=fs1)[0]
+        eq3.next_to(eq2, DOWN, buff=0.8)
+        eq3_1 = VGroup(eq2, eq3).move_to(ORIGIN, coor_mask=UP)
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(LaggedStart(mh.rtransform(eq1[0], eq2, eq1[1][0], eq3[0]),
+                  FadeIn(eq3[1:]), lag_ratio=0.3),
+                  run_time=1.8)
+
+        eq4 = Tex(r'Hermitian conjugate\ ', r'$A^*$', font_size=fs1)
+        eq4[0].set_color(RED).scale(0.7, about_edge=RIGHT)
+        mh.align_sub(eq4[0], eq4[0][-1], eq4[1], aligned_edge=DOWN, coor_mask = UP)
+        eq4.next_to(eq3, DOWN, buff=0.4).move_to(ORIGIN, coor_mask=RIGHT)
+        eq4_1 = VGroup(eq2.copy(), eq3.copy(), eq4)
+        eq4_1[0].next_to(eq4_1[1], UP, buff=0.6)
+        eq4_1.move_to(ORIGIN)
+        self.play(mh.transform(eq2, eq4_1[0], eq3, eq4_1[1]), FadeIn(eq4), run_time=1.5)
+        self.wait(0.1)
+
+        eq5 = MathTex(r'\langle \Phi\vert A^*\Psi\rangle', r'=', r'\langle A\Phi\vert\Psi\rangle', font_size=fs1)
+        eq5.next_to(eq4, DOWN, buff=0.6)
+        eq5_1 = VGroup(*eq4_1.copy()[:], eq5).move_to(ORIGIN)
+        eq5_1[2][0].move_to(ORIGIN, coor_mask=RIGHT)
+        eq5_2 = eq5[0].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq4[1][:], eq5_2[3:5]),
+                  FadeIn(eq5_2[:3], eq5_2[5:]),
+                  mh.transform(eq2, eq5_1[0], eq3, eq5_1[1], eq4[0], eq5_1[2][0]),
+                  run_time=1.8)
+        self.play(mh.rtransform(eq5_2.copy(), eq5[0], eq5_2[0], eq5[2][0],
+                                eq5_2[1:3], eq5[2][2:4], eq5_2[3], eq5[2][1],
+                                eq5_2[5:], eq5[2][4:]),
+                  FadeOut(eq5_2[4], shift=mh.diff(eq5_2[3], eq5[2][1])),
+                  FadeIn(eq5[1]),
+                  run_time=2)
+        self.wait(0.1)
+        eq6_1 = VGroup(eq2, eq3, eq4[0], eq5)
+        eq6_2 = eq6_1.copy().scale(0.8).to_edge(UP)
+        eq6 = Tex(r'Hermitian/self-adjoint:\ ', r'$A^*=A$', font_size=fs1)
+        eq6[0].set_color(RED).scale(0.5, about_edge=RIGHT)
+        eq6.next_to(eq6_2, DOWN)
+        self.play(mh.transform(eq6_1, eq6_2), FadeIn(eq6), run_time=1.8)
+        self.wait(0.1)
+
+        eq8 = Tex(r'symmetric:\ ', r'$\displaystyle\langle\Phi\vert A\Psi\rangle = \langle A\Phi\vert\Psi\rangle$', font_size=fs1)
+        eq8[0].set_color(RED).scale(0.8, about_edge=RIGHT)
+        eq8.scale(0.8)
+        #mh.align_sub(eq8[0], eq8[0][-1], eq8[1], aligned_edge=DOWN, coor_mask = UP)
+        eq8.next_to(eq6, DOWN, buff=0.5).move_to(ORIGIN, coor_mask=RIGHT)
+        eq7 = eq5.copy()
+        mh.align_sub(eq7, eq7[1][0], eq8[1][6])
+        self.play(mh.rtransform(eq5.copy(), eq7),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7[0][:4], eq8[1][:4], eq7[0][5:], eq8[1][4:6],
+                                eq7[1][0], eq8[1][6], eq7[2][:], eq8[1][7:]),
+                  FadeOut(eq7[0][4]),
+                  FadeIn(eq8[0]),
+                  run_time=1.5)
+        self.wait(1)
+
+class Eigen(Hilbert2):
+    def construct(self):
+        fs1 = self.fs1
+        fs2 = self.fs2
+        fs3 = 100
+        eq1 = Tex(r'basis:\ ', r'$u_1, u_2, u_3,\ldots$', font_size=fs1)
+        eq1[0].set_color(RED)
+        self.add(eq1)
+        self.wait(0.1)
+
+        eq2 = Tex(r'orthonormal:\ ', r'$\langle u_m\vert u_n\rangle=1_{\{m=n\}}$', font_size=fs2)
+        #eq2[2].next_to(eq2[1], DOWN)
+        eq2[0].set_color(RED)
+        eq2.next_to(eq1, DOWN)
+        gp1 = VGroup(eq1.copy(), eq2).move_to(ORIGIN).shift(UP)
+        self.play(mh.transform(eq1, gp1[0]), FadeIn(eq2), run_time=1)
+
+        eq3 = Tex('eigenvector:\ ', r'$Au_n=a_nu_n$', font_size=fs1)
+        eq3[0].set_color(RED).scale(0.8, about_edge=RIGHT)
+        eq3.next_to(eq2, DOWN, buff=0.4)
+        self.play(FadeIn(eq3), run_time=1)
+        self.wait(0.1)
+
+        eq4 = Tex(r'real values', font_size=fs2).set_color(RED).next_to(eq3[1][-4:-2], DOWN, buff=0.6).shift(LEFT * 0.5)
+        arr1 = Arrow(eq4[0][4].get_top(), eq3[1][-4], buff=0.1, stroke_width=4)
+        self.play(FadeIn(eq4, arr1), run_time=1)
+        self.wait(0.1)
+
+        eq5 = Tex(r'probability:\ ', r'$p_n=\lvert\langle u_n\vert\Psi\rangle\rvert^2$', font_size=fs3)
+        eq5[0].set_color(RED).scale(0.9, about_edge=RIGHT)
+        mh.align_sub(eq5[0], eq5[0][1], eq5[1][5], aligned_edge=DOWN, coor_mask=UP)
+        eq5.move_to(ORIGIN).next_to(eq3, DOWN, buff=0.5)
+
+        gp = VGroup(VGroup(eq1, eq2, eq3, eq4, arr1).copy(), eq5).move_to(ORIGIN)
+
+        self.play(
+            mh.transform(eq1, gp[0][0], eq2, gp[0][1], eq3, gp[0][2]),
+            FadeOut(eq4, target_position=gp[0][3]),
+            FadeOut(arr1, target_position=gp[0][4]),
+            FadeIn(eq5), run_time=1.2)
+        self.wait(0.1)
+
+        eq6 = MathTex(r'{\rm expected\ value}', r'=', r'\sum\nolimits_na_np_n', font_size=fs3)
+        eq6[0].set_color(RED)
+        eq6.next_to(eq5, DOWN, buff=0.5, coor_mask=UP)
+
+        gp1 = VGroup(eq1, eq2, eq3, eq5).copy()
+        gp2 = VGroup(gp1, eq6)
+        mh.align_sub(gp2, VGroup(eq3, eq5, eq6), ORIGIN, coor_mask=UP)
+        gp1[:2].set_opacity(0)
+
+        self.play(mh.transform(eq1, gp1[0], eq2, gp1[1], eq3, gp1[2], eq5, gp1[3]),
+                  FadeIn(eq6),
+                  run_time=1.2)
+        self.wait(0.1)
+
+        eq7 = MathTex(r'=', r'\sum\nolimits_na_n\lvert\langle u_n\vert\Psi\rangle\rvert^2', font_size=fs3)
+        eq7.next_to(eq6, DOWN, buff=0.3, coor_mask=UP)
+        mh.align_sub(eq7, eq7[1], ORIGIN, coor_mask=RIGHT)
+        eq7[0].set_opacity(0)
+
+        gp1 = VGroup(eq3, eq5, eq6).copy()
+        gp2 = VGroup(gp1, eq7).move_to(ORIGIN, coor_mask=UP)
+        gp1[2][0].move_to(ORIGIN, coor_mask=RIGHT)
+        eq8 = MathTex(r'{\rm\underline{expected\ value}}', font_size=fs3)
+        eq8[0][:-1].set_color(RED).set_z_index(1)
+        mh.align_sub(eq8, eq8[0][:-1], gp1[2][0])
+        eq8[0][-1].next_to(eq8[0][0], DOWN, buff=0.04, coor_mask=UP)
+
+        self.play(mh.transform(eq3, gp1[0], eq5, gp1[1], eq6[0], eq8[0][:-1]),
+                  mh.rtransform(eq6[2][:4], eq7[1][:4], eq6[1], eq7[0]),
+                  FadeIn(eq8[0][-1], shift=mh.diff(eq6[0], eq8[0][:-1])),
+                  mh.fade_replace(eq6[2][-2:], eq7[1][4:]),
+                  run_time=1.4)
+        self.wait(0.1)
+        eq9 = MathTex(r'=', r'\sum\nolimits_na_n\langle\Psi\vert u_n\rangle\,\langle u_n\vert\Psi\rangle', font_size=fs3)
+        mh.align_sub(eq9, eq9[0], eq7[0]).move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq7[1][:4], eq9[1][:4], eq7[1][5:11].copy(), eq9[1][10:16]),
+                  mh.rtransform(eq7[1][5], eq9[1][4], eq7[1][6:8], eq9[1][7:9],
+                                eq7[1][8], eq9[1][6], eq7[1][9], eq9[1][5], eq7[1][10], eq9[1][9]),
+                  FadeOut(eq7[1][4], shift=mh.diff(eq7[1][5], eq9[1][4])),
+                  FadeOut(eq7[1][-2:], shift=mh.diff(eq7[1][10], eq9[1][-1])),
+                  run_time=1.4)
+        self.wait(0.1)
+
+        eq10 = MathTex(r'=', r'\sum\nolimits_n\langle\Psi\vert a_nu_n\rangle\,\langle u_n\vert\Psi\rangle', font_size=fs3)
+        mh.align_sub(eq10, eq10[0], eq9[0])
+        eq10[1][5:7].shift(mh.diff(eq10[1][7], eq9[1][7]))
+        eq10[1][7:].move_to(eq9[1][7:])
+        self.play(mh.rtransform(eq9[1][:2], eq10[1][:2], eq9[1][2:4], eq10[1][5:7],
+                                eq9[1][4:7], eq10[1][2:5], eq9[1][7:], eq10[1][7:]),
+                  run_time=1)
+
+        eq11 = MathTex(r'=', r'\sum\nolimits_n\langle\Psi\vert A\vert u_n\rangle\,\langle u_n\vert\Psi\rangle', font_size=fs3)
+        mh.align_sub(eq11, eq11[0], eq9[0])
+        eq11[1][5:7].shift(mh.diff(eq11[1][7], eq10[1][7]))
+        eq11[1][7:].move_to(eq10[1][7:])
+        self.play(mh.rtransform(eq10[1][:5], eq11[1][:5], eq10[1][7:], eq11[1][7:]),
+                  FadeOut(eq10[1][5:7]),
+                  FadeIn(eq11[1][5:7]),
+                  run_time=0.8, rate_func=linear)
+        self.wait(0.1)
+
+        eq12 = MathTex(r'=', r'\langle\Psi\vert A\sum\nolimits_n\vert u_n\rangle\,\langle u_n\vert\Psi\rangle', font_size=fs3)
+        mh.align_sub(eq12, eq12[0], eq9[0])
+        eq12[1].move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq11[1][:2], eq12[1][4:6], eq11[1][2:6], eq12[1][:4], eq11[1][6:], eq12[1][6:]),
+                  run_time=1)
+        self.wait(0.1)
+        self.play(FadeOut(eq12[1][4:13]), run_time=1, rate_func=linear)
+
+        eq13 = MathTex(r'\langle\Psi\vert A\vert\Psi\rangle', font_size=fs1)
+        eq13.next_to(eq8, DOWN, buff=0.5)
+        self.play(mh.rtransform(eq12[1][:4], eq13[0][:4], eq12[1][13:], eq13[0][4:]), run_time=1)
+        self.wait(0.1)
+
+        eq14 = Tex(r'\bf bracket', font_size = 60, color=RED)[0].next_to(eq13, DOWN, buff=0.5)
+        self.play(FadeIn(eq14))
+        self.wait(0.1)
+        br1 = Brace(eq13[0][:3], direction=DOWN)
+        br2 = Brace(eq13[0][-3:], direction=DOWN)
+        self.play(eq14[:3].animate.move_to(eq13[0][1], coor_mask=RIGHT),
+                  eq14[-3:].animate.move_to(eq13[0][-2], coor_mask=RIGHT),
+                  FadeOut(eq14[3]),
+                  FadeIn(br1, br2),
+                  run_time=1.5)
+
+        self.wait()
 
 class Hilbert(Scene):
     def construct(self):
@@ -73,9 +345,6 @@ class Hilbert(Scene):
         eq21.align_to(eq11, LEFT).move_to(eq20, coor_mask=UP)
         eq20.next_to(eq21, RIGHT, coor_mask=RIGHT, buff=0.35)
 
-        # eq10.shift(UP)
-        # mh.align_sub(eq10, eq10[0][1], eq3[1], coor_mask=UP)
-
         self.wait(0.2)
         self.play(FadeIn(eq1, rate_func=linear))
         self.wait(0.1)
@@ -115,17 +384,6 @@ class Hilbert(Scene):
                   run_time=1.5)
         self.wait(0.1)
         eq9 = eq10[0]
-        # self.play(mh.rtransform(eq3[:2], eq8[:2], eq3[3:], eq8[7:], eq3[2], eq8[2],
-        #                         eq3[2].copy(), eq8[5],
-        #                         eq7[:3], eq9[:3], eq7[3], eq9[4],
-        #                         eq7[3].copy(), eq9[8], eq7[4], eq9[10]),
-        #           FadeIn(eq8[3:5], shift=mh.diff(eq3[2], eq8[2])),
-        #           FadeIn(eq8[6], shift=mh.diff(eq3[2], eq8[5])),
-        #           FadeIn(eq9[3], eq9[5], shift=mh.diff(eq7[3], eq9[4])),
-        #           FadeIn(eq9[7], eq9[9], shift=mh.diff(eq7[3], eq9[8])),
-        #           FadeIn(eq9[6], target_position=eq7[3]),
-        #           FadeOut(eq7[-2:]),
-        #           run_time=1)
         self.play(mh.rtransform(eq7[:3], eq9[:3], eq7[3], eq9[4],
                                 eq7[3].copy(), eq9[8], eq7[4], eq9[10]),
                   FadeIn(eq9[3], eq9[5], shift=mh.diff(eq7[3], eq9[4])),
