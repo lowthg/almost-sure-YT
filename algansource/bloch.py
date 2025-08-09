@@ -68,9 +68,9 @@ def create_sphere(r=1., simple_sphere=True):
     return s3, interior_col_update
 
 
-def bloch(r=1., simple_sphere=False):
+def bloch(r=1., simple_sphere=False, sphere_only=False):
     sphere, col_update = create_sphere(r, simple_sphere)
-    # c1 = Cylinder(radius=0.2, height=1, color=WHITE)
+    # c1 = Cylinder(radius=0.2, height=1)
 
     center_dot = Sphere(radius=r * 0.04)
     col_update(center_dot, color=WHITE)
@@ -78,7 +78,6 @@ def bloch(r=1., simple_sphere=False):
     with Off():
         Scene.get_camera().set_distance_to_screen(15)
         # c1.spawn().move(IN*2.3)
-        center_dot.spawn()
         light_source = Scene.get_light_sources()[0]
         light_source.move_to(UP * 12)
         light_source.rotate_around_point(ORIGIN, 45, OUT)
@@ -89,7 +88,11 @@ def bloch(r=1., simple_sphere=False):
         loc = -light_source.location
         loc[...,2] *= -1
         Scene.add_light_source(PointLight(location=loc, color=Color("#444444"), opacity=0.5).spawn())
-        # col_update(c1, [0.])
+        # col_update(c1, color=WHITE)
+
+    if sphere_only:
+        Scene.wait(1/15)
+        return 'Bloch_Sphere'
 
     # c1.add_updater(col_update)
 
@@ -102,7 +105,29 @@ def bloch(r=1., simple_sphere=False):
     mn_up = s_up.numpy()[0,0,:]
     mn_right = s_right.numpy()[0,0,:]
     mn_forward = s_forward.numpy()[0,0,:]
+    tilt = math.acos(mn_up[1]) / 2 / PI * 360
 
+    if True:
+        ht = 0.85 * r
+        ht2 = r - ht
+        c1 = Cylinder(radius=0.03, height=ht).move(UP * ht/ 2)
+        cone = mn.Cone(base_radius=0.1, height=ht2, show_base=True, resolution=[1, 10], stroke_opacity=0,
+                       fill_color=mn.WHITE, direction=mn.UP).shift(mn.UP * (ht + ht2))
+        cone.submobjects = [obj for obj in cone.submobjects if type(obj) != mn.VectorizedPoint]
+        arr1 = Group(c1, ManimMob(cone))
+        arr1.orbit_around_point(ORIGIN, tilt, RIGHT)
+
+
+        col_update(arr1, color=WHITE)
+        with Off():
+            arr1.spawn()
+            center_dot.spawn()
+
+        with Seq():
+            arr1.rotate_around_point(ORIGIN, 80, s_forward - s_right)
+            arr1.rotate_around_point(ORIGIN, 80, s_up)
+
+        return 'Bloch_arrow'
 
     print(s_up)
     print(s_right)
@@ -120,12 +145,6 @@ def bloch(r=1., simple_sphere=False):
     eqlt.move_to(-s_right * r * 1.2)
     eqft.move_to(s_forward * r * 1.05)
     eqbk.move_to(-s_forward * r * 1.05)
-    # xAx = Line(-s_right * r, s_right * r, color=WHITE, border_width=1)
-    #xAx = ManimMob(mn.Line(-mn_right * r, mn_right * r, stroke_width=2))
-    # yAx = Line(-s_up * r, s_up * r, border_width=1)
-    #yAx = ManimMob(mn.Line(-mn_up * r, mn_up * r, stroke_width=2))
-    # zAx = Line(-s_forward * r*0, s_forward * r, border_width=1)
-    #zAx = ManimMob(mn.Line(-mn_forward * r*0.5, mn_forward * r * 0.99, stroke_width=1))
     axes = Group(
         ManimMob(mn.Line(ORIGIN, mn_forward * r * 0.99, stroke_width=1)),
         ManimMob(mn.Line(ORIGIN, -mn_forward * r * 0.99, stroke_width=1)),
@@ -135,29 +154,26 @@ def bloch(r=1., simple_sphere=False):
         ManimMob(mn.Line(ORIGIN, -mn_right * r * 0.99, stroke_width=1))
     )
     col_update(axes, color=WHITE)
-    #col_update(yAx, color=WHITE)
-    #col_update(zAx, color=WHITE)
 
     with Sync():
+        center_dot.spawn()
         equp.spawn()
         eqdn.spawn()
         eqrt.spawn()
         eqlt.spawn()
         eqft.spawn()
         eqbk.spawn()
-        #xAx.spawn()
-        #yAx.spawn()
-        #zAx.spawn()
         axes.spawn()
-
 
     return 'bloch'
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
-    quality = HD
+    quality = LD
     r = 2.
     bgcol = DARKER_GREY
-    name = bloch(r)
+    simple_sphere = False
+
+    name = bloch(r, simple_sphere=simple_sphere)
     render_to_file(name, render_settings=quality, background_color=bgcol)

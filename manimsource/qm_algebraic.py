@@ -1476,6 +1476,108 @@ class Test3D(ThreeDScene):
         self.play(FadeIn(s1))
         self.play(s1.animate.shift(RIGHT*6.5))
 
+class TraceState(Scene):
+    def construct(self):
+        fs1 = 60
+        fs2 = 70
+        str1 = r'\langle{\rm up}\vert M\vert{\rm up}\rangle + \langle{\rm down}\vert M\vert{\rm down}\rangle'
+        str2 = r'\langle{\rm left}\vert M\vert{\rm left}\rangle + \langle{\rm right}\vert M\vert{\rm right}\rangle'
+        eq1 = MathTex(r'P_A(M)', r'=', r'\frac12\left(' + str1 + r'\right)', font_size=fs1)
+        eq2 = MathTex(r'P_B(M)', r'=', r'\frac12\left(' + str2 + r'\right)', font_size=fs1)
+        eq1.to_edge(UP)
+        eq2.next_to(eq1, DOWN)
+        self.add(eq1, eq2)
+        self.wait(0.1)
+
+        eq1_1 = MathTex(str1, stroke_width=1.5, font_size=fs2)[0]
+        eq1_2 = eq1[2].copy()
+        eq1_1.move_to(eq1[2][4:-1])
+        self.play(mh.transform(eq1[2][4:-1], eq1_1),
+                  (eq1[2][:4] + eq1[2][-1]).animate.set_opacity(0.5),
+                  run_time=1)
+        self.wait(0.1)
+        self.play(mh.transform(eq1[2], eq1_2), run_time=1)
+        self.wait(0.1)
+
+        eq2_1 = MathTex(str2, stroke_width=1.5, font_size=fs2)[0]
+        eq2_2 = eq2[2].copy()
+        eq2_1.move_to(eq2[2][4:-1])
+        self.play(mh.transform(eq2[2][4:-1], eq2_1),
+                  (eq2[2][:4] + eq2[2][-1]).animate.set_opacity(0.5),
+                  run_time=1)
+        self.wait(0.1)
+        self.play(mh.transform(eq2[2], eq2_2), run_time=1)
+        self.wait(0.1)
+
+        eq3 = MathTex(r'A=', r'\begin{pmatrix}'
+                             r'a_{11} & a_{12} & \cdots & a_{1n} \\'
+                             r'a_{21} & a_{22} & \cdots & a_{2n} \\'
+                             r'\vdots & \vdots & \ddots & \vdots \\'
+                             r'a_{n1} & a_{n2} & \cdots & a_{nn}'
+                             r'\end{pmatrix}', font_size=50).set_z_index(1)
+
+        eq3.next_to(eq2, DOWN, buff=0.1)
+        self.play(FadeIn(eq3), run_time=1.2)
+        self.wait(0.1)
+
+        color = ManimColor(WHITE.to_rgb() * 0.5)
+        buff = 0.07
+        opacity = 0.5
+        tl = eq3[1][5].get_corner(UL)
+        br = eq3[1][52].get_corner(UR)
+        len = np.linalg.norm(tl - br)
+        theta = math.acos((br-tl)[0] / len) + 2 * DEGREES
+        hgt = np.linalg.norm(eq3[1][50:53].get_corner(UR) - eq3[1][50:53].get_corner(DL))
+        rec1 = RoundedRectangle(width=len + 0.3, height=hgt - 0.1, stroke_opacity=0, fill_opacity=opacity,
+                                fill_color=color, corner_radius=0.4)
+        rec1.rotate(-theta).move_to(eq3[1][5:53])
+        self.play(FadeIn(rec1))
+        self.wait(0.1)
+
+
+        eq4 = MathTex(r'{\rm tr}(A)', r'=', r'a_{11} + a_{22} + \cdots + a_{nn}', font_size=fs1)
+        eq4.next_to(eq3, DOWN, buff=0.6)
+        eq3_1 = eq3[1].copy()
+        self.play(mh.rtransform(eq3_1[5:8], eq4[2][:3], eq3_1[20:23], eq4[2][4:7],
+                                eq3_1[35:38], eq4[2][8:11], eq3_1[50:53], eq4[2][12:15]),
+                  FadeIn(eq4[2][3], target_position=eq3_1[5:8] + eq3_1[20:23]),
+                  FadeIn(eq4[2][7], target_position=eq3_1[20:23] + eq3_1[35:38]),
+                  FadeIn(eq4[2][11], target_position=eq3_1[35:38] + eq3_1[50:53]),
+                  FadeIn(eq4[0], eq4[1]),
+                  run_time=2)
+        self.wait(0.1)
+        eq5 = MathTex(r'=', r'\langle u_1\vert A\vert u_1\rangle + \langle u_2\vert A\vert u_2\rangle'
+                            r'+ \cdots + \langle u_n\vert A\vert u_n\rangle', font_size=fs1)
+        eq4_1 = eq4.copy().move_to(eq3, coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], eq4_1[1]).next_to(eq4_1, DOWN, buff=0.3, coor_mask=UP)
+        VGroup(eq5, eq4_1).move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(FadeOut(eq3, rec1), mh.transform(eq4, eq4_1),
+                  FadeIn(eq5, shift=mh.diff(eq4[1], eq4_1[1])),
+                  run_time=1.5)
+
+        eq6 = Tex(r'(any orthonormal basis $u_1,u_2,\ldots,u_n$)').next_to(eq5, DOWN, buff=0.3)
+        self.wait(0.1)
+        self.play(FadeIn(eq6))
+        self.wait(0.1)
+        eq7 = MathTex(r'P_A(M)', r'=', r'P_B(M)', r'=', r'\frac12{\rm tr}(M)', r'=', r'\!\!\int\limits_{\lVert u\rVert=1}\!\!\!\langle u\vert M\vert u\rangle\,du', font_size=fs1)
+        mh.align_sub(eq7, eq7[1], VGroup(eq1[1], eq2[1]))
+
+        self.play(mh.rtransform(eq1[:2], eq7[:2], eq2[:2], eq7[2:4]),
+                  FadeOut(eq1[2], shift=mh.diff(eq1[1], eq7[1])),
+                  FadeOut(eq2[2], shift=mh.diff(eq2[1], eq7[3])),
+                  FadeIn(eq7[4], shift=mh.diff(eq2[1], eq7[3])),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq7[5:]), run_time=1.4)
+        self.wait(0.1)
+        eq8 = Tex(r'uniform measure', color=RED).next_to(eq7, DOWN, buff=0.2).to_edge(RIGHT)
+        arr1 = Arrow(eq8[0][-4].get_top(), eq7[6][-2:].get_bottom())
+        self.play(FadeIn(eq8, arr1))
+
+
+
+
+        self.wait()
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):

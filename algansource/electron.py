@@ -127,7 +127,7 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
     quality = HD
-    show_field = False
+    show_field = True
     bgcol = TRANSPARENT
     big = False
     sub_n=5
