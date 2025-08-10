@@ -1579,6 +1579,58 @@ class TraceState(Scene):
 
         self.wait()
 
+class Measurement(Pdefinition):
+    def construct(self):
+        MathTex.set_default(font_size=80)
+        eq1 = Tex(r'measurement outcomes (projections)', color=RED, font_size=60).set_z_index(1)
+        eq2 = MathTex(r'\pi_1,\pi_2,\ldots,\pi_n').set_z_index(1)
+        eq2.next_to(eq1, DOWN, buff=0.4)
+        eq3 = MathTex(r'\pi_1 + \pi_2 + \cdots + \pi_n', r'=1').set_z_index(1)
+        mh.align_sub(eq3, eq3[0][0], eq2[0][0]).move_to(ORIGIN, coor_mask=RIGHT)
+
+        eq4 = MathTex(r'P(\pi_1 + \pi_2 + \cdots + \pi_n)', r'=P(1)').set_z_index(1)
+        mh.align_sub(eq4, eq4[1][0], eq3[1][0]).move_to(ORIGIN, coor_mask=RIGHT)
+
+        eq5 = MathTex(r'P(\pi_1) + P(\pi_2) + \cdots + P(\pi_n)', r'=1').set_z_index(1)
+        mh.align_sub(eq5, eq5[1][0], eq3[1][0]).move_to(ORIGIN, coor_mask=RIGHT)
+
+        box1 = SurroundingRectangle(VGroup(eq1, eq2, eq3, eq4, eq5), fill_color=BLACK, stroke_opacity=0, fill_opacity=self.box_op, corner_radius=0.15)
+
+        VGroup(eq1, eq2, eq3, eq4, eq5, box1).move_to(ORIGIN).to_edge(DOWN, buff=0.15)
+        self.add(eq1, box1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2[0][:2]), run_time=0.8)
+        self.wait(0.1)
+        self.play(FadeIn(eq2[0][2:5]), run_time=0.8)
+        self.wait(0.1)
+        self.play(FadeIn(eq2[0][5:]), run_time=0.8)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[0][:2], eq3[0][:2], eq2[0][3:5], eq3[0][3:5], eq2[0][6:9], eq3[0][6:9],
+                                eq2[0][10:12], eq3[0][10:12]),
+                  mh.fade_replace(eq2[0][2], eq3[0][2]),
+                  mh.fade_replace(eq2[0][5], eq3[0][5]),
+                  mh.fade_replace(eq2[0][9], eq3[0][9]),
+                  FadeIn(eq3[1], shift=mh.diff(eq2[0][10:12], eq3[0][10:12]) * RIGHT),
+                  run_time=1.4
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[0][:], eq4[0][2:-1], eq3[1][0], eq4[1][0], eq3[1][1], eq4[1][3]),
+                  FadeIn(eq4[0][:2], shift=mh.diff(eq3[0][0], eq4[0][2])),
+                  FadeIn(eq4[0][-1], shift=mh.diff(eq3[0][-1], eq4[0][-2]) * RIGHT),
+                  FadeIn(eq4[1][1:3], eq4[1][-1], shift=mh.diff(eq3[1][1], eq4[1][3])),
+                  run_time=1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0][:4], eq5[0][:4], eq4[0][4], eq5[0][5], eq4[0][5:7], eq5[0][8:10],
+                                eq4[0][7], eq5[0][11], eq4[0][8:11], eq5[0][12:15], eq4[0][11], eq5[0][15],
+                                eq4[0][12:15], eq5[0][18:21], eq4[1][0], eq5[1][0], eq4[1][3], eq5[1][1]),
+                  FadeOut(eq4[1][1:3], eq4[1][-1], shift=mh.diff(eq4[1][3], eq5[1][1])),
+                  FadeIn(eq5[0][4], shift=mh.diff(eq4[0][3], eq5[0][3])),
+                  FadeIn(eq5[0][6:8], eq5[0][10], shift=mh.diff(eq4[0][5:7], eq5[0][8:10])),
+                  FadeIn(eq5[0][16:18], shift=mh.diff(eq4[0][12:15], eq5[0][18:21])),
+                  run_time=1.5)
+
+        self.wait()
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
         AliceState().render()
