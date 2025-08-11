@@ -26,7 +26,8 @@ def fade_replace(obj1: Mobject, obj2: Mobject, coor_mask=np.array([1, 1, 1]), **
     Fade out obj1 into obj2
     For when the objects differ so that ReplacementTransform doesn't work
     """
-    return FadeOut(obj1, target_position=obj2.get_center(), **kwargs), FadeIn(obj2, target_position=obj1.get_center(), **kwargs)
+    shift = diff(obj1, obj2) * coor_mask
+    return FadeOut(obj1, shift=shift, **kwargs), FadeIn(obj2, shift=shift, **kwargs)
 
 
 def stretch_replace(source: Mobject, target: Mobject, **kwargs):
