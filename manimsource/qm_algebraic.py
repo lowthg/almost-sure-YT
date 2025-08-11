@@ -1,3 +1,5 @@
+from turtledemo.chaos import coosys
+
 from manim import *
 import numpy as np
 import math
@@ -1750,7 +1752,188 @@ class Measurement2(Measurement):
 
         self.wait()
 
+class Star(Scene):
+    def construct(self):
+        eq1 = Tex(r'\underline{*-algebra $\mathcal A$}', color=RED, font_size=60)[0]
+        eq1[-1].set_color(WHITE)
+        eq1[-1].next_to(eq1[2], DOWN, buff=0.04, coor_mask=UP)
+        eq2 = Tex(r'$\mathcal A$ is a $\mathbb C$-vector space').next_to(eq1, DOWN, buff=0.4)
+        eq3 = Tex(r'a(bc)=a(bc)')
 
+        gp = VGroup(eq1, eq2).move_to(ORIGIN)
+
+        self.add(gp)
+
+class State(Pdefinition):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        Tex.set_default(font_size=60)
+        s = 0.4
+        eq1 = Tex(r'\underline{States on *-algebra $\mathcal A$}', color=RED)[0].set_z_index(1)
+        eq1[-1].set_color(WHITE)
+        eq1[-1].next_to(eq1[1], DOWN, buff=0.04, coor_mask=UP).set_z_index(0.5)
+        eq2 = Tex(r'$P\colon\mathcal A\to\mathbb C$').set_z_index(1).next_to(eq1, DOWN, buff=0.4*s)
+        eq2_2 = Tex(r'linearity: $P(\lambda A+\mu B)=\lambda P(A)+\mu P(B)$').set_z_index(1).next_to(eq2, DOWN, buff=0.4*s)
+        eq3 = Tex(r'total probability: $P(1)=1$').set_z_index(1).next_to(eq2_2, DOWN, buff=0.4*s)
+        eq4 = Tex(r'positivity: $P(A^*A)\ge0$').set_z_index(1).next_to(eq3, DOWN, buff=0.4*s)
+
+        gp = VGroup(eq1, eq2, eq2_2, eq3, eq4).move_to(ORIGIN)
+        box1 = SurroundingRectangle(gp, fill_color=BLACK, stroke_opacity=0, fill_opacity=self.box_op, corner_radius=0.15)
+
+        self.add(gp, box1)
+
+class Density1(Scene):
+    def construct(self):
+        fs1 =100
+        fs2 = 80
+        eq1 = MathTex(r'\Psi', font_size=200)
+        eq2 = MathTex(r'P(A)', r'=', r'\langle\Psi\vert A\vert\Psi\rangle', font_size=fs1)
+        eq2.next_to(eq1, DOWN, buff=0.4)
+        gp1 = VGroup(eq1.copy(), eq2).move_to(ORIGIN)
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(mh.transform(eq1, gp1[0]), FadeIn(eq2), run_time=1.4)
+        self.wait(0.1)
+        eq3 = MathTex(r'u_1,u_2,\ldots, u_n', font_size=fs1)
+        eq3.next_to(eq2, DOWN, buff=0.6)
+        gp2 = VGroup(eq2.copy(), eq3).move_to(ORIGIN)
+        self.play(FadeOut(eq1, shift=mh.diff(eq2, gp2[0])),
+                  mh.transform(eq2, gp2[0]),
+                  FadeIn(eq3),
+                  run_time=1.4)
+        self.wait(0.1)
+
+        eq4 = MathTex(r'\Psi', r'=', r'c_1u_1+c_2u_2+\cdots+c_nu_n', font_size=fs2)
+        eq4.next_to(eq3, DOWN, buff=0.5)
+        gp3 = VGroup(eq2.copy(), eq3.copy(), eq4).move_to(ORIGIN)
+        self.play(mh.transform(eq2, gp3[0], eq3, gp3[1]),
+                  FadeIn(eq4),
+                  run_time=1.4)
+        self.wait(0.1)
+
+        eq5 = MathTex(r'\Psi', r'=', r'\langle u_1\vert\Psi\rangle u_1+\langle u_2\vert\Psi\rangle u_2+',
+                                     r'\cdots+\langle u_n\vert\Psi\rangle u_n', font_size=fs2)
+        eq5[3].next_to(eq5[2], DOWN, buff=0.4).align_to(eq5[2], RIGHT)
+        mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP).move_to(ORIGIN, coor_mask=RIGHT)
+
+        self.play(mh.rtransform(eq4[:2], eq5[:2], eq4[2][2:5], eq5[2][6:9]),
+                  mh.fade_replace(eq4[2][:2], eq5[2][:6], coor_mask=RIGHT),
+                  eq4[2][5:10].animate.shift(mh.diff(eq4[2][5], eq5[2][9])),
+                  eq4[2][10:].animate.shift(mh.diff(eq4[2][10], eq5[3][0])),
+                  run_time=1.5)
+        self.play(mh.rtransform(eq4[2][7:10], eq5[2][15:18]),
+                  mh.fade_replace(eq4[2][5:7], eq5[2][9:15], coor_mask=RIGHT),
+                  run_time=1.5)
+        self.play(mh.rtransform(eq4[2][10:14], eq5[3][:4], eq4[2][16:18], eq5[3][10:12]),
+                  mh.fade_replace(eq4[2][14:16], eq5[3][4:10], coor_mask=RIGHT),
+                  run_time=1.5)
+        self.wait(0.1)
+
+        eq6 = MathTex(r'\Psi', r'=', r'\sum_j\langle u_j\vert\Psi\rangle u_j', font_size=fs2)
+        mh.align_sub(eq6, eq6[1], eq5[1]).move_to(ORIGIN, coor_mask=RIGHT)
+        gp4 = VGroup(eq6[2][4].copy(), eq6[2][9].copy(), eq6[2][4].copy(), eq6[2][9].copy())
+        self.play(mh.rtransform(eq5[:2], eq6[:2], eq5[2][:2], eq6[2][2:4], eq5[2][3:7], eq6[2][5:9]),
+                  mh.fade_replace(eq5[2][2], eq6[2][4]),
+                  mh.fade_replace(eq5[2][7], eq6[2][9]),
+                  mh.rtransform(eq5[2][9:11], eq6[2][2:4], eq5[2][12:16], eq6[2][5:9]),
+                  mh.fade_replace(eq5[2][11], gp4[0]),
+                  mh.fade_replace(eq5[2][16], gp4[1]),
+                  mh.rtransform(eq5[3][4:7], eq6[2][2:4], eq5[3][7:11], eq6[2][5:9]),
+                  mh.fade_replace(eq5[3][6], gp4[2]),
+                  mh.fade_replace(eq5[3][11], gp4[3]),
+                  FadeOut(eq5[2][8], eq5[2][17], eq5[3][:4]),
+                  FadeIn(eq6[2][:2]),
+                  run_time=1.8)
+        gp4.set_opacity(0)
+
+        #self.play(FadeIn(eq5), FadeOut(eq4))
+
+        self.wait()
+
+class Density(Scene):
+    def construct(self):
+        fs1 = 100
+        fs2 = 80
+        eq1 = MathTex(r'\Psi', font_size=200)
+        eq2 = MathTex(r'P(A)', r'=', r'\langle\Psi\vert A\vert\Psi\rangle', font_size=fs1)
+        eq2.next_to(eq1, DOWN, buff=0.4)
+        gp1 = VGroup(eq1.copy(), eq2).move_to(ORIGIN)
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(mh.transform(eq1, gp1[0]), FadeIn(eq2), run_time=1.4)
+        self.wait(0.1)
+        eq3 = MathTex(r'u_1,u_2,\ldots, u_n', font_size=fs1)
+        eq3.next_to(eq2, DOWN, buff=0.6)
+        gp2 = VGroup(eq2.copy(), eq3).move_to(ORIGIN)
+        self.play(FadeOut(eq1, shift=mh.diff(eq2, gp2[0])),
+                  mh.transform(eq2, gp2[0]),
+                  FadeIn(eq3),
+                  run_time=1.4)
+        self.wait(0.1)
+
+        eq4 = MathTex(r'P(A)', r'=', r'\langle\Psi\vert A\vert\Psi\rangle', font_size=fs2)
+        eq4.next_to(eq3, DOWN, buff=0.7)
+        gp3 = VGroup(eq2.copy(), eq3.copy(), eq4).move_to(ORIGIN)
+        self.play(mh.transform(eq2, gp3[0], eq3, gp3[1]),
+                  mh.rtransform(eq2.copy(), eq4),
+                  run_time=1.5)
+        self.wait(0.1)
+
+        eq5 = MathTex(r'P(A)', r'=', r'\langle\Psi\vert A\sum_k\vert u_k\rangle\langle u_k\vert\Psi\rangle', font_size=fs2)
+        mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
+        self.play(mh.rtransform(eq4[:2], eq5[:2], eq4[2][:4], eq5[2][:4], eq4[2][4:], eq5[2][-3:]),
+                  run_time=1.4)
+        self.play(FadeIn(eq5[2][4:-3]), rate_func=linear, run_time=1.4)
+
+        eq6 = mh.circle_eq(eq5[2][4:-2]).set_z_index(1)
+        eq7 = Tex(r'identity', font_size=60).set_z_index(2)
+        eq7.next_to(eq6, DR, buff=0).shift(UL*0.5)
+        self.play(Create(eq6), FadeIn(eq7), run_time=1)
+        self.wait(0.1)
+        eq8 = MathTex(r'P(A)', r'=', r'\sum_k\langle\Psi\vert A\vert u_k\rangle\langle u_k\vert\Psi\rangle', font_size=fs2)
+        mh.align_sub(eq8, eq8[1], eq5[1])
+        self.play(mh.rtransform(eq5[:2], eq8[:2], eq5[2][:4], eq8[2][2:6], eq5[2][4:6], eq8[2][:2],
+                                eq5[2][6:], eq8[2][6:]), FadeOut(eq6, eq7, rate_func=rush_into), run_time=1.2)
+        self.wait(0.1)
+        eq9 = MathTex(r'P(A)', r'=', r'\sum_k\langle u_k\vert\Psi\rangle\langle\Psi\vert A\vert u_k\rangle', font_size=fs2)
+        mh.align_sub(eq9, eq9[1], eq8[1])
+        self.play(mh.rtransform(eq8[:2], eq9[:2], eq8[2][:2], eq9[2][:2], eq8[2][2:10], eq9[2][8:16], eq8[2][10:16], eq9[2][2:8]),
+                  run_time=1.5)
+
+        self.wait(0.1)
+        eq10 = MathTex(r'\rho', r'=', r'\vert\Psi\rangle\langle\Psi\vert', font_size=fs2)
+        eq10.next_to(eq9, DOWN, buff=0.2)
+        mh.align_sub(eq10, eq10[2], eq9[2][5:11], coor_mask=RIGHT)
+        gp4 = VGroup(eq2.copy(), eq3.copy(), eq9.copy(), eq10).move_to(ORIGIN, coor_mask=UP)
+        self.play(mh.transform(eq2, gp4[0], eq3, gp4[1], eq9, gp4[2]),
+                  mh.rtransform(eq9[2][5:11].copy(), eq10[2][:]),
+                  FadeIn(eq10[:2]),
+                  run_time=2)
+        self.wait(0.1)
+        eq11 = MathTex(r'P(A)', r'=', r'\sum_k\langle u_k\vert\rho A\vert u_k\rangle', font_size=fs2)
+        mh.align_sub(eq11, eq11[1], eq9[1], coor_mask=UP)
+        eq11_1 = eq11[2][6].copy().move_to(eq9[2][6:11], coor_mask=RIGHT)
+        self.play(FadeOut(eq9[2][6:11]), mh.rtransform(eq10[0].copy(), eq11_1), run_time=1.3)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq9[:2], eq11[:2], eq9[2][:6], eq11[2][:6], eq11_1, eq11[2][6], eq9[2][11:], eq11[2][7:]),
+                  eq10.animate.move_to(ORIGIN, coor_mask=RIGHT),
+                  run_time=1.2)
+        self.wait(0.1)
+        eq12 = MathTex(r'P(A)', r'=', r'{\rm tr}(\rho A)', font_size=fs1)
+        mh.align_sub(eq12, eq12[1], eq11[1], coor_mask=UP)
+        self.play(FadeOut(eq11[2][:6], eq11[2][8:]),
+                  FadeIn(eq12[2][:3], eq12[2][-1]),
+                  run_time=1.8)
+        self.play(mh.rtransform(eq11[:2], eq12[:2], eq11[2][6:8], eq12[2][3:5]),
+                  run_time=1.2)
+        self.wait(0.1)
+        self.play(FadeOut(eq3), rate_func=linear)
+
+
+
+        # self.play(FadeIn(eq5), FadeOut(eq4))
+
+        self.wait()
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
