@@ -2087,7 +2087,8 @@ class Density(Scene):
         mh.align_sub(eq30, eq30[1][0], eq28[1][0], coor_mask=UP)
         eq30[0][:4].move_to(eq28[0][:10], coor_mask=RIGHT)
         eq30[0][4].move_to(eq28[0][10], coor_mask=RIGHT)
-        eq30[0][5:].move_to(eq28[0][11:], coor_mask=RIGHT)
+        # eq30[0][5:].move_to(eq28[0][11:], coor_mask=RIGHT)
+        mh.align_sub(eq30[0][5:] + eq30[1], eq30[0][5:], eq28[0][11:], coor_mask=RIGHT)
 
         self.play(mh.rtransform(eq28[0][1], eq30[0][0], eq28[0][3], eq30[0][2], eq28[0][7], eq30[0][1]),
                   mh.rtransform(eq28[0][6], eq30[0][0], eq28[0][8], eq30[0][2]),
@@ -2102,21 +2103,30 @@ class Density(Scene):
                   FadeOut(eq28[0][14], shift=mh.diff(eq28[0][15], eq30[0][8])),
                   FadeOut(eq28[0][20], shift=mh.diff(eq28[0][21], eq30[0][8])),
                   FadeIn(eq30[0][6], eq30[0][9], rate_func=rush_into),
+                  mh.rtransform(eq28[1], eq30[1]),
                   run_time=1.4)
 
         self.wait(0.1)
 
-        eq31 = MathTex(r'x^2+y^2+z^2', r'\le1', font_size=fs1)
+        eq31 = MathTex(r'-x^2+y^2+z^2', r'\le1', font_size=fs1)
+        eq31_1 = eq31[0][1:] + eq31[1]
+        mh.align_sub(eq31, eq31_1, ORIGIN)
+        eq31[0][0].set_opacity(0)
         mh.align_sub(eq31, eq31[1][0], eq28[1][0], coor_mask=UP)
-        self.play(mh.rtransform(eq30[0][2:4], eq31[:2]),
-                  FadeOut(eq30[0][1]),
+        self.play(mh.rtransform(eq30[0][2:4], eq31[0][1:3],
+                                eq30[0][5:7], eq31[0][4:6],
+                                eq30[0][8:10], eq31[0][7:9],
+                                eq30[0][1], eq31[0][0],
+                                eq30[0][0], eq31[1][1]),
+                  mh.fade_replace(eq30[0][4], eq31[0][3]),
+                  mh.fade_replace(eq30[0][7], eq31[0][6]),
+                  mh.fade_replace(eq30[1][0], eq31[1][0]),
+                  FadeOut(eq30[1][1], target_position=eq31[1][1]),
                   run_time=1.8)
-
-
-
-
-        # self.play(FadeIn(eq5), FadeOut(eq4))
-
+        self.wait(0.1)
+        self.play(LaggedStart(FadeOut(eq17, eq18, eq19, eq26),
+                  eq31_1.animate.move_to(ORIGIN).scale(1.2, scale_stroke=True), lag_ratio=0.3),
+                  run_time=2)
         self.wait()
 
 if __name__ == "__main__":
