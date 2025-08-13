@@ -2129,6 +2129,176 @@ class Density(Scene):
                   run_time=2)
         self.wait()
 
+def get_line(obj: Mobject):
+    return Line(obj.get_corner(DL), obj.get_corner(UR), stroke_color=RED, stroke_width=8).set_z_index(2)
+
+class DotProduct(Scene):
+    def construct(self):
+        fs1 = 120
+        fs2 = 70
+        fs3 = 60
+        eq1 = MathTex(r'{\rm tr}(\rho_1\rho_2)', font_size=fs1)[0]
+        eq2 = MathTex(r'\frac14\!\begin{pmatrix}'
+                             r'1+x_1 & y_1+iz_1 \\'
+                             r'y_1-iz_1 & 1-x_1\end{pmatrix}',
+                      r'\begin{pmatrix}'
+                      r'1+x_2 & y_2+iz_2 \\'
+                      r'y_2-iz_2 & 1-x_2\end{pmatrix}',
+                      font_size=fs2).set_z_index(1)
+        eq3 = MathTex(r'\frac14\begin{pmatrix}(1+x_1)(1+x_2) + (y_1+iz_1)(y_2-iz_2) \\'
+                      r'+(y_1-iz_1)(y_2+iz_2) + (1-x_1)(1-x_2)\end{pmatrix}', font_size=fs3)[0]
+        eq3[33:].shift(RIGHT*1.8)
+        eq3.move_to(ORIGIN).next_to(eq2, DOWN, buff=0.6)
+        self.add(eq1)
+        self.wait(0.5)
+        self.play(eq1.animate.to_edge(UP, buff=0.4), FadeIn(eq2), run_time=1.5)
+        gp1 = VGroup(eq2.copy(), eq3).move_to(ORIGIN)
+        self.wait(0.1)
+        self.play(mh.transform(eq2, gp1[0]), FadeIn(eq3[:4], eq3[-1]), run_time=1.4)
+        self.wait(0.1)
+        eq4 = MathTex(r'(1+x_1)', r'(1+x_2)', r'(y_1+iz_1)', r'(y_2-iz_2)',
+                      r'(y_1-iz_1)', r'(y_2+iz_2)', r'(1-x_1)', r'(1-x_2)', font_size=fs2).set_z_index(1)
+        for _ in eq4[:]: VGroup(_[-1], _[0]).set_opacity(0)
+        subeq = [eq2[0][4:8], eq2[1][1:5], eq2[0][8:14], eq2[1][11:17],
+                 eq2[0][14:20], eq2[1][5:11], eq2[0][20:24], eq2[1][17:21]]
+        for x,y in zip(eq4[:], subeq): mh.align_sub(x, x[1:-1], y)
+        color = ManimColor(WHITE.to_rgb() * 0.5)
+        buff = 0.07
+        opacity = 0.5
+        rec = [SurroundingRectangle(subeq[i] + subeq[j], stroke_opacity=0, fill_opacity=opacity, fill_color=color, buff=buff)
+               for i, j in ((0, 2), (1, 3), (4, 6), (5, 7))]
+
+        self.play(FadeIn(rec[0], rec[1]), run_time=1.5)
+
+        self.play(mh.rtransform(eq4[0], eq3[4:10], eq4[1], eq3[10:16],
+                                eq4[2], eq3[17:25], eq4[3], eq3[25:33]),
+                  FadeIn(eq3[16], rate_func=rush_into),
+                  run_time=2)
+        self.wait(0.1)
+        self.play(mh.rtransform(rec[0], rec[2], rec[1], rec[3]), run_time=1.5)
+        self.play(mh.rtransform(eq4[4], eq3[34:42], eq4[5], eq3[42:50],
+                                eq4[6], eq3[51:57], eq4[7], eq3[57:63]),
+                  FadeIn(eq3[33]),
+                  FadeIn(eq3[50], rate_func=rush_into),
+                  FadeOut(*rec[2:], rate_func=linear),
+                  run_time=2)
+
+        self.wait(0.1)
+        eq1_2 = MathTex(r'{\rm tr}(\rho_1\rho_2)=', font_size=fs1)[0].next_to(eq3, UP, coor_mask=UP, buff=0.7)
+        gp2 = VGroup(eq1_2, eq3.copy()).move_to(ORIGIN, coor_mask=UP).shift(UP*0.6)
+        self.play(FadeOut(eq2), mh.rtransform(eq1, eq1_2[:-1]),
+                  FadeIn(eq1_2[-1], shift=mh.diff(eq1[0][-1], eq1_2[-2])),
+                  mh.transform(eq3, gp2[1]),
+                  run_time=1.5)
+
+        eq5 = MathTex(r'1+x_1x_2+x_1+x_2 + (y_1+iz_1)(y_2-iz_2)', font_size=fs3)[0]
+        eq6 = MathTex(r'+(y_1-iz_1)(y_2+iz_2)+1+x_1x_2-x_1-x_2', font_size=fs3)[0]
+        mh.align_sub(eq5, eq5[0], eq3[5]).align_to(eq3[4], LEFT)
+        mh.align_sub(eq6, eq6[16], eq3[50]).align_to(eq3[62], RIGHT)
+        self.play(mh.rtransform(eq3[5:9], eq5[:4]),
+                  mh.rtransform(eq3[11:13], eq5[:2], eq3[13:15], eq5[4:6],
+                                eq3[6:9].copy(), eq5[6:9], eq3[12:15].copy(), eq5[9:12],
+                                eq3[16:33], eq5[12:]),
+                  FadeOut(eq3[4], eq3[9:11], eq3[15], rate_func=rush_from),
+                  run_time=1.5)
+        eq6_1 = eq6[19].copy()
+        self.play(mh.rtransform(eq3[54:56] + eq3[52], eq6[20:22] + eq6[18]),
+                  mh.rtransform(eq3[60:62], eq6[22:24], eq3[58], eq6[18],
+                                eq3[53:56].copy(), eq6[24:27], eq3[59:62].copy(), eq6[27:30],
+                                eq3[33:51], eq6[:18]),
+                  FadeOut(eq3[51], eq3[56:58], eq3[62], rate_func=rush_from),
+                  mh.fade_replace(eq3[53], eq6[19]),
+                  mh.fade_replace(eq3[59], eq6_1),
+                  run_time=1.5)
+        eq6_1.set_opacity(0)
+        line1 = get_line(eq5[6:12])
+        line2 = get_line(eq6[24:])
+        self.play(Create(line1), run_time=0.6)
+        self.play(Create(line2), run_time=0.6)
+        self.wait(0.1)
+        self.play(FadeOut(line1, line2, eq5[6:12], eq6[24:]))
+        self.wait(0.1)
+
+        eq7 = MathTex(r'1+x_1x_2+y_1y_2+z_1z_2-iy_1z_2+iz_1y_2', font_size=fs3)[0]
+        eq8 = MathTex(r'+y_1y_2+z_1z_2+iy_1z_2-iz_1y_2 + 1+x_1x_2', font_size=fs3)[0]
+        mh.align_sub(eq7, eq7[0], eq5[0])
+        #mh.align_sub(eq8, eq8[-6], eq6[-12]).align_to(eq6, RIGHT)
+        mh.align_sub(eq8, eq8[0], eq6[0])#.align_to(eq6, RIGHT)
+        self.play(mh.rtransform(eq5[12], eq7[6], eq5[14:16], eq7[7:9], eq5[22:24], eq7[9:11],
+                                eq5[16], eq7[11], eq5[18:20], eq7[12:14], eq5[26:28], eq7[14:16]),
+                  mh.rtransform(eq5[24:26], eq7[16:18], eq5[14:16].copy(), eq7[18:20],
+                                eq5[26:28].copy(), eq7[20:22], eq5[16].copy(), eq7[22],
+                                eq5[17], eq7[23], eq5[18:20].copy(), eq7[24:26],
+                                eq5[22:24].copy(), eq7[26:28], eq5[:6], eq7[:6]),
+                  FadeOut(eq5[13], eq5[20:22], eq5[28], rate_func=rush_from),
+                  run_time=1.8)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[17:24], eq8[-7:], eq6[0], eq8[0],
+                                eq6[2:4], eq8[1:3], eq6[10:12], eq8[3:5], eq6[6:8], eq8[6:8],
+                                eq6[14:16], eq8[8:10], eq6[12:14], eq8[10:12],
+                                eq6[2:4].copy(), eq8[12:14], eq6[14:16].copy(), eq8[14:16],
+                                eq6[4:6], eq8[16:18], eq6[6:8].copy(), eq8[18:20],
+                                eq6[10:12].copy(), eq8[20:22]),
+                  FadeOut(eq6[1], eq6[8:10], eq6[16], rate_func=rush_from),
+                  mh.fade_replace(eq6[4].copy(), eq8[5]),
+                  run_time=1.8)
+        self.wait(0.1)
+        line1 = get_line(eq7[-12:])
+        line2 = get_line(eq8[10:22])
+        self.play(Create(line1), run_time=0.6)
+        self.play(Create(line2), run_time=0.6)
+        self.wait(0.1)
+        self.play(FadeOut(line1, line2, eq7[-12:], eq8[10:22]))
+        self.wait(0.1)
+
+
+        eq9 = MathTex(r'+1+x_1x_2+y_1y_2+z_1z_2', font_size=fs3)[0]
+        mh.align_sub(eq9, eq9[0], eq8[0])
+        self.play(mh.rtransform(eq8[-7:], eq9[:7], eq8[:10], eq9[-10:]),
+                  run_time=1.8)
+        self.wait(0.1)
+
+        eq10 = MathTex(r'1+x_1x_2+y_1y_2+z_1z_2', font_size=fs2)[0]
+        eq11 = MathTex(r'\frac12', font_size=fs3)[0]
+        eq10.move_to(eq3[3:]).align_to(eq9[1], LEFT)
+        mh.align_sub(eq11, eq11[1], eq3[1])
+        self.play(mh.rtransform(eq9[1:], eq10), mh.rtransform(eq7[:16], eq10),
+                  mh.rtransform(eq3[:2], eq11[:2]),
+                  mh.fade_replace(eq3[2], eq11[2]),
+                  FadeOut(eq9[0]),
+                  run_time=1.5)
+        self.wait(0.1)
+        eq12 = MathTex(r'1+\begin{pmatrix}x_1 \\ y_1 \\ z_1\end{pmatrix}\cdot\begin{pmatrix}x_2 \\ y_2 \\ z_2\end{pmatrix}',
+                       font_size=fs2)[0]
+        eq12[12].scale(2)
+        mh.align_sub(eq12, eq12[0], eq10[0])
+        self.play(mh.rtransform(eq10[:2], eq12[:2], eq10[2:4], eq12[4:6], eq10[4:6], eq12[15:17],
+                                eq10[7:9], eq12[6:8], eq10[9:11], eq12[17:19], eq10[12:14], eq12[8:10],
+                                eq10[14:16], eq12[19:21]),
+                  FadeOut(eq10[6], eq10[11], rate_func=rush_from),
+                  FadeIn(eq12[2:4], eq12[10:15], eq12[-2:]),
+                  run_time=1.5)
+        self.wait(0.1)
+        eq13 = MathTex(r'{\rm tr}(\rho_1\rho_2)=', r'\frac12(1+\cos\theta)', font_size=90)
+        self.play(mh.rtransform(eq1_2, eq13[0], eq11, eq13[1][:3], eq12[:2], eq13[1][4:6]),
+                  mh.fade_replace(eq12[2:], eq13[1][6:10]),
+                  mh.stretch_replace(eq3[3], eq13[1][3]),
+                  mh.stretch_replace(eq3[-1], eq13[1][-1]),
+                  run_time=2)
+        self.wait(0.1)
+        eq14 = MathTex(r'{\rm tr}(\rho_1\rho_2)=', r'\cos^2\left(\frac\theta 2\right)', font_size=90)
+        mh.align_sub(eq14, eq14[0][-1], eq13[0][-1], coor_mask=UP)
+        self.play(mh.rtransform(eq13[0], eq14[0], eq13[1][6:9], eq14[1][:3], eq13[1][9], eq14[1][5]),
+                  FadeOut(eq13[1][:6]),
+                  FadeIn(eq14[1][3], shift=mh.diff(eq13[1][8], eq14[1][2])),
+                  FadeIn(eq14[1][4], rate_func=rush_into),
+                  mh.stretch_replace(eq13[1][-1], eq14[1][-1]),
+                  FadeIn(eq14[1][6:8], shift=mh.diff(eq13[1][9], eq14[1][5])*RIGHT),
+                  run_time=1.5)
+
+        self.wait()
+
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
         AliceState().render()
