@@ -5,14 +5,14 @@ import math
 from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
-
+from electron import create_electron
 from manim import Arrow3D, VGroup
 
 LD = RenderSettings((854, 480), 15)
 HD = RenderSettings((1920, 1080), 30)
 
-def create_sphere(r=1., simple_sphere=True):
-    min_op_s1 = 0.1  # opacity of outer sphere at center (minimum opacity)
+def create_sphere(r=1., simple_sphere=True, anim='', min_op_s1=0.1):
+    # min_op_s1 = 0.1  # opacity of outer sphere at center (minimum opacity)
     max_op_s2 = 0.6  # opacity of inner sphere at center (maximum opacity)
     base_op_s1 = 0.1  # additional opacity for surface
     interior_col = GREEN_C
@@ -26,7 +26,8 @@ def create_sphere(r=1., simple_sphere=True):
         s3.orbit_around_point(ORIGIN, 90, RIGHT)
         s3.orbit_around_point(ORIGIN, -7, UP)  # don't cover the center with a line
         s3.orbit_around_point(ORIGIN, 35, RIGHT)  # let's make the north pole point slightly towards us
-        s3.spawn()
+        if anim != 'inside':
+            s3.spawn()
 
     a = math.log(1 - min_op_s1) * r # min opacity = 1 - exp(a/r)
     b = math.log(1 - max_op_s2) / r  # max opacity = 1 - exp(b * r)
@@ -62,14 +63,17 @@ def create_sphere(r=1., simple_sphere=True):
         with Off():
             s1.smoothness = 0.6
             s1.metallicness = 0.4
-            s1.spawn()
-            s2.spawn()
+            if anim != 'inside':
+                s1.spawn()
+            if anim != 'surface':
+                s2.spawn()
 
     return s3, interior_col_update
 
 
-def bloch(r=1., simple_sphere=False, sphere_only=False):
-    sphere, col_update = create_sphere(r, simple_sphere)
+def bloch(r=1., simple_sphere=False, anim='sphere only'):
+    min_op_s1 = 0.99 if anim == 'opaque' else 0.1
+    sphere, col_update = create_sphere(r, simple_sphere, anim=anim, min_op_s1=min_op_s1)
     # c1 = Cylinder(radius=0.2, height=1)
 
     center_dot = Sphere(radius=r * 0.04)
@@ -90,7 +94,7 @@ def bloch(r=1., simple_sphere=False, sphere_only=False):
         Scene.add_light_source(PointLight(location=loc, color=Color("#444444"), opacity=0.5).spawn())
         # col_update(c1, color=WHITE)
 
-    if sphere_only:
+    if anim=='sphere only' or anim == 'surface' or anim == 'inside' or anim == 'opaque':
         Scene.wait(1/15)
         return 'Bloch_Sphere'
 
@@ -107,7 +111,33 @@ def bloch(r=1., simple_sphere=False, sphere_only=False):
     mn_forward = s_forward.numpy()[0,0,:]
     tilt = math.acos(mn_up[1]) / 2 / PI * 360
 
-    if True:
+    if anim == 'electron':
+        bloom = True
+        depth = 1
+        max_op_s2 = 0.6
+        interior_col = mn.GREEN_C
+        b = math.log(1 - max_op_s2)
+        inside_op = 1 - math.exp(depth * (b / 2))
+        new_white = mn.WHITE * (1 - inside_op) + interior_col * inside_op
+        new_yellow = mn.YELLOW * (1 - inside_op) + interior_col * inside_op
+        bare, field = create_electron(r*0.5, sub_n=5, bloom=bloom, colors=[new_white, new_yellow])
+        arr = bare[1]
+        dressed = Group(bare, field)
+        dressed.orbit_around_point(ORIGIN, 40, LEFT)
+        dressed.orbit_around_point(ORIGIN, 45, UP)
+        col_update(arr, color=WHITE)
+        with Off():
+            dressed.spawn()
+            #col_update(dressed, color=WHITE)
+
+        with Sync(run_time=2, rate_func=identity):
+            elec_up = -bare.get_forward_direction()
+            dressed.orbit_around_point(ORIGIN, 360, elec_up)
+
+        return 'bloch_electron'
+
+
+    if anim == 'arrow':
         ht = 0.85 * r
         ht2 = r - ht
         c1 = Cylinder(radius=0.03, height=ht).move(UP * ht/ 2)
@@ -133,18 +163,14 @@ def bloch(r=1., simple_sphere=False, sphere_only=False):
     print(s_right)
     print(s_forward)
 
-    equp = ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=32))
-    eqdn = ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=32))
-    eqrt = ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=32))
-    eqlt = ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=32))
-    eqft = ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=32))
-    eqbk = ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=32))
-    equp.move_to(s_up * r * 1.1)
-    eqdn.move_to(-s_up * r * 1.35)
-    eqrt.move_to(s_right * r * 1.25)
-    eqlt.move_to(-s_right * r * 1.2)
-    eqft.move_to(s_forward * r * 1.05)
-    eqbk.move_to(-s_forward * r * 1.05)
+    eqkets = Group(
+        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=32)).move_to(s_up * r * 1.1),
+        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=32)).move_to(-s_up * r * 1.35),
+        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=32)).move_to(s_right * r * 1.25),
+        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=32)).move_to(-s_right * r * 1.2),
+        ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=32)).move_to(s_forward * r * 1.05),
+        ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=32)).move_to(-s_forward * r * 1.05)
+    )
     axes = Group(
         ManimMob(mn.Line(ORIGIN, mn_forward * r * 0.99, stroke_width=1)),
         ManimMob(mn.Line(ORIGIN, -mn_forward * r * 0.99, stroke_width=1)),
@@ -155,25 +181,38 @@ def bloch(r=1., simple_sphere=False, sphere_only=False):
     )
     col_update(axes, color=WHITE)
 
-    with Sync():
-        center_dot.spawn()
-        equp.spawn()
-        eqdn.spawn()
-        eqrt.spawn()
-        eqlt.spawn()
-        eqft.spawn()
-        eqbk.spawn()
-        axes.spawn()
+    if anim == 'kets':
+        with Off():
+            center_dot.spawn()
+            eqkets.spawn()
+            axes.spawn()
+        Scene.wait(1/15)
+        return 'bloch_kets'
+
 
     return 'bloch'
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
-    quality = LD
+    quality = HD
     r = 2.
     bgcol = DARKER_GREY
+    bgcol = DARK_GREY
     simple_sphere = False
 
-    name = bloch(r, simple_sphere=simple_sphere)
-    render_to_file(name, render_settings=quality, background_color=bgcol)
+    anim='sphere only'
+    anim = 'surface'
+    anim = 'inside'
+    anim = 'kets'
+    anim = 'electron'
+    anim = 'opaque'
+
+    if anim == 'opaque':
+        bgcol = RED
+
+    kernel_size = int(93/0.4)
+    bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=10, scale_factor=6)
+
+    name = bloch(r, simple_sphere=simple_sphere, anim=anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol, post_processes=[bloom_new])

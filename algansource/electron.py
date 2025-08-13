@@ -1,7 +1,10 @@
 import numpy as np
+import torch
 from algan import *
 import manim as mn
 import math
+
+from algan.external_libraries.ground.core.angular.exact import orientation
 from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
 from functools import partial
 
@@ -25,19 +28,21 @@ dir_angle = {
 }
 
 # def generate_checkerboard
-def create_electron(r=1, bloom=True, sub_n=5) -> tuple[Mob, Mob]:
+def create_electron(r=1., bloom=True, sub_n=5, colors=None) -> tuple[Mob, Mob]:
+    if colors is None:
+        colors = [mn.WHITE, mn.YELLOW]
     r1 = r * 0.5
     r2 = r * 1.5
     r4 = r * 0.8
     r5 = r * 1.5
     r_max = 2.5 * r
-    s0 = mn.Sphere(radius=r1, stroke_opacity=1, resolution=[8 * sub_n, 4 * sub_n], checkerboard_colors=[mn.WHITE, mn.YELLOW])
+    s0 = mn.Sphere(radius=r1, stroke_opacity=1, resolution=[8 * sub_n, 4 * sub_n], checkerboard_colors=colors)
     for i, x in enumerate(s0.submobjects):
         k, j = divmod(i, 4 * sub_n)
         if (k // sub_n) % 2 == (j // sub_n) % 2:
-            x.set(color=mn.YELLOW)
+            x.set(color=colors[1])
         else:
-            x.set(color=mn.WHITE)
+            x.set(color=colors[0])
     s1 = ManimMob(s0)
     # s1_1 = Sphere(radius=r1, grid_height=20)
     # s1 = ImageMob('WorldMap.png').spawn()
@@ -46,8 +51,8 @@ def create_electron(r=1, bloom=True, sub_n=5) -> tuple[Mob, Mob]:
     ht = r * 0.7
     ht2 = r * 0.5
     c1 = Cylinder(radius=0.08 * r, height=ht).set(color=WHITE).move(UP*(ht/2+r1)).orbit_around_point(ORIGIN, 90, RIGHT)
-    cone = mn.Cone(base_radius=0.2 * r, height=ht2, show_base=True, resolution=[1,10], stroke_opacity=0,
-                   fill_color=mn.WHITE, direction=mn.IN).shift(mn.IN * (ht + ht2 + r1))
+    cone = mn.Cone(base_radius=0.2 * r, height=ht2, show_base=True, resolution=[1,10], stroke_opacity=1, stroke_width=0,
+                   fill_color=mn.WHITE, stroke_color=mn.WHITE, direction=mn.IN).shift(mn.IN * (ht + ht2 + r1))
     cone.submobjects = [obj for obj in cone.submobjects if type(obj) != mn.VectorizedPoint]
     arr1 = Group(c1, ManimMob(cone))
 
@@ -82,8 +87,8 @@ def create_electron(r=1, bloom=True, sub_n=5) -> tuple[Mob, Mob]:
 
     return Group(s1, arr1), Group(*efl, *fl)
 
-def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5):
-    bare, field = create_electron(r, sub_n=sub_n)
+def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5, direction=None, bloom=True, big=False):
+    bare, field = create_electron(r, sub_n=sub_n, bloom=bloom)
     dressed = Group(bare, field)
 
     if (start == DOWN).all() and (end == UP).all():
@@ -95,10 +100,22 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5):
         elif d_angle > 180:
             d_angle -= 360
 
-    th1 = 20 * PI / 180
-
     with Off():
-        dressed.orbit_around_point(ORIGIN, th1 * RADIANS, RIGHT)
+        if direction is None:
+            print('default direction')
+            th1 = 20 * PI / 180
+            dressed.orbit_around_point(ORIGIN, th1 * RADIANS, RIGHT)
+        else:
+            direction /= torch.norm(direction)
+            th1 = math.acos(direction[1].item())
+            print('theta1:', th1 * 180 / PI)
+            dressed.orbit_around_point(ORIGIN, th1 * RADIANS, UP)
+            norm2 = torch.norm(direction[::2])
+            if norm2 > 0.0001:
+                th2 = math.acos(direction[0].item() / norm2)
+                print('theta2:', th2 * 180 / PI)
+                dressed.orbit_around_point(ORIGIN, th2 * RADIANS, IN)
+
         elec_back = bare.get_upwards_direction()
         dressed.orbit_around_point(ORIGIN, dir_angle[start], elec_back)
         Scene.get_camera().set_euler_angles(90, 0, 0)
@@ -121,18 +138,10 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5):
     tag2 = 'B' if big else ''
     return 'electron{}{}{}{}'.format(tag2, tag, dir_str[start], dir_str[end])
 
-
-
-if __name__ == "__main__":
-    COMPUTING_DEFAULTS.render_device = torch.device('cpu')
-    COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
-    quality = HD
-    show_field = True
-    bgcol = TRANSPARENT
-    big = False
-    sub_n=5
-
-    r = 1. if big else 0.5
+def animate_electron(orient=(UP, UP), r=0., big=False, bgcol=BLACK, show_field=True, direction=None, name=None, sub_n=5,
+                     bloom=True):
+    if r == 0.:
+        r = 1. if big else 0.5
 
     kernel_size = int(93/0.4 * r)
     if bgcol.tolist()[-1] < 1:
@@ -142,11 +151,38 @@ if __name__ == "__main__":
     else:
         bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
 
-    # orient = [(UP, DOWN), (DOWN, UP), (UP, UP), (DOWN, DOWN)]
-    orient = [(UP, UP), (DOWN, DOWN), (UP, DOWN), (DOWN, UP)]
-    orient += [(LEFT, LEFT), (RIGHT, LEFT), (UP, RIGHT), (RIGHT, RIGHT)]
-
-    for start, end in orient:
-        name = electron(start, end, r=r, show_field=show_field, sub_n=5)
-        render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
+    start, end = orient
+    name2 = electron(start, end, r=r, show_field=show_field, sub_n=sub_n, bloom=bloom, direction=direction)
+    name = name2 if name is None else name
+    render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
         # render_to_file(name, render_settings=quality, background_color=TRANSPARENT, file_extension='mov')
+
+
+def random_electrons(r=1., show_field=True, sub_n=5, bloom=True, num=10, bgcol=BLACK, start=0):
+    np.random.seed(1)
+    for i in range(num):
+        direction = torch.tensor(np.random.normal(size=3), dtype=torch.get_default_dtype())
+        if i >= start:
+            name = 'electron{}'.format(i)
+            animate_electron(r=r, show_field=show_field, sub_n=sub_n, direction=direction, bloom=bloom, name=name,
+                             bgcol=bgcol)
+
+
+
+if __name__ == "__main__":
+    COMPUTING_DEFAULTS.render_device = torch.device('cpu')
+    COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
+    quality = HD
+    bgcol = TRANSPARENT
+
+    # orient = [(UP, DOWN), (DOWN, UP), (UP, UP), (DOWN, DOWN)]
+    # orient = [(UP, UP), (DOWN, DOWN), (UP, DOWN), (DOWN, UP)]
+    # orient += [(LEFT, LEFT), (RIGHT, LEFT), (UP, RIGHT), (RIGHT, RIGHT)]
+    if False:
+        orient = [(UP, UP)]
+        for _ in orient:
+            animate_electron(orient=_, big=False, bgcol=bgcol)
+    if True:
+        random_electrons(num=6, start=5, r=1., bgcol=bgcol)
+
+
