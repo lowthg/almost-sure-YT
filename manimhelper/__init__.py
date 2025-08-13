@@ -9,11 +9,11 @@ import math
 def pos(dir=ORIGIN):
     return RIGHT * config.frame_x_radius * dir[0] + UP * config.frame_y_radius * dir[1]
 
-def align_sub(source, subobject, target, direction=ORIGIN, **kwargs) -> Mobject:
+def align_sub(source, subobject, target, direction=ORIGIN, coor_mask=np.array([1, 1, 1]), **kwargs) -> Mobject:
     """
     move object to align subobject with target
     """
-    return source.next_to(target, direction, submobject_to_align=subobject, **kwargs)
+    return source.next_to(target, direction, submobject_to_align=subobject, coor_mask=coor_mask, **kwargs)
 
 def diff(source: Mobject, target: Mobject, coor_mask=UR):
     """
