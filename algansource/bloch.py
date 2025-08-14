@@ -86,6 +86,26 @@ def create_sphere(r=1., simple_sphere=True, anim='', min_op_s1=0.1):
 
     return s3, interior_col_update
 
+def anchor_pts(start=0., end=1., n=10):
+    pts = np.linspace(start, end, n)
+    anchors = []
+    for i in range(len(pts) - 1):
+        anchors += [pts[i], 0.67 * pts[i] + 0.33 * pts[i + 1], 0.33 * pts[i] + 0.67 * pts[i + 1], pts[i + 1]]
+    anchors2 = torch.tensor(anchors)
+    return anchors2
+
+
+def curve3d(f, start=0., end=1., npts=2, **kwargs):
+    anchors = anchor_pts(start=start, end=end, n=npts)
+    arc = BezierCircuitCubic(torch.cat([f(a) for a in anchors], -2),
+                             filled=False, border_width=4)
+    return arc
+
+def line3d(start, end, npts=6, **kwargs):
+    start = cast_to_tensor(start)
+    end = cast_to_tensor(end)
+    arc = curve3d(lambda a: start * (1-a) + a * end)
+    return arc
 
 def bloch(r=1., simple_sphere=False, anim='sphere only'):
     min_op_s1 = 0.1
@@ -157,17 +177,8 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             dir4 /= torch.norm(dir4)
             start = cast_to_tensor(dir1) * r * 1.02
             end = cast_to_tensor(-dir4) * r * 1.02
-            pts = np.linspace(0, PI/3, 10)
-            anchors = []
-            for i in range(len(pts)-1):
-                anchors += [pts[i], 0.67*pts[i]+0.33*pts[i+1], 0.33*pts[i] + 0.67*pts[i+1], pts[i+1]]
-            anchors2 = torch.tensor(anchors)
-            arc = BezierCircuitCubic(torch.cat([start * torch.cos(a) + torch.sin(a) * end for a in anchors2], -2),
-                                     filled=False, border_width=4)
-            arc2 = BezierCircuitCubic(torch.cat([start for a in anchors2], -2),
-                                     filled=False, border_width=4)
+            arc = curve3d(lambda a: start * torch.cos(a) + torch.sin(a) * end, 0., PI/3, 10)
             #arc.spawn()
-            # arc2.spawn()
 
         def updater(mob, t):
             print(t)
@@ -281,12 +292,12 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
     print(s_up)
     print(s_right)
     print(s_forward)
-    fs = 40
+    fs = 50
     eqkets = Group(
-        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=fs)).move_to(s_up * r * 1.1),
-        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=fs)).move_to(-s_up * r * 1.35),
-        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=fs)).move_to(s_right * r * 1.25),
-        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=fs)).move_to(-s_right * r * 1.2),
+        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=fs)).move_to(s_up * r * 1.2),
+        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=fs)).move_to(-s_up * r * 1.45),
+        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=fs)).move_to(s_right * r * 1.38),
+        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=fs)).move_to(-s_right * r * 1.32),
         ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=fs)).move_to(s_forward * r * 1.05),
         ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=fs)).move_to(-s_forward * r * 1.05)
     )
@@ -299,6 +310,89 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         ManimMob(mn.Line(ORIGIN, -mn_right * r * 0.99, stroke_width=1))
     )
     col_update(axes, color=WHITE)
+
+    if anim == 'AliceBob':
+        print('Alice and Bob')
+        dots = [Sphere(radius=r * 0.06) for _ in range(8)]
+        dots[0].move_to(s_up*r)
+        dots[3].move_to(-s_up*r)
+        dots[4].move_to(s_right*r)
+        dots[7].move_to(-s_right*r)
+        for dot in dots:
+            col_update(dot, color=WHITE)
+
+        with Off():
+            dots[0].spawn()
+            dots[3].spawn()
+            eqkets[0].spawn()
+            eqkets[1].spawn()
+            axes[2].spawn()
+            axes[3].spawn()
+            center_dot.spawn()
+
+        dt = 1.
+
+        with Sync(run_time=dt):
+            dots[0].become(dots[1])
+            dots[3].become(dots[2])
+        with Sync(run_time=dt):
+            dots[4].spawn()
+            dots[7].spawn()
+            axes[4].spawn()
+            axes[5].spawn()
+            eqkets[2].spawn()
+            eqkets[3].spawn()
+        with Sync(run_time=dt):
+            dots[4].become(dots[5])
+            dots[7].become(dots[6])
+        Scene.wait(0.1)
+        return 'bloch_ab'
+
+    if anim == 'mixed' or anim == 'mixed2':
+        dir1 = RIGHT + UP + OUT
+        dir1 /= torch.norm(dir1)
+        print(dir1)
+        pos1 = dir1 * r/2
+
+        dot1 = Sphere(radius=r * 0.06)
+        dots = [Sphere(radius=r*0.04) for _ in range(2)]
+        dots[0].move_to(dir1 * r)
+        dots[1].move_to(-dir1 * r)
+        dt = 1.
+        with Off():
+            dot1.move_to(pos1).spawn()
+            col_update(dot1, color=WHITE)
+            for dot in dots:
+                col_update(dot, color=WHITE)
+            center_dot.spawn()
+
+        if anim == 'mixed':
+            with Off():
+                lines = [line3d(pos1, dir1 * r), line3d(pos1, -dir1 * r),
+                         line3d(pos1, pos1), line3d(pos1, pos1)]
+                for line in lines:
+                    col_update(line, color=WHITE)
+                lines[2].spawn()
+                lines[3].spawn()
+
+            with Lag(0.5):
+                with Sync(run_time=dt):
+                    lines[2].become(lines[0])
+                    lines[3].become(lines[1])
+                with Sync(run_time=dt):
+                    dots[0].spawn()
+                    dots[1].spawn()
+
+            return 'bloch_mixed'
+
+        line1 = line3d(-dir1*r, dir1*r)
+        col_update(line1)
+
+        with Sync(run_time=dt):
+            line1.orbit_around_point(pos1, 90, OUT)
+
+        return 'bloch_mixed2'
+
 
     if anim == 'kets':
         with Off():
@@ -324,11 +418,13 @@ if __name__ == "__main__":
     anim = 'surface'
     anim = 'inside'
     anim = 'kets'
-    anim = 'electron'
-    anim = 'opaque'
-    anim = 'arrow'
-    anim = 'antipode'
-    anim = 'angle'
+    #anim = 'electron'
+    #anim = 'opaque'
+    #anim = 'arrow'
+    #anim = 'antipode'
+    #anim = 'angle'
+    anim = 'AliceBob'
+    anim = 'mixed'
 
     if anim == 'opaque':
         bgcol = BLACK
