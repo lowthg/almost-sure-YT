@@ -1,15 +1,31 @@
 import numpy as np
+import torch
 from algan import *
 import manim as mn
 import math
+
+from algan.external_libraries.manim import ArcBetweenPoints
 from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
-from electron import create_electron
+#from electron import create_electron
 from manim import Arrow3D, VGroup
 
 LD = RenderSettings((854, 480), 15)
 HD = RenderSettings((1920, 1080), 30)
+
+def arrow3D(body_length=1., tip_length=1., radius=0.03, tip_radius=0.1):
+    ht = body_length
+    ht2 = r - ht
+    c1 = Cylinder(radius=radius, height=ht).move(UP * ht / 2)
+    cone = mn.Cone(base_radius=tip_radius, height=ht2, show_base=True, resolution=[1, 10], stroke_opacity=1,
+                   stroke_color=mn.WHITE, stroke_width=0,
+                   fill_color=mn.WHITE, direction=mn.UP).shift(mn.UP * (ht + ht2))
+    cone.submobjects = [obj for obj in cone.submobjects if type(obj) != mn.VectorizedPoint]
+    #line = ManimMob(mn.Line(ORIGIN, UP*3, stroke_width=5, stroke_color=mn.RED))
+    arr1 = Group(c1, ManimMob(cone))
+    return arr1
+
 
 def create_sphere(r=1., simple_sphere=True, anim='', min_op_s1=0.1):
     # min_op_s1 = 0.1  # opacity of outer sphere at center (minimum opacity)
@@ -72,7 +88,9 @@ def create_sphere(r=1., simple_sphere=True, anim='', min_op_s1=0.1):
 
 
 def bloch(r=1., simple_sphere=False, anim='sphere only'):
-    min_op_s1 = 0.99 if anim == 'opaque' else 0.1
+    min_op_s1 = 0.1
+    if anim=='sphere only':
+        min_op_s1 = 0.99
     sphere, col_update = create_sphere(r, simple_sphere, anim=anim, min_op_s1=min_op_s1)
     # c1 = Cylinder(radius=0.2, height=1)
 
@@ -111,6 +129,91 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
     mn_forward = s_forward.numpy()[0,0,:]
     tilt = math.acos(mn_up[1]) / 2 / PI * 360
 
+    if anim == 'angle':
+        arr1 = arrow3D(body_length=0.8 * r, tip_length=0.2*r, tip_radius=0.15)
+        #arr1.orbit_around_point(ORIGIN, tilt, RIGHT)
+
+        with Off():
+            center_dot.spawn()
+            print(arr1[0].get_upwards_direction())
+            arr1.orbit_around_point(ORIGIN, 50, RIGHT)
+            print(arr1.get_upwards_direction())
+            arr1.orbit_around_point(ORIGIN, 45, UP) # line up with electron
+            dir1 = arr1.get_upwards_direction()[0][0]
+            dir1 /= torch.norm(dir1)
+            print(dir1)
+            print(torch.norm(dir1))
+            x, y, z = (dir1[i].item() for i in range(3))
+            dir2 = z * RIGHT + x * OUT
+            dir2 /= torch.norm(dir2)
+            col_update(arr1, color=WHITE)
+            arr2 = arr1.clone()
+            arr3 = arr1.clone()
+            arr1.spawn()
+            arr2.spawn()
+            arr3.orbit_around_point(ORIGIN, -60, dir2)
+            dir3 = arr3.get_upwards_direction()
+            dir4 = torch.cross(dir1, dir2, 0)
+            dir4 /= torch.norm(dir4)
+            start = cast_to_tensor(dir1) * r * 1.02
+            end = cast_to_tensor(-dir4) * r * 1.02
+            pts = np.linspace(0, PI/3, 10)
+            anchors = []
+            for i in range(len(pts)-1):
+                anchors += [pts[i], 0.67*pts[i]+0.33*pts[i+1], 0.33*pts[i] + 0.67*pts[i+1], pts[i+1]]
+            anchors2 = torch.tensor(anchors)
+            arc = BezierCircuitCubic(torch.cat([start * torch.cos(a) + torch.sin(a) * end for a in anchors2], -2),
+                                     filled=False, border_width=4)
+            arc2 = BezierCircuitCubic(torch.cat([start for a in anchors2], -2),
+                                     filled=False, border_width=4)
+            #arc.spawn()
+            # arc2.spawn()
+
+        def updater(mob, t):
+            print(t)
+        # arc.add_updater(updater)
+
+        with Sync(run_time=1, rate_func=rate_funcs.identity):
+            arr1.orbit_around_point(ORIGIN, -60, dir2)
+            arc.spawn()
+        Scene.wait(0.1)
+
+        return 'bloch_angle'
+
+
+    if anim == 'antipode':
+        depth = 1
+        max_op_s2 = 0.6
+        interior_col = GREEN_C
+        b = math.log(1 - max_op_s2)
+        inside_op = 1 - math.exp(depth * (b / 2))
+        new_white = WHITE * (1 - inside_op) + interior_col * inside_op
+        pt1 = RIGHT+UP+OUT*0.5
+        pt1 *= r / torch.norm(pt1)
+        print(pt1)
+        dot1 = Sphere(radius=r * 0.06).move_to(pt1)
+        dot2 = Sphere(radius=r * 0.06).move_to(-pt1)
+        line = Line(pt1*0.95, -pt1*0.95, color=new_white, border_width=4)
+        line1 = Line(pt1*0.95, pt1*0.95, color=new_white, border_width=5)
+#        line = ManimMob(mn.Line(pt1, -pt1, stroke_width=5))
+        # col_update(line, color=WHITE)
+        col_update(dot1, color=WHITE)
+        col_update(dot2, color=WHITE)
+        with Seq(run_time=1):
+            dot1.spawn()
+        with Off():
+            line1.spawn()
+        with Seq(run_time=2, rate_func=rate_funcs.identity):
+            with Lag(0.5):
+                with Sync():
+                    line1.become(line)
+                    center_dot.spawn()
+                dot2.spawn()
+            #center_dot.become(line)
+            #line.spawn()
+
+        return 'bloch_antipode'
+
     if anim == 'electron':
         bloom = True
         depth = 1
@@ -126,6 +229,7 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         dressed.orbit_around_point(ORIGIN, 40, LEFT)
         dressed.orbit_around_point(ORIGIN, 45, UP)
         col_update(arr, color=WHITE)
+        print(arr.get_upwards_direction())
         with Off():
             dressed.spawn()
             #col_update(dressed, color=WHITE)
@@ -138,38 +242,53 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 
 
     if anim == 'arrow':
-        ht = 0.85 * r
-        ht2 = r - ht
-        c1 = Cylinder(radius=0.03, height=ht).move(UP * ht/ 2)
-        cone = mn.Cone(base_radius=0.1, height=ht2, show_base=True, resolution=[1, 10], stroke_opacity=0,
-                       fill_color=mn.WHITE, direction=mn.UP).shift(mn.UP * (ht + ht2))
-        cone.submobjects = [obj for obj in cone.submobjects if type(obj) != mn.VectorizedPoint]
-        arr1 = Group(c1, ManimMob(cone))
-        arr1.orbit_around_point(ORIGIN, tilt, RIGHT)
+        arr1 = arrow3D(body_length=0.8 * r, tip_length=0.2*r, tip_radius=0.15)
+        #arr1.orbit_around_point(ORIGIN, tilt, RIGHT)
 
-
-        col_update(arr1, color=WHITE)
         with Off():
             arr1.spawn()
             center_dot.spawn()
+            print(arr1[0].get_upwards_direction())
+            arr1.orbit_around_point(ORIGIN, 50, RIGHT)
+            print(arr1.get_upwards_direction())
+            arr1.orbit_around_point(ORIGIN, 45, UP) # line up with electron
+            dir1 = arr1.get_upwards_direction()
+            print(dir1)
+            col_update(arr1, color=WHITE)
 
-        with Seq():
-            arr1.rotate_around_point(ORIGIN, 80, s_forward - s_right)
-            arr1.rotate_around_point(ORIGIN, 80, s_up)
+        dt = 1
+        n = 30
+
+        with Seq(rate_func=rate_funcs.identity):
+            #arr1.add_updater(col_update)
+            #arr1.rotate_around_point(ORIGIN, 80, s_forward - s_right)
+            with Seq(run_time=dt):
+                axis1 = OUT+dir1+RIGHT*0.2
+                axis1 /= torch.norm(axis1).item()
+                arr1.orbit_around_point(ORIGIN, -180, axis1)# + s_right + s_up)
+                dir2 = arr1.get_upwards_direction()
+                print(dir2)
+            with Seq(run_time=2*dt):
+                axis2 = 2 * torch.inner(dir1, dir2).item() * dir2 - dir1
+                axis2 /= torch.norm(axis2)
+                arr1.orbit_around_point(ORIGIN, 360, axis2)# + s_right + s_up)
+            with Seq(run_time=1*dt):
+                arr1.orbit_around_point(ORIGIN, -180, axis1)# + s_right + s_up)
+            Scene.wait(0.1)
 
         return 'Bloch_arrow'
 
     print(s_up)
     print(s_right)
     print(s_forward)
-
+    fs = 40
     eqkets = Group(
-        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=32)).move_to(s_up * r * 1.1),
-        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=32)).move_to(-s_up * r * 1.35),
-        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=32)).move_to(s_right * r * 1.25),
-        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=32)).move_to(-s_right * r * 1.2),
-        ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=32)).move_to(s_forward * r * 1.05),
-        ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=32)).move_to(-s_forward * r * 1.05)
+        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=fs)).move_to(s_up * r * 1.1),
+        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=fs)).move_to(-s_up * r * 1.35),
+        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=fs)).move_to(s_right * r * 1.25),
+        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=fs)).move_to(-s_right * r * 1.2),
+        ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=fs)).move_to(s_forward * r * 1.05),
+        ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=fs)).move_to(-s_forward * r * 1.05)
     )
     axes = Group(
         ManimMob(mn.Line(ORIGIN, mn_forward * r * 0.99, stroke_width=1)),
@@ -201,15 +320,18 @@ if __name__ == "__main__":
     bgcol = DARK_GREY
     simple_sphere = False
 
-    anim='sphere only'
+    anim = 'sphere only'
     anim = 'surface'
     anim = 'inside'
     anim = 'kets'
     anim = 'electron'
     anim = 'opaque'
+    anim = 'arrow'
+    anim = 'antipode'
+    anim = 'angle'
 
     if anim == 'opaque':
-        bgcol = RED
+        bgcol = BLACK
 
     kernel_size = int(93/0.4)
     bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=10, scale_factor=6)
