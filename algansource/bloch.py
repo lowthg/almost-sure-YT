@@ -14,6 +14,27 @@ from manim import Arrow3D, VGroup
 LD = RenderSettings((854, 480), 15)
 HD = RenderSettings((1920, 1080), 30)
 
+def rotation_matrix(axis, theta):
+    """
+    Return the rotation matrix associated with counterclockwise rotation about
+    the given axis by theta radians.
+    """
+    axis = np.asarray(axis)
+    axis = axis / math.sqrt(np.dot(axis, axis))
+    a = math.cos(theta / 2.0)
+    b, c, d = -axis * math.sin(theta / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+def rotate_vec(vec, angle=0., axis=OUT):
+    M = rotation_matrix(axis.numpy(), angle * PI / 180)
+    dir2 = torch.tensor(np.dot(M, vec.numpy()))
+    return dir2
+
+
 def arrow3D(body_length=1., tip_length=1., radius=0.03, tip_radius=0.1):
     ht = body_length
     ht2 = r - ht
@@ -94,11 +115,10 @@ def anchor_pts(start=0., end=1., n=10):
     anchors2 = torch.tensor(anchors)
     return anchors2
 
-
 def curve3d(f, start=0., end=1., npts=2, **kwargs):
     anchors = anchor_pts(start=start, end=end, n=npts)
     arc = BezierCircuitCubic(torch.cat([f(a) for a in anchors], -2),
-                             filled=False, border_width=4)
+                             filled=False, border_width=4, **kwargs)
     return arc
 
 def line3d(start, end, npts=6, **kwargs):
@@ -106,6 +126,12 @@ def line3d(start, end, npts=6, **kwargs):
     end = cast_to_tensor(end)
     arc = curve3d(lambda a: start * (1-a) + a * end)
     return arc
+
+def line3d_pts(start, end, npts=6):
+    start = cast_to_tensor(start)
+    end = cast_to_tensor(end)
+    anchors = anchor_pts(start=0., end=1., n=npts)
+    return torch.cat([start*(1-a) + a*end for a in anchors], -2)
 
 def bloch(r=1., simple_sphere=False, anim='sphere only'):
     min_op_s1 = 0.1
@@ -131,8 +157,11 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         loc[...,2] *= -1
         Scene.add_light_source(PointLight(location=loc, color=Color("#444444"), opacity=0.5).spawn())
         # col_update(c1, color=WHITE)
+        if anim == 'center':
+            center_dot.spawn()
 
-    if anim=='sphere only' or anim == 'surface' or anim == 'inside' or anim == 'opaque':
+
+    if anim=='sphere only' or anim == 'surface' or anim == 'inside' or anim == 'opaque' or anim == 'center':
         Scene.wait(1/15)
         return 'Bloch_Sphere'
 
@@ -358,7 +387,6 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         dots = [Sphere(radius=r*0.04) for _ in range(2)]
         dots[0].move_to(dir1 * r)
         dots[1].move_to(-dir1 * r)
-        dt = 1.
         with Off():
             dot1.move_to(pos1).spawn()
             col_update(dot1, color=WHITE)
@@ -367,6 +395,7 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             center_dot.spawn()
 
         if anim == 'mixed':
+            dt=1
             with Off():
                 lines = [line3d(pos1, dir1 * r), line3d(pos1, -dir1 * r),
                          line3d(pos1, pos1), line3d(pos1, pos1)]
@@ -385,13 +414,59 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 
             return 'bloch_mixed'
 
-        line1 = line3d(-dir1*r, dir1*r)
-        col_update(line1)
+        line1 = line3d(-dir1*r, dir1*r, npts=5)
+        col_update(line1, color=WHITE)
+        col_update(dots[1], color=WHITE)
+        col_update(dots[1], color=WHITE)
 
-        with Sync(run_time=dt):
-            line1.orbit_around_point(pos1, 90, OUT)
+        dt = 0.3
+        n = 5
+        line2 = line1.clone()
+        with Off():
+            dots[0].spawn()
+            dots[1].spawn()
+            line2.spawn()
 
-        return 'bloch_mixed2'
+        def move_to(line: BezierCircuitCubic, dots, pos1, dir2, dt, anim=Sync):
+            c = torch.inner(pos1, pos1).item() - r*r
+            b = 2*torch.inner(pos1, dir2).item()
+            a = torch.inner(dir2, dir2).item()
+            x = (-b - math.sqrt(b*b-4*a*c))/(2*a)
+            y = (-b + math.sqrt(b*b-4*a*c))/(2*a)
+            pos = (pos1 + x*dir2, pos1 + y*dir2)
+            #line4 = line3d(*pos)
+            pts = line3d_pts(*pos, npts=5)
+            with anim(run_time=dt, rate_func=rate_funcs.identity):
+                #line1.orbit_around_point(pos1, -90, IN)
+                #line.become(line4)
+                line.control_points.location = pts
+                dots[0].move_to(pos[0])
+                dots[1].move_to(pos[1])
+                col_update(dots[0])
+                col_update(dots[1])
+                col_update(line2, color=WHITE)
+            return line
+
+        if anim == 'mixed2':
+            for i in range(n):
+                theta = 90 * (i+1) / n
+                dir2 = rotate_vec(dir1, theta, OUT)
+                line2 = move_to(line2, dots, pos1, dir2, dt/n)
+            Scene.wait(0.1)
+            return 'bloch_mixed2'
+
+        dir2 = rotate_vec(dir1, 90, OUT)
+        line2 = move_to(line2, dots, pos1, dir2, 1., anim=Off)
+
+        for i in range(n):
+            theta = 180 * (i+1) / n
+            dir3 = rotate_vec(dir2, theta, dir1)
+            line2 = move_to(line2, dots, pos1, dir3, dt/n)
+        Scene.wait(0.1)
+
+            #print(dir1/torch.norm(dir1), dir2)
+
+        return 'bloch_mixed3'
 
 
     if anim == 'kets':
@@ -408,11 +483,11 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
-    quality = HD
+    quality = LD
     r = 2.
     bgcol = DARKER_GREY
     bgcol = DARK_GREY
-    simple_sphere = False
+    simple_sphere = True
 
     anim = 'sphere only'
     anim = 'surface'
@@ -425,6 +500,7 @@ if __name__ == "__main__":
     #anim = 'angle'
     anim = 'AliceBob'
     anim = 'mixed'
+    anim = 'mixed2'
 
     if anim == 'opaque':
         bgcol = BLACK
