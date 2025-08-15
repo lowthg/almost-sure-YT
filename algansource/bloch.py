@@ -115,10 +115,10 @@ def anchor_pts(start=0., end=1., n=10):
     anchors2 = torch.tensor(anchors)
     return anchors2
 
-def curve3d(f, start=0., end=1., npts=2, **kwargs):
+def curve3d(f, start=0., end=1., npts=2, border_width=4., **kwargs):
     anchors = anchor_pts(start=start, end=end, n=npts)
     arc = BezierCircuitCubic(torch.cat([f(a) for a in anchors], -2),
-                             filled=False, border_width=4, **kwargs)
+                             filled=False, border_width=border_width, **kwargs)
     return arc
 
 def line3d(start, end, npts=6, **kwargs):
@@ -133,10 +133,7 @@ def line3d_pts(start, end, npts=6):
     anchors = anchor_pts(start=0., end=1., n=npts)
     return torch.cat([start*(1-a) + a*end for a in anchors], -2)
 
-def bloch(r=1., simple_sphere=False, anim='sphere only'):
-    min_op_s1 = 0.1
-    if anim=='sphere only':
-        min_op_s1 = 0.99
+def create_bloch(r=1., simple_sphere=False, min_op_s1=0.1):
     sphere, col_update = create_sphere(r, simple_sphere, anim=anim, min_op_s1=min_op_s1)
     # c1 = Cylinder(radius=0.2, height=1)
 
@@ -157,9 +154,25 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         loc[...,2] *= -1
         Scene.add_light_source(PointLight(location=loc, color=Color("#444444"), opacity=0.5).spawn())
         # col_update(c1, color=WHITE)
-        if anim == 'center':
-            center_dot.spawn()
 
+    s_up = sphere.get_forward_direction()
+    s_right = sphere.get_right_direction()
+    s_forward = sphere.get_upwards_direction()
+
+    return sphere, col_update, center_dot, s_up, s_right, s_forward
+
+def bloch(r=1., simple_sphere=False, anim='sphere only'):
+    if anim == 'project':
+        return projection(r, simple_sphere=simple_sphere)
+
+    min_op_s1 = 0.1
+    if anim=='sphere only':
+        min_op_s1 = 0.99
+    sphere, col_update, center_dot, s_up, s_right, s_forward = create_bloch(r=r, simple_sphere=simple_sphere, min_op_s1=min_op_s1)
+    if anim == 'center':
+        with Off():
+            center_dot.spawn()
+        return 'bloch_center'
 
     if anim=='sphere only' or anim == 'surface' or anim == 'inside' or anim == 'opaque' or anim == 'center':
         Scene.wait(1/15)
@@ -170,9 +183,6 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
     # with Sync(run_time=3, rate_func=rate_funcs.identity):
         # c1.move(OUT*6)
 
-    s_up = sphere.get_forward_direction()
-    s_right = sphere.get_right_direction()
-    s_forward = sphere.get_upwards_direction()
     mn_up = s_up.numpy()[0,0,:]
     mn_right = s_right.numpy()[0,0,:]
     mn_forward = s_forward.numpy()[0,0,:]
@@ -377,7 +387,7 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         Scene.wait(0.1)
         return 'bloch_ab'
 
-    if anim == 'mixed' or anim == 'mixed2':
+    if anim == 'mixed' or anim == 'mixed2' or anim == 'mixed3' or anim == 'mixed4':
         dir1 = RIGHT + UP + OUT
         dir1 /= torch.norm(dir1)
         print(dir1)
@@ -422,12 +432,13 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         dt = 2
         n = 60
         line2 = line1.clone()
-        with Off():
-            dots[0].spawn()
-            dots[1].spawn()
-            line2.spawn()
+        if anim == 'mixed2' or anim == 'mixed3':
+            with Off():
+                dots[0].spawn()
+                dots[1].spawn()
+                line2.spawn()
 
-        def move_to(line: BezierCircuitCubic, dots, pos1, dir2, dt, anim=Sync):
+        def move_to(line: BezierCircuitCubic, dots, pos1, dir2, dt, anim=True):
             c = torch.inner(pos1, pos1).item() - r*r
             b = 2*torch.inner(pos1, dir2).item()
             a = torch.inner(dir2, dir2).item()
@@ -435,7 +446,7 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             y = (-b + math.sqrt(b*b-4*a*c))/(2*a)
             pos = (pos1 + x*dir2, pos1 + y*dir2)
             line4 = line3d(*pos, add_to_scene=False)
-            with anim(run_time=dt, rate_func=rate_funcs.identity):
+            with Sync(run_time=dt, rate_func=rate_funcs.identity) if anim else Off():
                 line.control_points.location = line4.control_points.location
                 dots[0].move_to(pos[0])
                 dots[1].move_to(pos[1])
@@ -452,18 +463,57 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             Scene.wait(0.1)
             return 'bloch_mixed2'
 
-        dir2 = rotate_vec(dir1, 90, OUT)
-        line2 = move_to(line2, dots, pos1, dir2, 1., anim=Off)
+        with Off():
+            dir2 = rotate_vec(dir1, 90, OUT)
+            line2 = move_to(line2, dots, pos1, dir2, 1., anim=False)
+            dir3 = torch.cross(dir2, dir1, 0)
+            dir3 /= torch.norm(dir3)
+            dir3 = -rotate_vec(dir3, 90, dir2)
 
-        for i in range(n):
-            theta = 180 * (i+1) / n
-            dir3 = rotate_vec(dir2, theta, dir1)
-            line2 = move_to(line2, dots, pos1, dir3, dt/n)
-        Scene.wait(0.1)
+        if anim == 'mixed3':
+            for i in range(n):
+                theta = 180 * (i+1) / n
+                dir4 = rotate_vec(dir2, theta, dir3)
+                line2 = move_to(line2, dots, pos1, dir4, dt/n)
+            Scene.wait(0.1)
 
-            #print(dir1/torch.norm(dir1), dir2)
+            return 'bloch_mixed3'
 
-        return 'bloch_mixed3'
+        dir4 = torch.cross(dir2, dir3, 0)
+
+        up = cast_to_tensor(dir2)
+        right = cast_to_tensor(dir4)
+        b = 2 * torch.inner(pos1, dir2).item()
+        a = torch.inner(dir2, dir2).item()
+        x = (-b) / (2 * a)
+        pos2 = pos1 + x * dir2
+        r2 = math.sqrt(r*r - torch.inner(pos2, pos2).item())
+
+        arc = curve3d(lambda a: (up * torch.cos(a) + torch.sin(a) * right) * r2*1.03 + pos2, start=0., end=2*PI, npts=40,
+                      border_width=10)
+
+
+        circ = ManimMob(mn.Circle(radius=r2*0.99, fill_opacity=0.7, stroke_opacity=0, fill_color=mn.GREY,
+                                  stroke_width=0)).move_to(pos2)
+
+        rot_dir = torch.cross(IN, dir3, dim=0)
+        nm = torch.norm(rot_dir)
+        theta = math.asin(nm) * 180 / PI
+        rot_dir /= nm
+        circ.orbit_around_point(pos2, theta, rot_dir)
+
+#        col_update(arc, color=WHITE)
+        col = WHITE
+        col.set_opacity(1)
+#        col_update(circ, color=GREY)
+        circ.set_opacity_via_color(0.7)
+
+
+        with Off():
+            arc.spawn()
+            circ.spawn()
+
+        return 'bloch_mixed4'
 
 
     if anim == 'kets':
@@ -477,12 +527,62 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 
     return 'bloch'
 
+def projection(r=1., simple_sphere=False):
+    sphere, col_update, center_dot, s_up, s_right, s_forward = create_bloch(r=r, simple_sphere=simple_sphere)
+
+    dir1 = RIGHT + UP + OUT
+    dir1 /= torch.norm(dir1)
+    dir2 = s_up
+    pos1 = dir1 * r / 2
+
+    pos2 = torch.inner(pos1, dir2) * dir2
+
+
+    dot1 = Sphere(radius=r * 0.06)
+    dots = [Sphere(radius=r * 0.04).move_to(pos2) for _ in range(4)]
+    dots[0].move_to(dir2 * r)
+    dots[1].move_to(-dir2 * r)
+
+    line1 = line3d(-dir2 * r, dir2 * r)
+    line2 = line3d(pos1, pos2, border_width=1.)
+
+
+    with Off():
+        center_dot.spawn()
+        dot2 = dot1.clone().move_to(pos2)
+        dot1.move_to(pos1).spawn()
+        col_update(dot1, color=WHITE)
+        col_update(dot2, color=WHITE)
+        col_update(line1, color=WHITE)
+        col_update(line2, color=WHITE)
+        for dot in dots:
+            col_update(dot, color=WHITE)
+
+    with Seq(run_time=1.):
+        line1.spawn()
+    with Sync(run_time=1.):
+        for dot in dots[:2]:
+            dot.spawn()
+    with Sync(run_time=1.):
+        line2.spawn()
+        dots[0].become(dots[2])
+        dots[1].become(dots[3])
+    with Sync(run_time=0.6):
+        dot1.become(dot2)
+        line2.set_opacity_via_color(0)
+    with Sync(run_time=0.5):
+        line1.set_opacity_via_color(0)
+
+    Scene.wait(0.1)
+
+    return 'bloch_project'
+
+
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
     quality = HD
     r = 2.
-    bgcol = DARKER_GREY
     bgcol = DARK_GREY
     simple_sphere = False
 
@@ -498,6 +598,9 @@ if __name__ == "__main__":
     anim = 'AliceBob'
     anim = 'mixed'
     anim = 'mixed2'
+    anim = 'mixed3'
+    anim = 'mixed4'
+    anim = 'project'
 
     if anim == 'opaque':
         bgcol = BLACK
