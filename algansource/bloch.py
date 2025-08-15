@@ -5,7 +5,7 @@ import manim as mn
 import math
 
 from algan.external_libraries.manim import ArcBetweenPoints
-from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
+from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
 #from electron import create_electron
@@ -419,8 +419,8 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         col_update(dots[1], color=WHITE)
         col_update(dots[1], color=WHITE)
 
-        dt = 0.3
-        n = 5
+        dt = 2
+        n = 60
         line2 = line1.clone()
         with Off():
             dots[0].spawn()
@@ -434,17 +434,14 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             x = (-b - math.sqrt(b*b-4*a*c))/(2*a)
             y = (-b + math.sqrt(b*b-4*a*c))/(2*a)
             pos = (pos1 + x*dir2, pos1 + y*dir2)
-            #line4 = line3d(*pos)
-            pts = line3d_pts(*pos, npts=5)
+            line4 = line3d(*pos, add_to_scene=False)
             with anim(run_time=dt, rate_func=rate_funcs.identity):
-                #line1.orbit_around_point(pos1, -90, IN)
-                #line.become(line4)
-                line.control_points.location = pts
+                line.control_points.location = line4.control_points.location
                 dots[0].move_to(pos[0])
                 dots[1].move_to(pos[1])
                 col_update(dots[0])
                 col_update(dots[1])
-                col_update(line2, color=WHITE)
+                col_update(line, color=WHITE)
             return line
 
         if anim == 'mixed2':
@@ -483,11 +480,11 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
-    quality = LD
+    quality = HD
     r = 2.
     bgcol = DARKER_GREY
     bgcol = DARK_GREY
-    simple_sphere = True
+    simple_sphere = False
 
     anim = 'sphere only'
     anim = 'surface'
