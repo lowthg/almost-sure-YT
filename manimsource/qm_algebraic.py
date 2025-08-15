@@ -2298,6 +2298,13 @@ class DotProduct(Scene):
 
         self.wait()
 
+class Phi(Scene):
+    def construct(self):
+        self.add(MathTex(r'\Phi', font_size=50))
+
+class Psi(Scene):
+    def construct(self):
+        self.add(MathTex(r'\Psi', font_size=50))
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):

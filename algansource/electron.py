@@ -5,7 +5,7 @@ import manim as mn
 import math
 
 from algan.external_libraries.ground.core.angular.exact import orientation
-from algan.rendering.post_processing import bloom_filter, bloom_filter_premultiply
+from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
 from functools import partial
 
 from manim import Arrow3D, VGroup
