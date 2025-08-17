@@ -72,7 +72,8 @@ def create_electron(r=1., bloom=True, sub_n=5, colors=None) -> tuple[Mob, Mob]:
         fl += [arc.clone().orbit_around_point(ORIGIN, (2*PI*i/n + dth) * RADIANS, OUT) for i in range(n)]
 
     th1 = 90 - math.atan(2)*180/PI
-    line = ManimMob(mn.Line(start=r1 * RIGHT, end=r_max * RIGHT, stroke_color=mn.PURE_RED, stroke_width=sw))
+#    line = ManimMob(mn.Line(start=r1 * RIGHT, end=r_max * RIGHT, stroke_color=mn.PURE_RED, stroke_width=sw))
+    line = Line(start=r1*RIGHT, end=r_max*RIGHT, color=PURE_RED, border_width=sw*0.5, texture_grid_size=10)
     for m in range(n*2):
         th2 = (m) * 180 / n
         th3 = th1 if m % 2 == 0 else -th1
