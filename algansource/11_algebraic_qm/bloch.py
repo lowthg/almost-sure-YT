@@ -8,7 +8,7 @@ from algan.external_libraries.manim import ArcBetweenPoints
 from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
-#from electron import create_electron
+from electron import create_electron
 from manim import Arrow3D, VGroup
 
 LD = RenderSettings((854, 480), 15)
@@ -112,6 +112,7 @@ def anchor_pts(start=0., end=1., n=10):
     anchors = []
     for i in range(len(pts) - 1):
         anchors += [pts[i], 0.67 * pts[i] + 0.33 * pts[i + 1], 0.33 * pts[i] + 0.67 * pts[i + 1], pts[i + 1]]
+    anchors += anchors[::-1]
     anchors2 = torch.tensor(anchors)
     return anchors2
 
@@ -132,6 +133,13 @@ def line3d_pts(start, end, npts=6):
     end = cast_to_tensor(end)
     anchors = anchor_pts(start=0., end=1., n=npts)
     return torch.cat([start*(1-a) + a*end for a in anchors], -2)
+
+def line_group(start=ORIGIN, end=ORIGIN, nsegments=15, **kwargs):
+    #pts = [0., 0.1, 0.25, 0.4, 0.6, 0.75, 0.9, 1.]
+    pts = np.linspace(0., 1., nsegments+1)
+    dx = end - start
+    return Group(*[Line(start + dx * pts[i], start + dx * pts[i+1], **kwargs) for i in range(nsegments)])
+
 
 def create_bloch(r=1., simple_sphere=False, min_op_s1=0.1):
     sphere, col_update = create_sphere(r, simple_sphere, anim=anim, min_op_s1=min_op_s1)
@@ -158,24 +166,33 @@ def create_bloch(r=1., simple_sphere=False, min_op_s1=0.1):
     s_up = sphere.get_forward_direction()
     s_right = sphere.get_right_direction()
     s_forward = sphere.get_upwards_direction()
+    fs = 50
+    eqkets = Group(
+        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=fs)).move_to(s_up * r * 1.2),
+        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=fs)).move_to(-s_up * r * 1.45),
+        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=fs)).move_to(s_right * r * 1.38),
+        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=fs)).move_to(-s_right * r * 1.32),
+        ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=fs)).move_to(s_forward * r * 1.05),
+        ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=fs)).move_to(-s_forward * r * 1.05)
+    )
 
-    return sphere, col_update, center_dot, s_up, s_right, s_forward
+    return sphere, col_update, center_dot, s_up, s_right, s_forward, eqkets
 
 def bloch(r=1., simple_sphere=False, anim='sphere only'):
     if anim == 'project':
         return projection(r, simple_sphere=simple_sphere)
 
     min_op_s1 = 0.1
-    if anim=='sphere only':
-        min_op_s1 = 0.99
-    sphere, col_update, center_dot, s_up, s_right, s_forward = create_bloch(r=r, simple_sphere=simple_sphere, min_op_s1=min_op_s1)
-    if anim == 'center':
+    #if anim=='sphere only':
+        #min_op_s1 = 0.99
+    sphere, col_update, center_dot, s_up, s_right, s_forward, eqkets = create_bloch(r=r, simple_sphere=simple_sphere, min_op_s1=min_op_s1)
+    if anim == 'center' or anim == 'center_big':
         with Off():
-            center_dot.spawn()
-        return 'bloch_center'
+            center_dot.scale(8).spawn()
+        return 'bloch_' + anim
 
     if anim=='sphere only' or anim == 'surface' or anim == 'inside' or anim == 'opaque' or anim == 'center':
-        Scene.wait(1/15)
+        #Scene.wait(1/15)
         return 'Bloch_Sphere'
 
     # c1.add_updater(col_update)
@@ -211,21 +228,33 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
             arr1.spawn()
             arr2.spawn()
             arr3.orbit_around_point(ORIGIN, -60, dir2)
-            dir3 = arr3.get_upwards_direction()
             dir4 = torch.cross(dir1, dir2, 0)
             dir4 /= torch.norm(dir4)
             start = cast_to_tensor(dir1) * r * 1.02
             end = cast_to_tensor(-dir4) * r * 1.02
-            arc = curve3d(lambda a: start * torch.cos(a) + torch.sin(a) * end, 0., PI/3, 10)
-            #arc.spawn()
 
         def updater(mob, t):
             print(t)
         # arc.add_updater(updater)
 
-        with Sync(run_time=1, rate_func=rate_funcs.identity):
+        n = 30
+        with Sync(run_time=1., rate_func=rate_funcs.identity):
             arr1.orbit_around_point(ORIGIN, -60, dir2)
-            arc.spawn()
+            with Seq():
+                for i in range(n):
+                    theta = PI/3 * (i+1)/n
+                    arc2 = curve3d(lambda a: start * torch.cos(a) + torch.sin(a) * end, 0., theta, 10, add_to_scene=False)
+                    with Sync(run_time=1/n, rate_func=rate_funcs.identity):
+                        if i > 0:
+                            arc.control_points.location = arc2.control_points.location
+                        else:
+                            arc = arc2.clone(add_to_scene=True).spawn()
+
+        #arc = curve3d(lambda a: start * torch.cos(a) + torch.sin(a) * end, 0., 0., 10)
+        #arc.spawn()
+        #with Sync(run_time=1, rate_func=rate_funcs.identity):
+        #    arr1.orbit_around_point(ORIGIN, -60, dir2)
+        #    #arc.spawn()
         Scene.wait(0.1)
 
         return 'bloch_angle'
@@ -243,10 +272,13 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         print(pt1)
         dot1 = Sphere(radius=r * 0.06).move_to(pt1)
         dot2 = Sphere(radius=r * 0.06).move_to(-pt1)
-        line = Line(pt1*0.95, -pt1*0.95, color=new_white, border_width=4)
-        line1 = Line(pt1*0.95, pt1*0.95, color=new_white, border_width=5)
+        #line = Line(pt1*0.95, -pt1*0.95, color=new_white, border_width=4)
+        #line1 = Line(pt1*0.95, pt1*0.95, color=new_white, border_width=5)
 #        line = ManimMob(mn.Line(pt1, -pt1, stroke_width=5))
-        # col_update(line, color=WHITE)
+        pts = [-1., -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.]
+        line = Group(*[Line(pt1 * pts[i]*0.95, pt1 * pts[i + 1]*0.95, border_width=4) for i in range(7)])
+        line1 = Group(*[Line(pt1 * 0.95, pt1 * 0.95, border_width=4) for i in range(7)])
+        col_update(line, color=WHITE)
         col_update(dot1, color=WHITE)
         col_update(dot2, color=WHITE)
         with Seq(run_time=1):
@@ -331,15 +363,6 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
     print(s_up)
     print(s_right)
     print(s_forward)
-    fs = 50
-    eqkets = Group(
-        ManimMob(mn.MathTex(r'\lvert{\rm up}\rangle', font_size=fs)).move_to(s_up * r * 1.2),
-        ManimMob(mn.MathTex(r'\lvert{\rm down}\rangle', font_size=fs)).move_to(-s_up * r * 1.45),
-        ManimMob(mn.MathTex(r'\lvert{\rm right}\rangle', font_size=fs)).move_to(s_right * r * 1.38),
-        ManimMob(mn.MathTex(r'\lvert{\rm left}\rangle', font_size=fs)).move_to(-s_right * r * 1.32),
-        ManimMob(mn.MathTex(r'\lvert{\rm front}\rangle', font_size=fs)).move_to(s_forward * r * 1.05),
-        ManimMob(mn.MathTex(r'\lvert{\rm back}\rangle', font_size=fs)).move_to(-s_forward * r * 1.05)
-    )
     axes = Group(
         ManimMob(mn.Line(ORIGIN, mn_forward * r * 0.99, stroke_width=1)),
         ManimMob(mn.Line(ORIGIN, -mn_forward * r * 0.99, stroke_width=1)),
@@ -407,24 +430,25 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
         if anim == 'mixed':
             dt=1
             with Off():
-                lines = [line3d(pos1, dir1 * r), line3d(pos1, -dir1 * r),
-                         line3d(pos1, pos1), line3d(pos1, pos1)]
+                lines = [line_group(-dir1 * r, dir1 * r), line_group(pos1, pos1)]
                 for line in lines:
                     col_update(line, color=WHITE)
-                lines[2].spawn()
-                lines[3].spawn()
+                lines[1].spawn()
+                #lines[2].spawn()
+                #lines[3].spawn()
 
             with Lag(0.5):
                 with Sync(run_time=dt):
-                    lines[2].become(lines[0])
-                    lines[3].become(lines[1])
+                    lines[1].become(lines[0])
+                    #lines[2].become(lines[0])
+                    #lines[3].become(lines[1])
                 with Sync(run_time=dt):
                     dots[0].spawn()
                     dots[1].spawn()
 
             return 'bloch_mixed'
 
-        line1 = line3d(-dir1*r, dir1*r, npts=5)
+        line1 = line_group(-dir1*r, dir1*r)
         col_update(line1, color=WHITE)
         col_update(dots[1], color=WHITE)
         col_update(dots[1], color=WHITE)
@@ -438,16 +462,17 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
                 dots[1].spawn()
                 line2.spawn()
 
-        def move_to(line: BezierCircuitCubic, dots, pos1, dir2, dt, anim=True):
+        def move_to(line: Group(), dots, pos1, dir2, dt, anim=True):
             c = torch.inner(pos1, pos1).item() - r*r
             b = 2*torch.inner(pos1, dir2).item()
             a = torch.inner(dir2, dir2).item()
             x = (-b - math.sqrt(b*b-4*a*c))/(2*a)
             y = (-b + math.sqrt(b*b-4*a*c))/(2*a)
             pos = (pos1 + x*dir2, pos1 + y*dir2)
-            line4 = line3d(*pos, add_to_scene=False)
+            line4 = line_group(*pos, add_to_scene=False)
             with Sync(run_time=dt, rate_func=rate_funcs.identity) if anim else Off():
-                line.control_points.location = line4.control_points.location
+                for i, _ in enumerate(line[:]):
+                    _.control_points.location = line4[i].control_points.location
                 dots[0].move_to(pos[0])
                 dots[1].move_to(pos[1])
                 col_update(dots[0])
@@ -527,23 +552,47 @@ def bloch(r=1., simple_sphere=False, anim='sphere only'):
 
     return 'bloch'
 
+
+
 def projection(r=1., simple_sphere=False):
-    sphere, col_update, center_dot, s_up, s_right, s_forward = create_bloch(r=r, simple_sphere=simple_sphere)
+    sphere, col_update, center_dot, s_up, s_right, s_forward, eqkets = create_bloch(r=r, simple_sphere=simple_sphere)
 
-    dir1 = RIGHT + UP + OUT
-    dir1 /= torch.norm(dir1)
-    dir2 = s_up
-    pos1 = dir1 * r / 2
+    detail = False
 
-    pos2 = torch.inner(pos1, dir2) * dir2
+    if detail:
+        pos2 = RIGHT + UP + OUT
+        pos2 *= 0.5 * torch.norm(pos2)
+        dirs = [s_up]
+        name = 'bloch_project'
+    else:
+        pos2 = RIGHT + UP + OUT
+        pos2 *= r/torch.norm(pos2)
+        dirs = [
+            s_up,
+            UP + LEFT,
+            RIGHT+OUT,
+            s_forward - s_right,
+            #s_forward * 0.2 + 0.5 * s_up + s_right
+            s_forward
+        ]
+        name = 'bloch_project{}'.format(len(dirs))
 
+    for dir in dirs:
+        dir2 = dir / torch.norm(dir)
+        pos1 = pos2
+        pos2 = torch.inner(pos1, dir2) * dir2
 
     dot1 = Sphere(radius=r * 0.06)
-    dots = [Sphere(radius=r * 0.04).move_to(pos2) for _ in range(4)]
-    dots[0].move_to(dir2 * r)
-    dots[1].move_to(-dir2 * r)
+    if detail:
+        dots = [Sphere(radius=r * 0.04).move_to(pos2) for _ in range(4)]
+        dots[0].move_to(dir2 * r)
+        dots[1].move_to(-dir2 * r)
+    else:
+        dots = []
 
-    line1 = line3d(-dir2 * r, dir2 * r)
+    pts = [-1., -0.8, -0.5, -0.2, 0.2, 0.5, 0.8, 1.]
+    line1 = Group(*[Line(dir2 * r * pts[i], dir2*r * pts[i+1]) for i in range(7)])
+    #line1 = ManimMob(mn.Line(dir2.numpy() * -r, dir2.numpy() * r, stroke_color=mn.WHITE, stroke_width=4))
     line2 = line3d(pos1, pos2, border_width=1.)
 
 
@@ -557,25 +606,35 @@ def projection(r=1., simple_sphere=False):
         col_update(line2, color=WHITE)
         for dot in dots:
             col_update(dot, color=WHITE)
+        eqkets.spawn()
 
     with Seq(run_time=1.):
         line1.spawn()
-    with Sync(run_time=1.):
-        for dot in dots[:2]:
-            dot.spawn()
-    with Sync(run_time=1.):
-        line2.spawn()
-        dots[0].become(dots[2])
-        dots[1].become(dots[3])
-    with Sync(run_time=0.6):
-        dot1.become(dot2)
-        line2.set_opacity_via_color(0)
-    with Sync(run_time=0.5):
-        line1.set_opacity_via_color(0)
+
+    if detail:
+        with Sync(run_time=1.):
+            for dot in dots[:2]:
+                dot.spawn()
+        with Sync(run_time=1.):
+            line2.spawn()
+            dots[0].become(dots[2])
+            dots[1].become(dots[3])
+        with Sync(run_time=0.6):
+            dot1.become(dot2)
+            line2.set_opacity_via_color(0)
+        with Sync(run_time=0.5):
+            line1.set_opacity_via_color(0)
+    else:
+        with Sync(run_time=0.6):
+            dot1.become(dot2)
+            #line2.spawn()
+        with Sync(run_time=0.5):
+            line1.set_opacity_via_color(0)
+            #line2.set_opacity_via_color(0)
 
     Scene.wait(0.1)
 
-    return 'bloch_project'
+    return name
 
 
 if __name__ == "__main__":
@@ -587,26 +646,27 @@ if __name__ == "__main__":
     simple_sphere = False
 
     anim = 'sphere only'
-    anim = 'surface'
-    anim = 'inside'
-    anim = 'kets'
+    #anim = 'surface'
+    #anim = 'inside'
+    #anim = 'kets'
     #anim = 'electron'
     #anim = 'opaque'
-    #anim = 'arrow'
+    # anim = 'arrow'
     #anim = 'antipode'
     #anim = 'angle'
-    anim = 'AliceBob'
+    #anim = 'AliceBob'
     anim = 'mixed'
-    anim = 'mixed2'
-    anim = 'mixed3'
-    anim = 'mixed4'
-    anim = 'project'
+    #anim = 'mixed2'
+    #anim = 'mixed3'
+    #anim = 'mixed4'
+    #anim = 'project'
+    #anim = 'center_big'
 
     if anim == 'opaque':
         bgcol = BLACK
 
-    kernel_size = int(93/0.4)
-    bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=10, scale_factor=6)
+    kernel_size = int(93/0.4 * 1.4)
+    bloom_new = partial(bloom_filter_premultiply, num_iterations=7, kernel_size=kernel_size, strength=20, scale_factor=6)
 
     name = bloch(r, simple_sphere=simple_sphere, anim=anim)
     render_to_file(name, render_settings=quality, background_color=bgcol, post_processes=[bloom_new])

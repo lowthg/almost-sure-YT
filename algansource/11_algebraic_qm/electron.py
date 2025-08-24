@@ -88,11 +88,14 @@ def create_electron(r=1., bloom=True, sub_n=5, colors=None) -> tuple[Mob, Mob]:
 
     return Group(s1, arr1), Group(*efl, *fl)
 
-def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5, direction=None, bloom=True, big=False):
+def electron(start=UP, end=RIGHT, r=1., show_field=True, sub_n=5, direction=None, bloom=True, big=False, angle=None,
+             run_time=2., dir=1):
     bare, field = create_electron(r, sub_n=sub_n, bloom=bloom)
     dressed = Group(bare, field)
 
-    if (start == DOWN).all() and (end == UP).all():
+    if angle is not None:
+        d_angle = angle
+    elif (start == DOWN).all() and (end == UP).all():
         d_angle = -180
     else:
         d_angle = dir_angle[end] - dir_angle[start]
@@ -129,8 +132,8 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5, direction=Non
     elec = Group(bare, field) if show_field else bare
 
     elec_up = -bare.get_forward_direction()
-    with Sync(run_time=2, same_run_time=True, rate_func=rate_funcs.identity):
-        elec.orbit_around_point(elec_pos, 360, elec_up)
+    with Sync(run_time=run_time, same_run_time=True, rate_func=rate_funcs.identity):
+        elec.orbit_around_point(elec_pos, 360 * dir, elec_up)
         if d_angle != 0:
             with Sync(run_time=2, rate_func=rate_funcs.smooth):
                 elec.orbit_around_point(elec_pos, d_angle, elec_back)
@@ -139,8 +142,8 @@ def electron(start=UP, end=RIGHT, r=1., show_field=False, sub_n=5, direction=Non
     tag2 = 'B' if big else ''
     return 'electron{}{}{}{}'.format(tag2, tag, dir_str[start], dir_str[end])
 
-def animate_electron(orient=(UP, UP), r=0., big=False, bgcol=BLACK, show_field=True, direction=None, name=None, sub_n=5,
-                     bloom=True):
+def animate_electron(orient=(UP, UP), r=0., big=False, bgcol=BLACK, name=None, strength=15,
+                     **kwargs):
     if r == 0.:
         r = 1. if big else 0.5
 
@@ -148,25 +151,25 @@ def animate_electron(orient=(UP, UP), r=0., big=False, bgcol=BLACK, show_field=T
     if bgcol.tolist()[-1] < 1:
         print('transparent')
         print('kernel_size', kernel_size)
-        bloom_new = partial(bloom_filter_premultiply, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
+        bloom_new = partial(bloom_filter_premultiply, num_iterations=7, kernel_size=kernel_size, strength=strength, scale_factor=6)
     else:
-        bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=15, scale_factor=6)
+        bloom_new = partial(bloom_filter, num_iterations=7, kernel_size=kernel_size, strength=strength, scale_factor=6)
 
     start, end = orient
-    name2 = electron(start, end, r=r, show_field=show_field, sub_n=sub_n, bloom=bloom, direction=direction)
+    name2 = electron(start, end, r=r, big=big, **kwargs)
     name = name2 if name is None else name
     render_to_file(name, render_settings=quality, post_processes = [bloom_new], background_color=bgcol)
         # render_to_file(name, render_settings=quality, background_color=TRANSPARENT, file_extension='mov')
 
 
-def random_electrons(r=1., show_field=True, sub_n=5, bloom=True, num=10, bgcol=BLACK, start=0):
+def random_electrons(r=1., num=10, bgcol=BLACK, start=0, **kwargs):
     np.random.seed(1)
     for i in range(num):
         direction = torch.tensor(np.random.normal(size=3), dtype=torch.get_default_dtype())
         if i >= start:
             name = 'electron{}'.format(i)
-            animate_electron(r=r, show_field=show_field, sub_n=sub_n, direction=direction, bloom=bloom, name=name,
-                             bgcol=bgcol)
+            animate_electron(r=r, direction=direction, name=name,
+                             bgcol=bgcol, **kwargs)
 
 
 
@@ -180,10 +183,15 @@ if __name__ == "__main__":
     # orient = [(UP, UP), (DOWN, DOWN), (UP, DOWN), (DOWN, UP)]
     # orient += [(LEFT, LEFT), (RIGHT, LEFT), (UP, RIGHT), (RIGHT, RIGHT)]
     if False:
+        animate_electron(big=False, bgcol=bgcol, direction=UP, angle=360, show_field=True)
+    if True:
+        #orient = [(UP, UP), (DOWN, DOWN), (LEFT, LEFT), (RIGHT, RIGHT), (UP, DOWN), (DOWN, UP), (UP, RIGHT), (RIGHT, LEFT)]
+        #orient = [(UP, UP), (DOWN, DOWN), (LEFT, LEFT), (RIGHT, RIGHT)]
+        #orient = [(UP, UP), (RIGHT, RIGHT)]
         orient = [(UP, UP)]
         for _ in orient:
-            animate_electron(orient=_, big=False, bgcol=bgcol)
-    if True:
-        random_electrons(num=6, start=5, r=1., bgcol=bgcol)
+            animate_electron(orient=_, big=False, bgcol=bgcol, show_field=True, bloom=True, strength=12)
+    if False:
+        random_electrons(num=6, start=5, r=1., bgcol=bgcol, strength=12)
 
 

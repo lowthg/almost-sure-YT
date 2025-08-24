@@ -59,11 +59,25 @@ def test5():
     Sphere(radius=1)
     return 'test5'
 
+def test6():
+    s = Sphere(radius=0.5)
+    with Sync(run_time=0.4):
+        s.spawn()
+
+    # pos = Sphere(radius=0.0001)
+    # pos.move_to_edge(LEFT)
+    # p1 = pos.get_center()[0][0]
+    # print(p1)
+    # print(LEFT*5.627)
+    # print(RIGHT)
+    s.move_to(RIGHT*5.01)
+    return 'test6'
 
 # algan.defaults.batch_defaults.DEFAULT_BATCH_SIZE_ACTORS = 1
 # algan.defaults.batch_defaults.DEFAULT_BATCH_SIZE_FRAMES = 1
 # render_to_file(render_settings=PREVIEW)
-DEFAULT_PORTION_MEMORY_USED_FOR_ANIMATING = 1
+# DEFAULT_PORTION_MEMORY_USED_FOR_ANIMATING = 1
+COMPUTING_DEFAULTS.render_device = torch.device('cpu')
 
-fn = test4()
+fn = test6()
 render_to_file(file_name=fn, render_settings=PREVIEW)
