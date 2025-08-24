@@ -1665,6 +1665,7 @@ class Measurement2(Measurement):
         eq5 = MathTex(r"P'(A)", r'=', r'P(\pi_1A\pi_1)+\cdots+P(\pi_nA\pi_n)').set_z_index(1)
         eq5.move_to(eq4).move_to(ORIGIN, coor_mask=RIGHT)
 
+
         # mh.align_sub(eq4, eq4[1], eq3[1]).move_to(ORIGIN, coor_mask=RIGHT)
         box3 = SurroundingRectangle(eq4, fill_color=BLACK, stroke_opacity=0, fill_opacity=self.box_op, corner_radius=0.15)
         VGroup(eq4, eq5, box3).to_edge(DOWN, buff=0.15)
@@ -1709,7 +1710,33 @@ class Measurement2(Measurement):
                   FadeOut(eq5[2][7], shift=mh.diff(eq5[2][:7], eq6[2][:7])),
                   FadeOut(eq5[2][13:15], shift=mh.diff(eq5[2][15], eq6[2][12])))
         self.wait(0.1)
-
+        eq6_1 = MathTex(r"P'(A)", r'=', r'P(A(\pi_1+\cdots+\pi_n))').set_z_index(1)
+        eq6_2 = MathTex(r"P'(A)", r'=', r'P(A)').set_z_index(1)
+        mh.align_sub(eq6_1, eq6_1[1], eq6[1]).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq6_2, eq6_2[1], eq6[1]).move_to(ORIGIN, coor_mask=RIGHT)
+        eq6_3 = eq6.copy()
+        self.play(mh.rtransform(eq6[2][2:4], eq6[2][5:7], eq6[2][12:14], eq6[2][15:17]), run_time=1.2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[:2], eq6_1[:2], eq6[2][:2], eq6_1[2][:2], eq6[2][4], eq6_1[2][2], eq6[2][5:12], eq6_1[2][4:11],
+                                eq6[2][15:17], eq6_1[2][11:13], eq6[2][-1], eq6_1[2][-1]),
+                  mh.rtransform(eq6[2][14], eq6_1[2][2]),
+                  FadeIn(eq6_1[2][3], shift=mh.diff(eq6[2][4], eq6_1[2][2])),
+                  FadeIn(eq6_1[2][-2], shift=mh.diff(eq6[2][-3], eq6_1[2][-4])),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(FadeOut(eq6_1[2][3:-1]), run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6_1[:2], eq6_2[:2], eq6_1[2][:2], eq6_2[2][:2], eq6_1[2][2], eq6_2[2][2], eq6_1[2][-1], eq6_2[2][-1]),
+                  run_time=1.4)
+        self.wait(0.1)
+        eq6 = eq6_3
+        self.play(mh.rtransform(eq6_2[:2], eq6[:2], eq6_2[2][:2], eq6[2][:2],
+                                eq6_2[2][2], eq6[2][4], eq6_2[2][2].copy(), eq6[2][14], eq6_2[2][-1], eq6[2][-1]),
+                  FadeIn(eq6[2][2:4], eq6[2][5:7], shift=mh.diff(eq6_2[2][2], eq6[2][4])),
+                  FadeIn(eq6[2][12:14], eq6[2][15:17], shift=mh.diff(eq6_2[2][2], eq6[2][14])),
+                  FadeIn(eq6[2][7:12], shift=mh.diff(eq6_2[2][2], eq6[2][7:12])),
+                  run_time=1.6)
+        self.wait(0.1)
         eq7 = MathTex(r"P''(A)", r'=', r'P(\pi_iA\pi_i)/P(\pi_i)').set_z_index(1)
         eq7.next_to(eq6, DOWN, buff=0.4)
         eq6_1 = eq6.copy().set_color(ManimColor(WHITE.to_rgb() * 0.8))
@@ -1992,7 +2019,7 @@ class Density(Scene):
         self.play(FadeIn(eq19), run_time=1.2)
         self.wait(0.1)
 
-        eq20 = MathTex(r'\rho', r'=', r'p_1\vert\Psi_1\rangle\langle\Psi_1\vert + p_1\vert\Psi_2\rangle\langle\Psi_2\vert + \cdots', font_size=fs2)
+        eq20 = MathTex(r'\rho', r'=', r'p_1\vert\Psi_1\rangle\langle\Psi_1\vert + p_2\vert\Psi_2\rangle\langle\Psi_2\vert + \cdots', font_size=fs2)
         eq20.next_to(eq19, DOWN, buff=0.5)
         eq21 = MathTex(r'\Psi_1, \Psi_2,\ldots\ {\rm orthonormal}', font_size=fs2)
         eq21.next_to(eq20, DOWN, buff=0.4)
@@ -2304,8 +2331,204 @@ class Phi(Scene):
 
 class Psi(Scene):
     def construct(self):
-        self.add(MathTex(r'\Psi', font_size=50))
+        self.add(MathTex(r'\Psi', font_size=140, stroke_width=1))
+
+class CurlyH(Scene):
+    def construct(self):
+        self.add(MathTex(r'\mathcal H', font_size=140, stroke_width=1))
+
+class KetSum(Scene):
+    def construct(self):
+        self.add(MathTex(r'\vert\Phi\rangle+\vert\Psi\rangle\in\mathcal H', font_size=120))
+
+class QuantumOscillator(ThreeDScene):
+    #def __init__(self, *args, **kwargs):
+    #    if config.transparent:
+    #        config.background_color = BLACK
+    #    ThreeDScene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        #self.set_camera_orientation(phi=PI/2, theta=-PI/2)
+        self.set_camera_orientation(phi=50 * DEGREES, theta=90 * DEGREES)
+
+        xmax = 3
+        xscale = 1.7
+        zscale = 1.5
+
+        t_start = 0.
+        t_end = 2*PI
+        run_time = 4.
+
+        levels = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 2),
+            (1, 1),
+            (2, 0),
+            (2, 1),
+        ]
+        nlevels = len(levels)
+        coeffs0 = [1., 1., 0.6 + 0.8j, 1, 0.8 - 0.6j, 1j, 1]
+        norm = math.sqrt(sum([_.imag * _.imag + _.real * _.real for _ in coeffs0]))
+        coeffs0 = [_/norm for _ in coeffs0]
+
+        energies = [l[0] + l[1] for l in levels]
+        polys = [[np.polynomial.Hermite([0] * n + [1]) for n in l] for l in levels]
+        coeffs = [0j] * nlevels
+
+        def f(x, y):
+            psi = 0. + 0j
+            for i in range(nlevels):
+                psi += coeffs[i] * polys[i][0](x) * polys[i][1](y)
+            z = math.sqrt(psi.real * psi.real + psi.imag * psi.imag)
+            #z = psi.real
+            z *= math.exp(-0.5 * (x*x+y*y))
+
+            return (x * RIGHT + y * UP) * xscale + z * OUT * zscale
+
+        #surf1 = Surface(f, u_range=[-xmax, xmax], v_range=[-xmax, xmax], fill_opacity=0.3,
+        #              stroke_opacity=0.4, checkerboard_colors=[RED_D, RED_E])
+
+        gp = VGroup(VGroup())
+
+        tval = ValueTracker(t_start)
+
+        def redraw():
+            t = tval.get_value()
+            for i in range(nlevels):
+                coeffs[i] = np.exp(energies[i] * 1j * -t) * coeffs0[i]
+            surf2 = Surface(f, u_range=[-xmax, xmax], v_range=[-xmax, xmax], fill_opacity=0.7,
+                          stroke_opacity=1, stroke_color=RED, stroke_width=4, checkerboard_colors=[RED_D, RED_E])
+            surf2.shift(DOWN*0.3)
+            gp[0] = surf2
+            return surf2
+
+        surf1 = always_redraw(redraw)
+        self.add(surf1)
+
+        self.play(tval.animate.set_value(t_end), run_time=run_time, rate_func=linear)
+
+class DensityM(Pdefinition):
+    def construct(self):
+        Tex.set_default(font_size=60)
+        eq1 = Tex(r'density matrices')[0].set_z_index(1)
+        box2 = SurroundingRectangle(eq1, stroke_color=WHITE, stroke_width=3, stroke_opacity=0.8,
+                                           fill_color=BLACK, fill_opacity=0.7, corner_radius=0.2, buff=0.4)
+        self.add(box2, eq1)
+
+class Intro(Pdefinition):
+    def construct(self):
+        Tex.set_default(font_size=60)
+        eq1 = Tex(r'Hilbert space')[0].set_z_index(1)
+        eq2 = Tex(r'*-algebra')[0].set_z_index(1)
+        eq3 = Tex(r'wave function')[0].set_z_index(1)
+        eq4 = Tex(r'positive functional')[0].set_z_index(1)
+        eq3.move_to(eq1)
+        eq4.move_to(eq2)
+        eq3.next_to(eq1, DOWN, buff=0.6, coor_mask=UP)
+        mh.align_sub(eq2, eq2[2], eq1[-3], coor_mask=UP, aligned_edge=DOWN)
+        mh.align_sub(eq4, eq4[-2], eq3[1], coor_mask=UP, aligned_edge=DOWN)
+        VGroup(eq2, eq4).next_to(eq1, RIGHT, coor_mask=RIGHT, buff=3)
+        VGroup(eq1, eq2, eq3, eq4).move_to(ORIGIN)
+
+        box1 = SurroundingRectangle(VGroup(eq1, eq3, VGroup(eq4[0], eq2[0]).copy().move_to(eq3, coor_mask=RIGHT)), stroke_color=WHITE, stroke_width=3, stroke_opacity=0.8,
+                                           fill_color=BLACK, fill_opacity=0.7, corner_radius=0.2, buff=0.4)
+        box2 = SurroundingRectangle(VGroup(eq2, eq4), stroke_color=WHITE, stroke_width=3, stroke_opacity=0.8,
+                                           fill_color=BLACK, fill_opacity=0.7, corner_radius=0.2, buff=0.4)
+
+        gp1 = VGroup(eq1, eq3, box1)
+        gp2 = VGroup(eq2, eq4, box2)
+        arr = Arrow(gp1.get_right(), gp2.get_left(), stroke_width=20,
+                    max_stroke_width_to_length_ratio=20,
+                    max_tip_length_to_length_ratio=5,
+                    tip_length=0.5)
+
+        gp3 = gp1.copy().move_to(ORIGIN, coor_mask=RIGHT)
+        shift = mh.diff(gp3, gp1)
+        self.add(gp3)
+        self.wait(0.1)
+        self.play(ReplacementTransform(gp3, gp1),
+                  FadeIn(gp2, arr, shift=shift))
+        self.wait(0.2)
+        self.play(FadeOut(arr), run_time=0.7)
+
+        self.wait(0.1)
+
+class Boltzman(Scene):
+    def construct(self):
+        self.add(MathTex(r'\rho\sim e^{-\frac{H}{kT}}', font_size=120))
+
+class Boltzmann2(Scene):
+    def construct(self):
+        self.add(Tex(r'Boltzmann distribution', color=RED, font_size=100))
+
+class PiProj(Scene):
+    def construct(self):
+        eq = Tex(r"`$\pi$' \textsf{for projection}", font_size=80, color=RED, stroke_width=2)[0]
+        pt = eq[7].get_bottom()
+        arr = Arrow(pt, pt+DR*2)
+        self.add(eq, arr)
+
+class SemiCircle(Scene):
+    colors = [
+        ManimColor(RED_D.to_rgb() * 0.5),
+        ManimColor(RED_E.to_rgb() * 0.5)
+    ]
+
+    def plots(self):
+        def p0(x):
+            return math.sqrt(max(4-x*x, 0))
+
+        xmax = 2.8
+        ymax = 2.2
+        xlen = 8
+        ax = Axes(x_range=[-xmax, xmax + 0.2], y_range=[0, ymax], x_length=xlen, y_length=ymax / (2*xmax+0.2) * xlen,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "shade_in_3d": True,
+                               },
+                  #                  shade_in_3d=True,
+                  ).set_z_index(1)
+        ax_o = ax.coords_to_point(0, 0)
+        xlen = ax.coords_to_point(xmax, 0)[0] - ax_o[0]
+        ylen = ax.coords_to_point(0, 1)[1] - ax_o[1]
+
+        #plt1 = ax.plot(p0, x_range=[-2., 2.], color=BLUE).set_z_index(2)
+        n = 100
+        ntheta = math.floor(n * PI * 2)
+        theta = np.linspace(-PI/2, PI/2, ntheta)
+        nline = math.floor(n * (xmax-2))
+        nline
+        x1 = np.linspace(-xmax, -2, nline)
+        x2 = np.linspace(2, xmax, nline)
+        y1 = np.zeros(nline)
+        sw = 5
+        plt1_1 = ax.plot_line_graph(x_values=x1, y_values=y1, line_color=BLUE, stroke_opacity=1, add_vertex_dots=False, stroke_width=sw).set_z_index(5)
+        plt1_2 = ax.plot_line_graph(x_values=x2, y_values=y1, line_color=BLUE, stroke_opacity=1, add_vertex_dots=False, stroke_width=sw).set_z_index(5)
+        plt1_0 = ax.plot_line_graph(x_values=np.sin(theta)*2, y_values=np.cos(theta)*2, line_color=BLUE, stroke_width=sw,
+                                  stroke_opacity=1, fill_opacity=0, fill_color=BLUE, add_vertex_dots=False).set_z_index(5)
+        plt2 = plt1_0.copy().set_fill(opacity=0.5).set_stroke(opacity=0).set_z_index(0)
+        #fill1 = ax.get_area(plt1, color=BLUE, opacity=0.5, x_range=(-2.,2.)).set_z_index(2)
+        eq1 = MathTex(r'p(\lambda)=\frac1{2\pi}\sqrt{4-\lambda^2}', font_size=35, stroke_width=1)[0]
+        eq2 = MathTex(r'\lambda').next_to(ax.x_axis.get_right(), UP, buff=0.22)
+        eq3 = Tex(r'eigenvalue density', font_size=50)[0].set_z_index(6)
+        mh.align_sub(eq3, eq3, ax.coords_to_point(0, 0.7))
+        plt1 = VGroup(plt1_1, plt1_0, plt1_2)
+
+        eq1.set_z_index(3).move_to(ax.coords_to_point(-1.9, 1), RIGHT)
+
+        self.add(ax, eq2)
+        self.wait(0.2)
+        self.play(LaggedStart(AnimationGroup(Create(plt1, rate_func=linear), FadeIn(eq1)),
+                              FadeIn(plt2, eq3), lag_ratio=0.5), run_time=1.5)
+        self.wait(0.1)
+
+    def construct(self):
+        self.plots()
+
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
-        AliceState().render()
+        QuantumOscillator().render()
