@@ -1,12 +1,8 @@
-from turtledemo.chaos import coosys
-
 from manim import *
 import numpy as np
 import math
 import sys
 import scipy as sp
-from networkx.classes import edges
-from sorcery import switch
 
 sys.path.append('../')
 import manimhelper as mh
