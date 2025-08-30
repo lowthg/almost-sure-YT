@@ -9,9 +9,9 @@ def anchor_pts(start=0., end=1., n=10):
     anchors2 = torch.tensor(anchors)
     return anchors2
 
-def curve3d(f, start=0., end=1., npts=2, border_width=4., **kwargs):
+def curve3d(f, start=0., end=1., npts=2, border_width=4., filled=False, **kwargs):
     anchors = anchor_pts(start=start, end=end, n=npts)
     arc = BezierCircuitCubic(torch.cat([f(a) for a in anchors], -2),
-                             filled=False, border_width=border_width, **kwargs)
+                             filled=filled, border_width=border_width, **kwargs)
     return arc
 
