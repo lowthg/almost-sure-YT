@@ -255,7 +255,7 @@ def expectedXY(render_settings=LD):
         c = get_op(d.color, d.location)
         eq3 = ManimMob(mn.MathTex(r'1', font_size=45)[0].rotate(PI/2, mn.RIGHT).rotate(PI, mn.OUT)).move(xlen*(UP+RIGHT*1.05))
         eq4 = ManimMob(mn.MathTex(r'X', font_size=45, color=mn.RED)[0].rotate(PI/2, mn.RIGHT).rotate(PI, mn.OUT)).move(xlen*(UP+LEFT*1.4))
-        eq5 = ManimMob(mn.MathTex(r'Y', font_size=45, color=mn.BLUE)[0].rotate(PI/2, mn.RIGHT).rotate(PI, mn.OUT)).move(xlen*(DOWN*1.2+RIGHT))
+        eq5 = ManimMob(mn.MathTex(r'Y', font_size=45, color=mn.BLUE)[0].rotate(PI/2, mn.RIGHT).rotate(PI, mn.OUT)).move(xlen*(DOWN*1.2+RIGHT)+IN*0.5)
         eq7 = mn.MathTex(r'p(x, y)', font_size=45)[0].rotate(PI/2, mn.RIGHT).rotate(PI, mn.OUT)
         eq7[2].set_color(mn.RED)
         eq7[4].set_color(mn.BLUE)

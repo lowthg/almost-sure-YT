@@ -54,10 +54,10 @@ class ExpectedValue(Scene):
         self.wait(0.1)
 
         def p(x):
-            return math.exp(-x*x)
+            return math.exp(-x*x/2)
 
-        xmin = -2
-        xmax = 2
+        xmin = -2.5
+        xmax = 2.5
         ax = Axes(x_range=[xmin, xmax * 1.1], y_range=[0, 1.1], x_length=12, y_length=3,
                   axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
@@ -82,129 +82,91 @@ class ExpectedValue(Scene):
 
         self.wait()
 
-class StandardNormal(ThreeDScene):
-    colors = [
-        ManimColor(RED_D.to_rgb() * 0.5),
-        ManimColor(RED_E.to_rgb() * 0.5)
-    ]
+class ExpectedAB(Scene):
+    def __init__(self, *args, **kwargs):
+        if config.transparent:
+            config.background_color = WHITE
+        Scene.__init__(self, *args, **kwargs)
 
-    def plots(self, display=True, ymax=1.15):
-        self.set_camera_orientation(phi=PI/2, theta=-PI/2)
-
-        def p0(x):
-            return math.exp(-x * x / 2)
-
-        xmax = 2.5
-        ax = Axes(x_range=[-xmax, xmax + 0.2], y_range=[0, ymax], x_length=8, y_length=2*ymax/1.15,
-                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
-                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
-                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
-                               "shade_in_3d": True,
-                               },
-                  #                  shade_in_3d=True,
-                  ).set_z_index(1)
-        ax[0].submobjects[0].set(shade_in_3d=True)
-        ax_o = ax.coords_to_point(0, 0)
-        ax.shift(-ax_o)
-        ax_o=ORIGIN
-        xlen = ax.coords_to_point(xmax, 0)[0] - ax_o[0]
-        ylen = ax.coords_to_point(0, 1)[1] - ax_o[1]
-
-        plt1 = ax.plot(p0, x_range=[-xmax, xmax], color=BLUE, shade_in_3d=True).set_z_index(2)
-        fill1 = ax.get_area(plt1, color=BLUE, opacity=0.5, shade_in_3d=True).set_z_index(2)
-        eq1 = MathTex(r'p(a)=\frac1{\sqrt{2\pi}}e^{-\frac12a^2}', font_size=35, shade_in_3d=True)[0]
-        eq2 = MathTex(r'{p(\bf v)=\frac1{2\pi\lvert\Sigma\rvert^{\frac12}}e^{-\frac12v^T\Sigma^{-1} v}}', font_size=35, color=WHITE, stroke_width=1.7, stroke_color=WHITE, shade_in_3d=True)[0]
-
-        eq1.set_z_index(3).move_to(ax.coords_to_point(-xmax, 1.1), UL)
-        eq2.set_z_index(3).move_to(ax.coords_to_point(-xmax, 1), UL)
-
-        gp1 = VGroup(ax, plt1, fill1, eq1, eq2).rotate(PI/2, axis=RIGHT, about_point=ax_o)
-        eq2.shift(DOWN*xlen/2)
-        if display:
-            self.add(ax)
-            self.wait(0.2)
-            self.play(LaggedStart(AnimationGroup(Create(plt1, rate_func=linear), FadeIn(eq1)),
-                                  FadeIn(fill1), lag_ratio=0.5), run_time=1.5)
-            self.wait(0.1)
-
-        sq1 = Surface(lambda u, v: u * RIGHT + v * UP, u_range=[-xlen, xlen], v_range=[-xlen, xlen], fill_opacity=0.3,
-                      stroke_opacity=0.4, checkerboard_colors=[RED_D, RED_E])
-
-        if display:
-            self.remove(ax)
-            self.add(ax)
-            self.move_camera(phi=70*DEGREES, theta=-120*DEGREES)
-        else:
-            self.set_camera_orientation(phi=70*DEGREES, theta=-120*DEGREES)
-
-        gp2 = gp1[:-2].copy()
-        gp2.set(shade_in_3d=True)
-        ax.y_axis.set_z_index(3)
-
-        if display:
-            self.play(Rotate(gp2, -90*DEGREES, OUT, about_point=ax_o), FadeIn(sq1))
-            self.play(gp1[1:-1].animate.shift(xlen*UP), gp2[1:].animate.shift(xlen*RIGHT))
-        else:
-            gp2.rotate(-90*DEGREES, about_point=ax_o)
-            gp1[1:-1].shift(xlen*UP)
-            gp2[1:].shift(xlen*RIGHT)
-
-        def p1(x, y):
-            return (RIGHT * x + UP * y) * xlen/xmax + OUT * math.exp(-(x*x+y*y)/2) * ylen
-
-        def p2(x, y):
-            return (RIGHT * x + UP * y) * xlen/xmax + OUT * math.exp(-(x*x+y*y+x*y)*2/3) * ylen
-
-        sq1.set_z_index(4)
-        surf1 = Surface(p1, u_range=[-xmax, xmax], v_range=[-xmax, xmax], fill_opacity=0.9,
-                      stroke_opacity=0.8, checkerboard_colors=self.colors, stroke_color=WHITE).set_z_index(200, family=True)
-        surf2 = Surface(p2, u_range=[-xmax, xmax], v_range=[-xmax, xmax], fill_opacity=0.9,
-                      stroke_opacity=0.8, checkerboard_colors=self.colors, stroke_color=WHITE).set_z_index(200, family=True)
-        line1 = Line(OUT * ylen, OUT * ylen * 1.12, stroke_width=4, stroke_color=WHITE).set_z_index(300)
-        if display:
-            self.add(line1)
-            self.play(ReplacementTransform(sq1, surf1),
-                      FadeIn(eq2, rate_func=lambda t: smooth(min(t*2, 1) - max(t*4 - 3, 0))),
-                      FadeOut(eq1, rate_func=lambda t: smooth(max(t*4 - 3, 0))),
-                      run_time=2)
-            self.play(ReplacementTransform(surf1, surf2),
-                      run_time=1.2)
-
-        return xmax, xlen, ylen, VGroup(ax, gp2[0], line1)
+    fs1 = 100
 
     def construct(self):
-        self.plots()
+        cx = RED
+        cy = BLUE
+        MathTex.set_default(font_size=self.fs1)
+        eq1 = MathTex(r'A, B', r'\sim', r'N(0,1)')
+        eq1[0][0].set_color(cx)
+        eq1[0][-1].set_color(cy)
+        self.add(eq1)
+        self.wait(0.1)
+        eq2 = MathTex(r'{\rm Corr}(A, B)', r'=', r'1/2', font_size=80)
+        eq2.next_to(eq1, DOWN)
+        eq2[0][-4].set_color(cx)
+        eq2[0][-2].set_color(cy)
+        gp = Group(eq1.copy(), eq2).move_to(ORIGIN)
+        self.play(FadeIn(eq2), mh.transform(eq1, gp[0]), run_time=1)
+        self.wait()
+
+class ABexp(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=100)
+        eq1 = MathTex(r'X', r'=', r'e^{\frac12A^2}')
+        eq2 = MathTex(r'Y', r'=', r'e^{\frac12B^2}')
+        eq1[0][0].set_color(RED)
+        eq1[2][-2].set_color(RED)
+        eq2[0][0].set_color(BLUE)
+        eq2[2][-2].set_color(BLUE)
+        gp = VGroup(eq1, eq2).arrange(RIGHT, buff=1).move_to(ORIGIN)
+        self.add(gp)
+
 
 class ExpectedXY(Scene):
     fs1 = 100
     def construct(self):
         cx = RED
         cy = BLUE
-        cx = cy = WHITE
         MathTex.set_default(font_size=self.fs1)
-        eq1 = MathTex(r'X', r'=', r'e^{\frac12A^2}')
-        eq1[0][0].set_color(cx)
-        eq1[2][4].set_color(cx)
-        eq1_1 = eq1[2].copy().scale(1.2).move_to(ORIGIN)
-        self.add(eq1_1)
-        self.wait(0.5)
-        self.play(mh.rtransform(eq1_1, eq1[2]),
-                  FadeIn(eq1[:2], shift=mh.diff(eq1_1, eq1[2])),
-                  run_time=1.2)
+        eq1 = MathTex(r'\mathbb E[Y\vert X]', r'=', r'\int p(y\vert X)y\,dy')
+        eq1[0][2].set_color(cy)
+        eq1[0][4].set_color(cx)
+        eq1[2][3].set_color(cy)
+        eq1[2][5].set_color(cx)
+        eq1[2][7].set_color(cy)
+        eq1[2][9].set_color(cy)
+        self.add(eq1)
         self.wait(0.1)
-        eq2 = MathTex(r'Y', r'=', r'e^{\frac12B^2}')
-        eq2[0][0].set_color(cy)
-        eq2[2][4].set_color(cy)
-        eq2.next_to(eq1, DOWN)
-        gp = VGroup(eq1.copy(), eq2).move_to(ORIGIN)
-        eq1_2 = eq1.copy()
-        self.play(mh.transform(eq1, gp[0]),
-                  mh.rtransform(eq1_2[1], eq2[1], eq1_2[2][:4], eq2[2][:4],
-                                eq1_2[2][5], eq2[2][5]),
-                  mh.fade_replace(eq1_2[0], eq2[0]),
-                  mh.fade_replace(eq1_2[2][4], eq2[2][4]),
-                  run_time=1.6)
+        eq2 = MathTex(r'\mathbb E[Y\vert X]', r'=', r'2X')
+        eq2[0][2].set_color(cy)
+        eq2[0][4].set_color(cx)
+        eq2[2][1].set_color(cx)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        eq2_1 = eq2[2].copy()
+        mh.align_sub(eq2_1, eq2_1[1], eq1[2][5], coor_mask=RIGHT)
+        self.play(FadeOut(eq1[2][:5], eq1[2][6:]),
+                  FadeIn(eq2_1[0]), mh.rtransform(eq1[2][5], eq2_1[1]),
+                  run_time=1.4)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq2_1, eq2[2]),
+                 run_time=1.5)
         self.wait(0.1)
+        eq3 = MathTex(r'\mathbb E[X\vert Y]', r'=', r'2Y')
+        eq3[0][2].set_color(cx)
+        eq3[0][4].set_color(cy)
+        eq3[2][1].set_color(cy)
+        eq3.next_to(eq2, DOWN, buff=0.8)
+        mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=RIGHT)
+        eq2_1 = eq2.copy()
+        gp = VGroup(eq2.copy(), eq3).align_to(eq1, UP).shift(DOWN*0.2)
+        self.play(mh.rtransform(eq2_1[0][:2], eq3[0][:2], eq2_1[0][3], eq3[0][3], eq2_1[0][5], eq3[0][5],
+                                eq2_1[1], eq3[1], eq2_1[2][0], eq3[2][0]),
+                  mh.transform(eq2, gp[0]),
+                  mh.fade_replace(eq2_1[0][2], eq3[0][2]),
+                  mh.fade_replace(eq2_1[0][4], eq3[0][4]),
+                  mh.fade_replace(eq2_1[2][1], eq3[2][1]),
+                  run_time=1.6
+                  )
+
+
+        return
         eq3 = MathTex(r'\mathbb E[Y\vert X]', r'=', r'2X')
         eq3[0][2].set_color(cy)
         eq3[0][4].set_color(cx)
