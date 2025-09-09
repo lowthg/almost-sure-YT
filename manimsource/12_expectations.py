@@ -7,6 +7,10 @@ import scipy as sp
 sys.path.append('../')
 import manimhelper as mh
 
+H = LabeledDot(Text("H", color=BLACK, font='Helvetica', weight=SEMIBOLD), radius=0.35, color=BLUE).scale(1.5)
+T = LabeledDot(Text("T", color=BLACK, font='Helvetica', weight=SEMIBOLD), radius=0.35, color=YELLOW).scale(1.5)
+
+
 class ExpectedValue(Scene):
     fs1 = 100
     def construct(self):
@@ -116,8 +120,17 @@ class ABexp(Scene):
         eq1[2][-2].set_color(RED)
         eq2[0][0].set_color(BLUE)
         eq2[2][-2].set_color(BLUE)
-        gp = VGroup(eq1, eq2).arrange(RIGHT, buff=1).move_to(ORIGIN)
-        self.add(gp)
+        gp = VGroup(eq1.copy(), eq2).arrange(RIGHT, buff=1).move_to(ORIGIN)
+        mh.align_sub(eq1.copy(), eq1[1], gp[0][1], coor_mask=UP)
+        eq1_1 = eq1.copy()
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(mh.transform(eq1, gp[0]),
+                  mh.fade_replace(eq1_1[0], eq2[0]),
+                  mh.rtransform(eq1_1[1], eq2[1], eq1_1[2][:4], eq2[2][:4], eq1_1[2][-1], eq2[2][-1]),
+                  mh.fade_replace(eq1_1[2][-2], eq2[2][-2]),
+                  run_time=1.6)
+        self.wait()
 
 
 class ExpectedXY(Scene):
@@ -133,7 +146,12 @@ class ExpectedXY(Scene):
         eq1[2][5].set_color(cx)
         eq1[2][7].set_color(cy)
         eq1[2][9].set_color(cy)
-        self.add(eq1)
+        eq1_1 = eq1[2][1:7].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.add(eq1_1)
+        self.wait(0.1)
+        self.play(LaggedStart(mh.rtransform(eq1_1, eq1[2][1:7], run_time=1.6),
+                  FadeIn(eq1[:2], eq1[2][0], eq1[2][7:], run_time=1.6),
+                    lag_ratio=0.5))
         self.wait(0.1)
         eq2 = MathTex(r'\mathbb E[Y\vert X]', r'=', r'2X')
         eq2[0][2].set_color(cy)
@@ -200,4 +218,102 @@ class ExpectedXY(Scene):
                   run_time=2)
 
 
+        self.wait()
+
+
+class Head(Scene):
+    def construct(self):
+        self.add(H.scale(2))
+
+class Tail(Scene):
+    def construct(self):
+        self.add(T.scale(2))
+
+class Alicea(Scene):
+    def __init__(self, *args, **kwargs):
+        config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    eq_str = r'a'
+    eq_col = RED
+
+    def construct(self):
+        eq1 = MathTex(self.eq_str, font_size=120, stroke_width=6, color=self.eq_col).set_z_index(1)
+        eq2 = MathTex(self.eq_str, font_size=120, stroke_width=12, stroke_color=BLACK).set_z_index(0)
+        self.add(eq1, eq2)
+
+class Bobb(Alicea):
+    eq_str = r'b'
+    eq_col = BLUE
+
+class AliceExpected(Scene):
+    def __init__(self, *args, **kwargs):
+        config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        eq1 = MathTex(r'p(b)', r'=', r'\left(\frac12\right)^{b+1}')
+        eq1[0][2].set_color(BLUE)
+        eq1[2][-3].set_color(BLUE)
+        eq2 = Tex(r'\sf Alice receives ', r'$4^b$')
+
+        eq2[0][:5].set_color(RED)
+        for x in eq2[0][:5]: x.set(stroke_width=2)
+        eq2[1][-1].set_color(BLUE)
+        eq2.next_to(eq1, DOWN)
+        eq3 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\sum_b4^bp(b)')
+        mh.align_sub(eq3, eq3[0][2:-1], eq2[0], coor_mask=UP)
+        eq4 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\sum_{b=0}^{a-1}4^b\left(\frac12\right)^{b+1}')
+        mh.align_sub(eq4, eq4[1], eq3[1])
+        eq5 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\sum_{b=0}^{a-1}\left(\frac42\right)^b\frac12')
+        eq6 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\frac12\sum_{b=0}^{a-1}2^b')
+        mh.align_sub(eq6, eq6[1], eq3[1])
+        mh.align_sub(eq5, eq5[1], eq3[1])
+        eq7 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\frac12\left(2^a-1\right)')
+        mh.align_sub(eq7, eq7[1], eq3[1], coor_mask=UP)
+
+        eqs = VGroup(eq1, eq2, eq3, eq4, eq5, eq6, eq7).set_z_index(1)
+        box = SurroundingRectangle(eqs, corner_radius=0.2, fill_color=BLACK, fill_opacity=0.7, stroke_width=0)
+
+        self.add(eq1, box)
+        self.wait(0.1)
+        self.play(FadeIn(eq2), run_time=1)
+        self.wait(0.1)
+        self.play(LaggedStart(AnimationGroup(eq2[0].animate.move_to(eq3[0][2:-3]),
+                  mh.rtransform(eq2[1][:], eq3[2][2:4]), run_time=1.2),
+                  FadeIn(eq3[0][:2], eq3[0][-3:], eq3[1], eq3[2][:2], eq3[2][4:], run_time=1.2),
+                              lag_ratio=0.5)
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[2][:2], eq4[2][3:5]),
+                  FadeIn(eq4[2][:3], eq4[2][5:7]))
+        self.wait(0.1)
+        self.play(FadeOut(eq3[2][-4:], eq1[:2]),
+                  mh.rtransform(eq1[2][:], eq4[2][-8:], run_time=1.4))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[2][:7], eq5[2][:7], eq3[2][2], eq5[2][8],
+                                eq3[2][3], eq5[2][12], eq4[2][9], eq5[2][7],
+                                eq4[2][13], eq5[2][11], eq4[2][11:13].copy(), eq5[2][9:11],
+                                eq4[2][10:13], eq5[2][13:], eq3[1], eq5[1],
+                                eq3[0][:2], eq5[0][:2], eq3[0][-3:], eq5[0][-3:]),
+                  mh.rtransform(eq4[2][14], eq5[2][12]),
+                  FadeOut(eq4[2][15:]),
+                  eq2[0].animate.move_to(eq5[0][2:-3])
+                  )
+        self.wait(0.1)
+        eq6_1 = mh.align_sub(eq6[2][10:12].copy(), eq6[2][10], eq5[2][9], coor_mask=RIGHT)
+        self.play(FadeOut(eq5[2][7], eq5[2][11], eq5[2][9]),
+                  eq5[2][12].animate.move_to(eq6_1[1]),
+                  eq5[2][10].animate.move_to(eq6_1[0]),
+                  FadeOut(eq5[2][8], target_position=eq6_1[0]))
+        self.play(mh.rtransform(eq5[2][:7], eq6[2][3:10], eq5[2][10], eq6[2][10],
+                                eq5[2][12], eq6[2][11], eq5[2][-3:], eq6[2][:3]), run_time=1.2)
+        self.wait(0.1)
+        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq6[2][:3], eq7[2][:3], eq6[2][10], eq7[2][4],
+                                eq6[2][3], eq7[2][5], eq5[1], eq7[1], eq5[0][:2], eq7[0][:2], eq5[0][-3:], eq7[0][-3:]),
+                  eq2[0].animate.move_to(eq7[0][2:-3]),
+                  FadeOut(eq6[2][4:10]),
+                  FadeOut(eq6[2][11], target_position=eq7[2][5]),
+                    run_time=1.6),
+                  FadeIn(eq7[2][3], eq7[2][6:], run_time=1.4), lag_ratio=0.5))
         self.wait()
