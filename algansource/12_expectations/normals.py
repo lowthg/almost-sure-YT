@@ -20,13 +20,13 @@ HD = RenderSettings((1920, 1080), 30)
 colors = [
     #mn.ManimColor(mn.RED_D.to_rgb() * 0.5),
     #mn.ManimColor(mn.RED_E.to_rgb() * 0.5)
-    RED_D.clone(),
-    RED_E.clone()
+    RED_C.clone(),
+    RED_D.clone()
 ]
 for _ in colors:
     _[:3] *= 0.5
 
-def surfaceImage(col1=colors[0], col2=colors[1], fill_opacity=0.9, stroke_color=RED_D, stroke_opacity=0.8):
+def surfaceImage(col1=colors[0], col2=colors[1], fill_opacity=0.9, stroke_color=RED_C, stroke_opacity=0.8):
     n = 32
     m = 10
     t = torch.zeros(m * n - 1, m * n - 1, 5)
@@ -187,12 +187,12 @@ def normals(render_settings=LD, animate=True):
             gp2[1:].move(xlen * LEFT)
 
         with Sync(run_time=2, rate_func=rate_funcs.ease_out_expo):
-            mob1.set_location_by_function(p1)
+            mob1.set_location_by_function(p2)
             d[1].color = c1
             eq2.spawn()
 
-        with Seq(run_time=1.2):
-            mob1.set_location_by_function(p2)
+        # with Seq(run_time=1.2):
+        #     mob1.set_location_by_function(p2)
 
         Scene.wait(0.2)
     else:
@@ -206,10 +206,148 @@ def normals(render_settings=LD, animate=True):
 
     return eq1, gp2[-1], eq2, gp1[:-1], gp2[:-1], mob1, xmax, xlen, ylen
 
+def normals2(render_settings=LD, animate=True):
+    with Off():
+        cam = Scene.get_camera()
+        cam.set_distance_to_screen(12)
+        cam.move_to(cam.get_center() * 1.4)
+        cam.set_euler_angles(-90, 0, 180)
+
+    def p0(x):
+        return math.exp(-x * x / 2)
+
+    print('starting')
+    xmax = 2.5
+    ymax = 1.15
+
+    ax = mn.Axes(x_range=[-xmax, xmax + 0.2], y_range=[0, ymax], x_length=8, y_length=2 * ymax / 1.15,
+              axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                           "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           "shade_in_3d": True,
+                           },
+              #                  shade_in_3d=True,
+              ).set_z_index(1)
+
+    ax_o = ax.coords_to_point(0, 0)
+    ax.shift(-ax_o)
+    ax_o = mn.ORIGIN
+    xlen = ax.coords_to_point(xmax, 0)[0] - ax_o[0]
+    ylen = ax.coords_to_point(0, 1)[1] - ax_o[1]
+
+    plt = ax.plot(p0, x_range=[-xmax, xmax], color=mn.BLUE).set_z_index(2)
+    fill1 = ax.get_area(plt, color=mn.BLUE, opacity=0.5).set_z_index(2)
+    eq1 = mn.MathTex(r'p(a)=\frac1{\sqrt{2\pi}}e^{-\frac12a^2}', font_size=35)[0]
+    eq1_1 = mn.MathTex(r'p(b)=\frac1{\sqrt{2\pi}}e^{-\frac12b^2}', font_size=35)[0]
+    eq2 = mn.MathTex(r'{p(\bf v)=\frac1{2\pi\lvert\Sigma\rvert^{\frac12}}e^{-\frac12{\bf v}^T\Sigma^{-1} {\bf v}}}', font_size=35
+                     )[0]
+    eq1[2].set_color(mn.RED)
+    eq1[-2].set_color(mn.RED)
+    eq1_1[2].set_color(mn.BLUE)
+    eq1_1[-2].set_color(mn.BLUE)
+    col = mn.ManimColor.from_hex('#FFD1FF')
+    eq2[2].set_color(col)
+    eq2[-6].set_color(col)
+    eq2[-1].set_color(col)
+    eq1.move_to(ax.coords_to_point(-xmax, 1.1), mn.UL)
+    eq1_1.move_to(eq1)
+    eq2.move_to(ax.coords_to_point(-xmax, 1), mn.UL)
+    print('running 1')
+    mn.VGroup(fill1).shift(mn.IN*0.01)
+    gp1 = mn.VGroup(ax, fill1, eq1, eq1_1, eq2).rotate(PI / 2, axis=mn.RIGHT, about_point=ax_o) # eq1, eq2
+    gp1.rotate(PI, axis=mn.OUT, about_point=ax_o)
+
+    ax_r = ax.coords_to_point(1, 0) - ax_o
+    ax_u = ax.coords_to_point(0, 1) - ax_o
+    def f(t):
+        t1 = t.item()
+        res = ax_o + ax_r * t1 + ax_u * p0(t1)
+        res1 = RIGHT * res[0] + UP * res[1] + IN * res[2]
+        res2 = res1[None, :]
+        return res2
+
+    # eq2.shift(DOWN * xlen / 2)
+    ax_a = ManimMob(ax)
+    # plt1_a = ManimMob(plt1)
+    fill1 = ManimMob(fill1)
+
+    eq1 = ManimMob(eq1)
+    eq1_1 = ManimMob(eq1_1)
+    n = int(render_settings.frames_per_second * 1.5 + 0.5)
+    if False:
+        with Lag(run_time=1.5, lag_ratio=0.5):
+            with Sync(run_time=1.5):
+                eq1.spawn()
+                with Seq():
+                    for i in range(n):
+                        t = i/(n-1)
+                        x1 = xmax*t - xmax*(1-t)
+                        plt2 = ah.curve3d(f, -xmax, x1, npts=100, border_color=BLUE, border_width=2.5, add_to_scene=False)
+                        with Sync(run_time=1.5 / n, rate_func=rate_funcs.identity):
+                            if i == 0:
+                                plt1 = plt2.clone(add_to_scene=True).spawn()
+                            else:
+                                plt1.control_points.location = plt2.control_points.location
+
+            #plt1_a.spawn()  # linear
+            # eq1 spawn
+        fill1.spawn()
+
+    print('running 2')
+
+    with Off():
+        cam.set_euler_angles(20, 0, 30)
+    def f2(u):
+        return torch.mul(u[:,:,:1] * 2 - 1, RIGHT * xlen) + torch.mul(u[:,:,1:2] * 2 - 1, UP * xlen)
+
+    mob1 = surfaceImage()
+    eq2 = ManimMob(eq2)
+    with Off():
+        gp1 = Group(ax_a, fill1, eq1).spawn()
+        gp2 = Group(ax_a, fill1, eq1_1).clone().spawn()
+        eq2.move(DOWN*1.2)
+        gp2.orbit_around_point(ORIGIN, 90, OUT)
+        gp1[1:].move(xlen * UP)
+        gp2[1:].move(xlen * LEFT)
+
+    return
+
+    def p2(u):
+        x = (u[:,:,:1] * 2 - 1) * xmax
+        y = (u[:,:,1:2] * 2 - 1) * xmax
+        z = torch.exp(-0.5 * (x*x + y*y - x*y))
+        return torch.mul(x, RIGHT * xlen/xmax) + torch.mul(y, UP * xlen/xmax) + torch.mul(z, IN*ylen)
+
+
+    mob1.set_location_by_function(f2)
+    d = mob1.get_descendants()
+    c = d[1].color
+    c1 = c.clone()
+    c[:,:,-1] = 0.3
+
+    with Sync(run_time=1):
+        with Sync(rate_func=rate_funcs.identity):
+            mob1.spawn()
+
+
+    with Sync(run_time=2, rate_func=rate_funcs.ease_out_expo):
+        mob1.set_location_by_function(p2)
+        d[1].color = c1
+        eq2.spawn()
+
+    # with Seq(run_time=1.2):
+    #     mob1.set_location_by_function(p2)
+
+    Scene.wait(0.2)
+
 
 def animate_normals(render_settings=LD):
     normals(render_settings=render_settings)
     render_to_file('normals', render_settings=render_settings, background_color=BLACK)
+
+def animate_normals2(render_settings=LD):
+    normals2(render_settings=render_settings)
+    render_to_file('normals2', render_settings=render_settings, background_color=BLACK)
 
 
 def expectedXY(render_settings=LD):
@@ -338,4 +476,4 @@ def expectedXY(render_settings=LD):
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
-    expectedXY(render_settings=HD)
+    animate_normals2(render_settings=HD)
