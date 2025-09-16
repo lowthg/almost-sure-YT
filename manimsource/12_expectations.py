@@ -784,3 +784,161 @@ class Geometric(Gain25):
         self.play(FadeIn(eq6))
 
         self.wait()
+
+class ConditionalCalc(Gain25):
+    def construct(self):
+
+        eqh = Tex(r'selected', r'$B$', r'initial cash', r'prob', r'conditional')
+        eqh[1].set_color(BLUE)
+        eqh0 = eqh.copy()
+        eqA = MathTex(r'A', color=RED, font_size=60)
+        eqhA = MathTex(r'\frac12A')[0]
+        eqhA[-1].scale(1.25, about_edge=LEFT)
+        eq2A = MathTex(r'2A', font_size=60)[0]
+        #eq2A[-1].scale(1.25, about_edge=LEFT)
+        VGroup(eqhA[-1], eq2A[-1]).set_color(RED)
+        eqpn = MathTex(r'\sim p^n1')[0]
+        eqpnp = MathTex(r'\sim p^np')[0]
+        eqp1 = MathTex(r'\frac1{1+p}')[0]
+        eqp2 = MathTex(r'\frac p{1+p}')[0]
+        t1 = MobjectTable([
+            eqh[:],
+            [eqA.copy(), eqhA.copy(), eqhA.copy(), eqpn, eqp1],
+            [eqA.copy(), eq2A.copy(), eqA.copy(), eqpnp, eqp2]
+        ],
+            include_outer_lines=True, include_background_rectangle=True,
+            h_buff=0.7, v_buff=0.2).to_edge(DOWN, buff=0.2).set_z_index(2)
+        t1.background_rectangle.set_opacity(0.8).set_z_index(1)
+        mh.align_sub(eqh0, eqh0[3], eqh[3])
+        for i in range(len(eqh[:])):
+            eqh[i].move_to(eqh0[i], coor_mask=UP)
+
+        self.add(t1.vertical_lines, t1.horizontal_lines, t1.background_rectangle, t1.elements[:5])
+        self.wait(0.1)
+        self.play(FadeIn(t1.elements[5], t1.elements[10]))
+        self.wait(0.1)
+        self.play(LaggedStart(mh.rtransform(t1.elements[5][0].copy(), t1.elements[6][-1]),
+                  FadeIn(t1.elements[6][:-1]), lag_ratio=0.5))
+        self.play(LaggedStart(mh.rtransform(t1.elements[10][0].copy(), t1.elements[11][-1]),
+                  FadeIn(t1.elements[11][:-1]), lag_ratio=0.5))
+        self.play(mh.rtransform(t1.elements[6].copy(), t1.elements[7]))
+        self.play(mh.rtransform(t1.elements[10].copy(), t1.elements[12]), run_time=1.2)
+
+        eqpn2 = MathTex(r'\sim p^n')[0].set_z_index(2)
+        eqpnp2 = MathTex(r'\sim p^{n+1}')[0].set_z_index(2)
+        mh.align_sub(eqpn2, eqpn2[0], eqpn[0])
+        mh.align_sub(eqpnp2, eqpnp2[0], eqpnp[0])
+        self.play(FadeIn(eqpn2, eqpnp2))
+        self.play(mh.rtransform(eqpn2[:], eqpn[:-1], eqpnp2[:3], eqpnp[:3], eqpnp2[1].copy(), eqpnp[3]),
+                  FadeOut(eqpnp2[3:]),
+                  FadeIn(eqpn[-1]))
+        eqp1_1 = eqpn[-1].copy()
+        eqp2_1 = eqpnp[-1].copy()
+        self.play(eqp1_1.animate.move_to(eqp1), eqp2_1.animate.move_to(eqp2))
+        self.play(LaggedStart(mh.rtransform(eqp1_1, eqp1[0], eqp2_1, eqp2[0],
+                                            eqp1_1.copy(), eqp1[2], eqp1_1.copy(), eqp2[2],
+                                            eqp2_1.copy(), eqp1[4], eqp2_1.copy(), eqp2[4],
+                                            run_time=1.4),
+                  FadeIn(eqp1[1], eqp2[1], eqp1[3], eqp2[3]), lag_ratio=0.3))
+        self.wait(0.1)
+
+        t2 = t1.copy().to_edge(DOWN, buff=0).scale(0.8, about_edge=DOWN)
+        eq3 = MathTex(r'\mathbb E[B\vert A] - A', r'=', r'A\frac{p}{1+p}-\frac12A\frac1{1+p}', font_size=60).set_z_index(0.5)
+        eq3[0][2].set_color(BLUE)
+        VGroup(eq3[0][-4], eq3[0][-1], eq3[2][0], eq3[2][10]).set_color(RED)
+        eq3.next_to(t2, UP, coor_mask=UP, buff=0.1)
+        box2 = SurroundingRectangle(eq3, fill_color=BLACK, fill_opacity=0.8, corner_radius=0.1, buff=0.1,
+                                    stroke_width=0, stroke_opacity=0)
+        self.play(mh.rtransform(t1, t2), FadeIn(box2, eq3[:2]))
+        eq3.set_z_index(2)
+        self.play(mh.rtransform(t2.elements[11][1].copy(), eq3[2][0]), run_time=1.4)
+        self.play(mh.rtransform(t2.elements[14][:].copy(), eq3[2][1:6]), run_time=1.4)
+        self.play(mh.rtransform(t2.elements[6][:].copy(), eq3[2][7:11]),
+                  FadeIn(eq3[2][6], shift=mh.diff(t2.elements[6][1], eq3[2][8])),
+                  run_time=1.4)
+        self.play(mh.rtransform(t2.elements[9][:].copy(), eq3[2][11:]), run_time=1.4)
+        self.wait(0.1)
+        eq4 = MathTex(r'\mathbb E[B\vert A] - A', r'=', r'A\frac{p-1/2}{1+p}', font_size=60).set_z_index(2)
+        eq4[0][2].set_color(BLUE)
+        VGroup(eq4[0][-4], eq4[0][-1], eq4[2][0]).set_color(RED)
+        mh.align_sub(eq4, eq4[1], eq3[1], coor_mask=UP)
+        self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[2][0], eq4[2][0],
+                                eq3[2][1], eq4[2][1], eq3[2][6], eq4[2][2],
+                                eq3[2][7:10], eq4[2][3:6], eq3[2][2:6], eq4[2][6:10]),
+                  mh.rtransform(eq3[2][10], eq4[2][0], eq3[2][11], eq4[2][3]),
+                  mh.rtransform(eq3[2][12:16], eq4[2][6:10]),
+                  run_time=1.5)
+        self.wait(0.1)
+
+        MathTex.set_default(font_size=100)
+        eq5 = MathTex(r'\mathbb E[B\vert A]-A', r'=', r'A\frac{5/6-1/2}{1+5/6}').set_z_index(2)
+        eq5[0][2].set_color(BLUE)
+        VGroup(eq5[0][4], eq5[0][-1], eq5[2][0]).set_color(RED)
+
+        box3 = SurroundingRectangle(eq5, fill_color=BLACK, fill_opacity=0.8, corner_radius=0.15, buff=0.2,
+                                    stroke_width=0, stroke_opacity=0)
+        VGroup(eq5, box3).to_edge(DOWN, buff=0.4)
+
+        self.play(LaggedStart(FadeOut(t2, run_time=1), AnimationGroup(
+            mh.rtransform(box2, box3, eq4[:2], eq5[:2], eq4[2][0], eq5[2][0], eq4[2][2:9], eq5[2][4:11]),
+            mh.fade_replace(eq4[2][1], eq5[2][1:4]),
+            mh.fade_replace(eq4[2][-1], eq5[2][-3:]),
+        run_time=1.6), lag_ratio=0.2))
+
+        eq6 = MathTex(r'\mathbb E[B\vert A]-A', r'=', r'A\frac{5-6/2}{6+5}').set_z_index(2)
+        mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
+        eq6[0][2].set_color(BLUE)
+        VGroup(eq6[0][4], eq6[0][-1], eq6[2][0]).set_color(RED)
+        self.play(mh.rtransform(eq5[:2], eq6[:2], eq5[2][:2], eq6[2][:2],
+                                eq5[2][4], eq6[2][2], eq5[2][3], eq6[2][3],
+                                eq5[2][6:9], eq6[2][4:7], eq5[2][-1], eq6[2][7],
+                                eq5[2][10:12], eq6[2][8:10]),
+                  FadeOut(eq5[2][2], shift=mh.diff(eq5[2][1], eq6[2][1])),
+                  FadeOut(eq5[2][5], target_position=eq6[2][3]),
+                  FadeOut(eq5[2][9], target_position=eq6[2][7]),
+                  FadeOut(eq5[2][-2], shift=mh.diff(eq5[2][-3], eq6[2][9])))
+        eq6_1 = MathTex(r'3').set_z_index(2).move_to(eq6[2][3:6]).align_to(eq5[2][3], DOWN)
+        self.play(FadeOut(eq6[2][3:6]), FadeIn(eq6_1))
+
+        eq7 = MathTex(r'\mathbb E[B\vert A]-A', r'=', r'A\frac{2}{11}').set_z_index(2)
+        eq7[0][2].set_color(BLUE)
+        VGroup(eq7[0][4], eq7[0][-1], eq7[2][0]).set_color(RED)
+        mh.align_sub(eq7, eq7[1], eq6[1])
+        self.play(mh.rtransform(eq6[:2], eq7[:2], eq6[2][0], eq7[2][0],
+                                eq6[2][6], eq7[2][2]),
+                  FadeOut(eq6[2][1], target_position=eq7[2][1]),
+                  FadeOut(eq6[2][2], target_position=eq7[2][1]),
+                  FadeOut(eq6_1, target_position=eq7[2][1]),
+                  FadeIn(eq7[2][1], eq7[2][3:5]),
+                  FadeOut(eq6[2][7], target_position=eq7[2][3:5]),
+                  FadeOut(eq6[2][8], target_position=eq7[2][3:5]),
+                  FadeOut(eq6[2][9], target_position=eq7[2][3:5]),
+                  )
+        eq8 = MathTex(r'\mathbb E[B\vert A]-A', r'=', r'\frac{2}{11}A').set_z_index(2)
+        mh.align_sub(eq8, eq8[1], eq7[1], coor_mask=UP)
+        eq8[0][2].set_color(BLUE)
+        VGroup(eq8[0][4], eq8[0][-1], eq8[2][-1]).set_color(RED)
+        self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][0], eq8[2][-1], eq7[2][1:], eq8[2][:-1]))
+
+        eq9 = MathTex(r'\mathbb E[B\vert A] > A')[0].set_z_index(2)
+        mh.align_sub(eq9, eq9[0], eq8[0][0], coor_mask=UP)
+        eq9[2].set_color(BLUE)
+        VGroup(eq9[4], eq9[-1]).set_color(RED)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq8[0][:6], eq9[:6], eq8[0][-1], eq9[7]),
+                  mh.fade_replace(eq8[0][6], eq9[6]),
+                  FadeOut(eq8[1:]))
+        self.wait(0.1)
+        eq10 = MathTex(r'\mathbb E[B\vert A] > A', font_size=100)[0].set_z_index(2)
+        eq11 = MathTex(r'\mathbb E[A\vert B] > B', font_size=100)[0].set_z_index(2).next_to(eq10, DOWN)
+        VGroup(eq10[2], eq11[4], eq11[7]).set_color(BLUE)
+        VGroup(eq11[2], eq10[4], eq10[7]).set_color(RED)
+        VGroup(eq10, eq11).move_to(box3)
+        self.play(mh.rtransform(eq9, eq10, eq9[:2].copy(), eq11[:2], eq9[3].copy(), eq11[3],
+                                eq9[5:7].copy(), eq11[5:7]),
+                  mh.fade_replace(eq9[2].copy(), eq11[2]),
+                  mh.fade_replace(eq9[4].copy(), eq11[4]),
+                  mh.fade_replace(eq9[7].copy(), eq11[7]))
+
+
+        self.wait()
