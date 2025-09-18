@@ -808,7 +808,7 @@ class ConditionalCalc(Gain25):
         ],
             include_outer_lines=True, include_background_rectangle=True,
             h_buff=0.7, v_buff=0.2).to_edge(DOWN, buff=0.2).set_z_index(2)
-        t1.background_rectangle.set_opacity(0.8).set_z_index(1)
+        t1.background_rectangle.set_opacity(0.7).set_z_index(1)
         mh.align_sub(eqh0, eqh0[3], eqh[3])
         for i in range(len(eqh[:])):
             eqh[i].move_to(eqh0[i], coor_mask=UP)
@@ -847,7 +847,7 @@ class ConditionalCalc(Gain25):
         eq3[0][2].set_color(BLUE)
         VGroup(eq3[0][-4], eq3[0][-1], eq3[2][0], eq3[2][10]).set_color(RED)
         eq3.next_to(t2, UP, coor_mask=UP, buff=0.1)
-        box2 = SurroundingRectangle(eq3, fill_color=BLACK, fill_opacity=0.8, corner_radius=0.1, buff=0.1,
+        box2 = SurroundingRectangle(eq3, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.1, buff=0.1,
                                     stroke_width=0, stroke_opacity=0)
         self.play(mh.rtransform(t1, t2), FadeIn(box2, eq3[:2]))
         eq3.set_z_index(2)
@@ -875,7 +875,7 @@ class ConditionalCalc(Gain25):
         eq5[0][2].set_color(BLUE)
         VGroup(eq5[0][4], eq5[0][-1], eq5[2][0]).set_color(RED)
 
-        box3 = SurroundingRectangle(eq5, fill_color=BLACK, fill_opacity=0.8, corner_radius=0.15, buff=0.2,
+        box3 = SurroundingRectangle(eq5, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15, buff=0.2,
                                     stroke_width=0, stroke_opacity=0)
         VGroup(eq5, box3).to_edge(DOWN, buff=0.4)
 
@@ -939,6 +939,93 @@ class ConditionalCalc(Gain25):
                   mh.fade_replace(eq9[2].copy(), eq11[2]),
                   mh.fade_replace(eq9[4].copy(), eq11[4]),
                   mh.fade_replace(eq9[7].copy(), eq11[7]))
+        self.wait(0.1)
+
+        eq12 = MathTex(r'\mathbb E[\mathbb E[B\vert A]] > \mathbb E[A]', font_size=100)[0].set_z_index(2)
+        eq13 = MathTex(r'\mathbb E[\mathbb E[A\vert B]] > \mathbb E[B]', font_size=100)[0].set_z_index(2)
+        VGroup(eq12[4], eq13[6], eq13[12]).set_color(BLUE)
+        VGroup(eq13[4], eq12[6], eq12[12]).set_color(RED)
+        eq12.move_to(eq10, coor_mask=UP)
+        eq13.move_to(eq11, coor_mask=UP)
+        self.play(LaggedStart(mh.rtransform(eq10[:6], eq12[2:8], eq10[6], eq12[9], eq10[7], eq12[12],
+                                            eq11[:6], eq13[2:8], eq11[6], eq13[9], eq11[7], eq13[12],
+                                            run_time=1.4),
+                  FadeIn(eq12[:2], eq12[8], eq12[10:12], eq12[13],
+                         eq13[:2], eq13[8], eq13[10:12], eq13[13],run_time=1), lag_ratio=0.5))
+        self.wait(0.1)
+        circ1 = mh.circle_eq(eq13[:9])
+        self.play(Create(circ1), run_time=1)
+        self.wait(0.1)
+        eq14 = MathTex(r'\mathbb E[B] > \mathbb E[A]')[0].set_z_index(2)
+        eq15 = MathTex(r'\mathbb E[A] > \mathbb E[B]')[0].set_z_index(2)
+        VGroup(eq14[2], eq15[7]).set_color(BLUE)
+        VGroup(eq15[2], eq14[7]).set_color(RED)
+        eq14.move_to(eq10, coor_mask=UP)
+        eq15.move_to(eq11, coor_mask=UP)
+        self.play(mh.rtransform(eq13[:2], eq15[:2], eq13[7], eq15[3]),
+                  mh.rtransform(eq13[2:5], eq15[:3], eq13[8], eq15[3]),
+                  FadeOut(eq13[5:7]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq12[:2], eq14[:2], eq12[7], eq14[3], eq13[9:], eq15[4:]),
+                  mh.rtransform(eq12[2:5], eq14[:3], eq12[8:], eq14[3:]),
+                  FadeOut(circ1, eq12[5:7]))
+        self.wait(0.1)
+        line1 = Line(eq15.get_corner(DL), eq14.get_corner(UR), stroke_width=8, stroke_color=RED).set_z_index(4)
+        line2 = Line(eq14.get_corner(UL), eq15.get_corner(DR), stroke_width=8, stroke_color=RED).set_z_index(4)
+        self.play(Create(line1, rate_func=linear, run_time=0.6))
+        self.play(Create(line2, rate_func=linear, run_time=0.6))
+        self.wait(0.1)
+        self.play(FadeOut(line1, line2, eq14, eq15, rate_func=linear))
+        eq16 = MathTex(r'\mathbb E[A\vert B]', r'=', r'B + \mathbb E[A\vert B] - B').set_z_index(2)
+        VGroup(eq16[0][2], eq16[2][4]).set_color(RED)
+        VGroup(eq16[0][4], eq16[2][0], eq16[2][6], eq16[2][9]).set_color(BLUE)
+        eq16.move_to(box3)
+        self.play(FadeIn(eq16))
+        self.wait(0.1)
+
+        eq17 = MathTex(r'\mathbb E[\mathbb E[A\vert B]]', r'\!=\!', r'\mathbb E[B + \mathbb E[A\vert B] - B]').set_z_index(2)
+        VGroup(eq17[0][4], eq17[2][6]).set_color(RED)
+        VGroup(eq17[0][6], eq17[2][2], eq17[2][8], eq17[2][11]).set_color(BLUE)
+        mh.align_sub(eq17, eq17[1], eq16[1], coor_mask=UP)
+        box4 = SurroundingRectangle(VGroup(eq5, eq17), fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15, buff=0.2,
+                                    stroke_width=0, stroke_opacity=0)
+
+        self.play(LaggedStart(mh.rtransform(eq16[0][:], eq17[0][2:-1], eq16[1], eq17[1],
+                                            eq16[2][:],eq17[2][2:-1], box3, box4),
+                  FadeIn(eq17[0][:2], eq17[0][-1], eq17[2][:2], eq17[2][-1]), lag_ratio=0.3))
+        self.wait(0.1)
+        eq18 = MathTex(r'\mathbb E[A]', r'\!=\!', r'\mathbb E[B] + \mathbb E[\mathbb E[A\vert B] - B]').set_z_index(2)
+        mh.align_sub(eq18, eq18[1], eq17[1], coor_mask=UP)
+        VGroup(eq18[0][2], eq18[2][9]).set_color(RED)
+        VGroup(eq18[2][2], eq18[2][11], eq18[2][14]).set_color(BLUE)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq17[0][:2], eq18[0][:2], eq17[0][-1], eq18[0][-1],
+                                ),
+                  mh.rtransform(eq17[0][2:5], eq18[0][:3], eq17[0][-2], eq18[0][-1]),
+                  mh.rtransform(eq17[1], eq18[1], eq17[2][:3], eq18[2][:3],
+                                eq17[2][3], eq18[2][4], eq17[2][4:], eq18[2][7:]),
+                  mh.rtransform(eq17[2][:2].copy(), eq18[2][5:7]),
+                  FadeOut(eq17[0][5:7]),
+                  FadeIn(eq18[2][3], shift=mh.diff(eq17[2][2], eq18[2][2])))
+        self.wait(0.1)
+        circ2 = mh.circle_eq(eq18[2][5:]).set_z_index(3)
+        eq19 = Tex(r'\sf strictly positive', stroke_width=2, stroke_color=YELLOW, font_size=60).set_z_index(4)
+        eq19.next_to(circ2, UP, buff=0)
+        self.play(LaggedStart(Create(circ2, rate_func=linear, run_time=1),
+                              FadeIn(eq19, run_time=1), lag_ratio=0.5))
+        self.wait(0.1)
+        circ3 = mh.circle_eq(eq18[2][:4]).set_z_index(3)
+        eq20 = Tex(r'\sf infinite!', stroke_width=2, stroke_color=YELLOW, font_size=60).set_z_index(4)
+        eq20.next_to(circ3, UP, buff=0.1)
+        self.play(LaggedStart(Create(circ3, rate_func=linear, run_time=1),
+                              FadeIn(eq20, run_time=1), lag_ratio=0.5))
+        self.wait(0.1)
+        circ4 = mh.circle_eq(eq18[0]).set_z_index(3)
+        eq21 = Tex(r'\sf infinite', stroke_width=2, stroke_color=YELLOW, font_size=60).set_z_index(4)
+        eq21.next_to(circ4, UP, buff=0.1)
+        self.play(LaggedStart(Create(circ4, rate_func=linear, run_time=1),
+                              FadeIn(eq21, run_time=1), lag_ratio=0.5))
+
 
 
         self.wait()
