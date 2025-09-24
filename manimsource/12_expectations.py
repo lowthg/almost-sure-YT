@@ -348,7 +348,7 @@ class AliceExpected(Scene):
         eq2 = Tex(r'\sf Alice receives ', r'$4^b$')
 
         for x in eq2[0][:5]: x.set(stroke_width=2)
-        eq2.next_to(eq1, DOWN)
+        eq2.next_to(eq1, DOWN, buff=0.)
         eq3 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\sum_b4^bp(b)')
         mh.align_sub(eq3, eq3[0][2:-3], eq2[0], coor_mask=UP)
         eq4 = MathTex(r'\mathbb E[{\rm Alice receives}\vert a]', r'=', r'\sum_{b=0}^{a-1}4^b\left(\frac12\right)^{b+1}')
@@ -418,12 +418,12 @@ class AliceExpected(Scene):
                   FadeIn(eq7[2][3], eq7[2][6:], run_time=1.4), lag_ratio=0.5))
         self.wait(0.5)
 
-        eq7_1 = eq7.copy().align_to(eq1_1, UP).shift(DOWN*0.1)
+        eq7_1 = eq7.copy().align_to(eq1_1, UP).shift(DOWN*0.05)
 
         eq10 = MathTex(r'\mathbb P(b > a\vert a)', r'=', r'\left(\frac12\right)^{a+1}')
         eq10[0][2].set_color(BLUE)
         VGroup(eq10[0][4], eq10[0][6], eq10[2][-3]).set_color(RED)
-        eq10.next_to(eq7_1, DOWN, buff=0.1)
+        eq10.next_to(eq7_1, DOWN, buff=0.05)
 
         eq11 = MathTex(r'\mathbb E[{\sf Alice\ pays}\vert a]', r'=', r'4^a\left(\frac12\right)^{a+1}')
         mh.align_sub(eq11, eq11[1], eq10[1], coor_mask=UP)
@@ -1153,19 +1153,19 @@ class NormalDecomp(Scene):
         eq5 = MathTex(r'=', r'\rho1', font_size=80)
         eq6 = MathTex(r'{\rm Cov}(C,A)', r'=', r'0', font_size=80)
         eq7 = Tex(r'$\Rightarrow$ independent', color=YELLOW, font_size=70)
-        eq8 = MathTex(r'B', r'\sim', r'N(\rho A, {\rm Var} C)')
+        eq8 = MathTex(r'B\vert_A', r'\sim', r'N(\rho A, {\rm Var} C)')
         eq9 = MathTex(r'{\rm Var}C', r'=', r'{\rm Cov}(B-\rho A, B-\rho A)')
         eq10 = MathTex(r'{\rm Var}C', r'\!=\!', r'{\rm Var}B + \rho^2{\rm Var}A-2\rho{\rm Cov}(A,B)', font_size=80)
         eq11 = MathTex(r'=', r'11\rho', font_size=80)
         eq12 = MathTex(r'{\rm Var}C', r'=', r'1-\rho^2')
-        eq13 = MathTex(r'B', r'\sim', r'N(\rho A, 1-\rho^2)')
+        eq13 = MathTex(r'B\vert_A', r'\sim', r'N(\rho A, 1-\rho^2)')
 
-        VGroup(eq1[0], eq2[2][0], eq3[2][4], eq4[2][4], eq8[0], eq9[2][4], eq9[2][9],
-               eq10[2][3], eq10[2][-2], eq13[0]).set_color(BLUE)
+        VGroup(eq1[0], eq2[2][0], eq3[2][4], eq4[2][4], eq8[0][0], eq9[2][4], eq9[2][9],
+               eq10[2][3], eq10[2][-2], eq13[0][0]).set_color(BLUE)
         VGroup(eq1[2][1], eq2[2][-1], eq3[0][6], eq3[2][7], eq3[2][9],
                eq4[0][6], eq4[2][6], eq4[2][14], eq4[2][16], eq6[0][6],
                eq8[2][3], eq9[2][-2], eq9[2][-7], eq10[2][10], eq10[2][18],
-               eq13[2][3]).set_color(RED)
+               eq13[2][3], eq13[0][-1], eq8[0][-1]).set_color(RED)
         VGroup(eq1[2][-1], eq2[0][0], eq3[0][4], eq4[0][4], eq6[0][4],
                eq8[2][-2], eq9[0][-1], eq10[0][-1], eq12[0][-1]).set_color(col3)
         eq2.next_to(eq1, DOWN)
@@ -1223,8 +1223,9 @@ class NormalDecomp(Scene):
         self.wait(0.1)
         self.wait(1)
         self.wait(0.1)
-        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq1[0], eq8[0], eq1[2][:2], eq8[2][2:4], eq1[2][-1], eq8[2][-2]),
+        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq1[0], eq8[0][0], eq1[2][:2], eq8[2][2:4], eq1[2][-1], eq8[2][-2]),
                   mh.fade_replace(eq1[1], eq8[1]),
+                  FadeIn(eq8[0][1:], shift=mh.diff(eq1[0], eq8[0][0])),
                   mh.fade_replace(eq1[2][2], eq8[2][4], coor_mask=RIGHT), run_time=1.2),
                   FadeIn(eq8[2][:2], eq8[2][5:8], eq8[2][-1], run_time=1), lag_ratio=0.3))
         self.wait(0.1)
@@ -1297,12 +1298,14 @@ class Integral(NormalDecomp):
         eq13 = MathTex(r'\mathbb E[e^{\frac12B^2}\vert A]', r'=', r'\rho^{-1}e^{\frac12A^2}', font_size=100)
         eq14 = MathTex(r'\mathbb E[\mathbb E[Y\vert A]\vert X]', r'=', r'\rho^{-1}\mathbb E[X\vert X]', font_size=100)
         eq15 = MathTex(r'\mathbb E[Y\vert X]', r'=', r'\rho^{-1}X', font_size=100)
+        eq16 = MathTex(r'\mathbb E[X\vert Y]', r'=', r'\rho^{-1}Y', font_size=100)
         VGroup(eq1[0][-2], eq1[2][4], eq2[0][3], eq2[3][6], eq3[2][6], eq4[2][8], eq4[2][12],
                eq5[2][8], eq5[2][12], eq6[2][10], eq6[2][14], eq7[0][6], eq7[0][10], eq7[0][15],
                eq8[0][6], eq8[1][7], eq9[3][6], eq9[0][4], eq10[0][5], eq11[1][5], eq12[0][7], eq12[3][5],
                eq13[0][-2], eq13[2][-2], eq1_1[-2], eq14[0][6], eq14[0][9], eq14[2][5], eq14[2][7],
-               eq15[0][-2], eq15[2][-1]).set_color(RED)
-        VGroup(eq1[0][6], eq1[2][2], eq2[0][1], eq13[0][6], eq1_1[6], eq14[0][4], eq15[0][2]).set_color(BLUE)
+               eq15[0][-2], eq15[2][-1], eq16[0][2]).set_color(RED)
+        VGroup(eq1[0][6], eq1[2][2], eq2[0][1], eq13[0][6], eq1_1[6], eq14[0][4], eq15[0][2],
+               eq16[0][-2], eq16[2][-1]).set_color(BLUE)
 
         eq4[3][1:3].move_to(eq4[2][2:4], coor_mask=UP)
         eq4[3][3].move_to(eq4[2][-8], coor_mask=UP)
@@ -1326,6 +1329,7 @@ class Integral(NormalDecomp):
         eq13.align_to(eq1, UP)
         mh.align_sub(eq14, eq14[1], eq13[1])
         mh.align_sub(eq15, eq15[1], eq14[1], coor_mask=UP)
+        mh.align_sub(eq16, eq16[1], eq15[1]).next_to(eq15, DOWN, buff=0.2)
 
         eq1_1.align_to(eq1[0], UP)
         eq1_2 = eq1_1.copy()
@@ -1461,12 +1465,12 @@ class Integral(NormalDecomp):
         self.wait(0.1)
         circ1 = mh.circle_eq(eq12[2:4] + eq12[2:4].copy().shift(DOWN*0.3)).shift(RIGHT*0.2 + UP*0.1).set_z_index(2)
         eq12_1 = Tex(r'$N(A/\rho,\rho^{-2}-1)$', r'\sf probability density', font_size=60, color=YELLOW).set_z_index(3)
-        eq12_1.next_to(circ1, UP, buff=0).shift(LEFT)
+        eq12_1.next_to(circ1, UP, buff=-0.2).shift(LEFT)
         eq12_1[0].next_to(eq12_1[1], UP, buff=0.2)
         eq12_1[0][2].set_color(RED)
         self.play(LaggedStart(Create(circ1 ,run_time=1.3), FadeIn(eq12_1, run_time=1), lag_ratio=0.7))
         self.wait(0.1)
-        eq12_2 = Tex(r'\sf integrates to $1$', color=YELLOW, font_size=60)
+        eq12_2 = Tex(r'\sf integrates to $1$', color=YELLOW, font_size=60).set_z_index(3)
         eq12_2.move_to(eq12_1[1]).align_to(eq12_1[1], LEFT)
         self.play(FadeOut(eq12_1), FadeIn(eq12_2))
         self.wait(0.1)
@@ -1485,7 +1489,12 @@ class Integral(NormalDecomp):
                   FadeIn(eq14[0][:2], eq14[0][-3:], eq14[2][3:5], eq14[2][-3:], run_time=1.2),
                               lag_ratio=0.5))
         self.wait(0.1)
-        eq14_1 = Tex(r'\sf apply tower law', r'\sf as $X$ is $A$-measurable', font_size=50, font_color=YELLOW)
+        brace1 = Brace(eq14[0], DOWN, color=RED)
+        eq14_1 = Tex(r'\sf apply tower law', r'\sf as $X$ is $A$-measurable', font_size=60, color=YELLOW)
+        eq14_1[1].next_to(eq14_1[0], DOWN, buff=0.2)
+        eq14_1.next_to(brace1, DOWN, buff=0.1)
+        VGroup(eq14_1[1][2], eq14_1[1][5]).set_color(RED)
+        self.play(FadeIn(brace1, eq14_1))
         eq15_1 = eq15.copy()
         mh.align_sub(eq15[0], eq15[0][2], eq14[0][4], coor_mask=RIGHT)
         eq15[1].move_to(eq14[1], coor_mask=RIGHT)
@@ -1496,7 +1505,349 @@ class Integral(NormalDecomp):
                   mh.rtransform(eq14[0][:2], eq15[0][:2], eq14[0][8], eq15[0][3], eq14[0][-1], eq15[0][-1]),
                   FadeOut(eq14[0][6], eq14[2][3:5], eq14[2][-3:]), run_time=1.4)
         self.wait(0.1)
-        self.play(mh.transform(eq15, eq15_1), run_time=1.4)
+        self.play(mh.transform(eq15, eq15_1), FadeOut(brace1, eq14_1, rate_func=linear), run_time=1.4)
+        self.wait(0.1)
+        eq16_1 = Tex(r'\sf symmetry:', color=YELLOW, font_size=70)
+        eq16_1.next_to(eq15, LEFT)
+        self.play(FadeIn(eq16_1))
+        self.wait(0.1)
+        gp = VGroup(eq15.copy(), eq16)#.move_to(eq15, coor_mask=UP)
+        eq15_1 = eq15.copy()
+        self.play(mh.transform(eq15, gp[0], eq15_1[0][:2], eq16[0][:2],
+                               eq15_1[0][3], eq16[0][3], eq15_1[0][5], eq16[0][5],
+                               eq15_1[1], eq16[1], eq15_1[2][:3], eq16[2][:3]),
+                  mh.fade_replace(eq15_1[0][2], eq16[0][2]),
+                  mh.fade_replace(eq15_1[0][4], eq16[0][4]),
+                  mh.fade_replace(eq15_1[2][3], eq16[2][3]),
+                  run_time=1.8)
+        self.wait(0.1)
+        self.play(FadeOut(eq16_1))
 
 
         self.wait()
+
+def get_OU_path(times, vol, mr, seed=0):
+    """
+    dVar = 2 Cov(X,dX)+Var(dX) = -2 mr Var dt + vol^2 dt
+    Var(t) = vol^2 * (1-e^(-2mr t))/(2 mr)
+    """
+    if seed != 0:
+        np.random.seed(seed)
+    n = len(times)
+    dt = (times[-1] - times[0]) / (n-1)
+    s = math.sqrt(dt)
+    yvals = np.zeros(n)
+    bm = np.random.normal(0., 1., n)
+    a = math.exp(-mr * dt)
+    b = vol * math.sqrt((1 - math.exp(-2*mr*dt))/(2*mr))
+    yvals[0] = bm[0] * vol / math.sqrt(2 * mr)
+    for i in range(1, n):
+        yvals[i] = yvals[i-1] * a + bm[i] * b
+    return yvals
+
+class OUProcess(Scene):
+    def construct(self):
+        n = 2000
+        vol = 1.
+        mr = 1.
+        dev = vol / math.sqrt(2 * mr)
+        tmax = 4.
+        ymin = -1.5
+        ymax = 1.5
+        seeds = [6, 7, 11, 9, 10]
+        play_time=8
+        play_n = 5
+        op3 = 0.5
+
+        ax = Axes(x_range=[0, tmax * 1.04], y_range=[ymin, ymax], x_length=12, y_length=5,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "stroke_opacity": 1,
+                               },
+                  ).set_z_index(2)
+        ax.y_axis.set_z_index(20)
+        ax.to_edge(DOWN, buff=0.4)
+        label1 = MathTex(r't').next_to(ax.x_axis.get_right(), RIGHT, buff=0.1)
+        label2 = MathTex(r'0').next_to(ax.x_axis.get_left(), LEFT, buff=0.1)
+        label3 = MathTex(r'X_t').next_to(ax.y_axis.get_top(), UP, buff=0.1).set_z_index(20)
+        self.add(ax, label1, label2, label3)
+        self.wait(0.1)
+
+        times = np.linspace(0., tmax, n)
+        times2 = np.linspace(0., tmax * 10, n * play_n + n)
+        yval2 = -get_OU_path(times2, vol, mr, seeds[0])[::-1]
+        #path2 = ax.plot_line_graph(times, yval2[:n], add_vertex_dots=False, line_color=BLUE,
+        #                          stroke_width=5, stroke_opacity=1).set_z_index(10)
+
+
+        colors = [BLUE, GREEN, YELLOW, RED, MAROON]
+        zindices = [10, 9, 8, 7, 6]
+        yvals = [yval2] + [get_OU_path(times, vol, mr, seed) for seed in seeds[1:]]
+        paths = [ax.plot_line_graph(times, y, add_vertex_dots=False, line_color=lc,
+                                  stroke_width=3, stroke_opacity=0.7).set_z_index(z)
+                 for y, lc, z in zip(yvals[1:], colors[1:], zindices[1:])]
+
+        #path2 = play_func()
+        path2 = ax.plot_line_graph(times, yval2[:n], add_vertex_dots=False, line_color=BLUE,
+                                   stroke_width=5, stroke_opacity=1).set_z_index(10)
+
+        paths = [path2] + paths
+
+        t_val = ValueTracker(0.)
+        arr1 = Arrow(ax.coords_to_point(0, ymax), ax.coords_to_point(0, 0), buff=0, color=RED).set_z_index(20)
+        origin = ax.coords_to_point(0, 0)
+        txt = Tex(r'drift', color=RED).set_z_index(100)
+
+        ht = [origin[1]]
+
+        def f():
+            t1 = t_val.get_value()
+            if t1 > 0:
+                pt1 = path2['line_graph'].get_end()
+                ht[0] = ht[0] + (pt1[1] - ht[0]) * 0.2
+                pt1[1] = origin[1] + (ht[0] - origin[1]) * 2
+                pt0 = pt1 * RIGHT + ax.coords_to_point(0, 0) * UP
+                scale = max(min(pt1[1] - origin[1], 1), -1)
+                tip = arr1.tip.copy().stretch(scale, dim=1, about_point=origin).shift((pt1 - origin)*RIGHT)
+                line = Line(pt1, pt0, color=RED, stroke_color=RED, stroke_width=6).set_z_index(200)
+                txt2 = txt.copy().next_to(line, RIGHT, buff=0.2)
+                op = min(max(t1 - 0.3, 0) * 10, 1) - max(t1-0.95, 0) * 20
+
+                return VGroup(tip, line, txt2).shift(RIGHT*0.05).set_opacity(op)
+            else:
+                return VGroup()
+
+        drift = always_redraw(f)
+        self.add(drift)
+        self.play(Create(paths[0]),
+                  t_val.animate.set_value(1.),
+                  rate_func=linear, run_time=4)
+        self.remove(drift)
+        self.wait(0.1)
+        self.play(*[Create(paths[i]) for i in range(1, len(paths))],
+                  rate_func=linear, run_time=2)
+        self.wait(0.1)
+
+        self.play(*[path.animate.set_stroke(opacity=op3) for path in paths[1:]], rate_func=linear, run_time=0.5)
+        self.wait(0.1)
+
+        def quadratic_in_out(t0):
+            b = 1 / (2 * t0 * (1 - t0))
+            c = b * t0 * t0
+            g = (1 - 2 * c) / (1 - 2 * t0)
+
+            def f(t):
+                if t < t0:
+                    return b * t * t
+                elif t > 1. - t0:
+                    return 1. - b * (1-t) * (1-t)
+                return c + g * (t - t0)
+
+            return f
+
+        def f(y):
+            return (np.exp(y*y/(2*dev)) - 1) / (math.exp(1) - 1) * (ymax-ymin) + ymin
+
+        yvalsexp = [f(y) for y in yvals]
+        print(min(yvalsexp[0]))
+        pathsexp = [ax.plot_line_graph(times, y, add_vertex_dots=False, line_color=lc,
+                                  stroke_width=3, stroke_opacity=op3).set_z_index(z)
+                 for y, lc, z in zip(yvalsexp, colors, [20] + zindices)]
+        pathsexp[0].set_stroke(width=5, opacity=1)
+
+        pt0 = ax.coords_to_point(0, 0)
+        pt1 = ax.coords_to_point(0, ymin)
+        shift = pt1 - pt0
+        label4 = MathTex(r'1').next_to(pt1, LEFT, buff=0.1)
+        label5 = MathTex(r'e^{X^2_t}', stroke_width=1).next_to(ax.y_axis.get_top(), UP, buff=0.1).set_z_index(20)
+        mh.align_sub(label5, label5[0][1], label3[0], coor_mask=RIGHT)
+
+        self.play(*[mh.rtransform(paths[i], pathsexp[i]) for i in range(len(paths))],
+                  VGroup(ax.x_axis, label1).animate.shift(shift),
+                  mh.fade_replace(label2, label4),
+                  mh.rtransform(label3[0][1], label5[0][3]),
+                  mh.stretch_replace(label3[0][0], label5[0][1]),
+                  FadeIn(label5[0][0]),
+                  FadeIn(label5[0][2], shift=label5[0][1].get_corner(UR) - label3[0][0].get_corner(UR)),
+                  run_time=1.4, rate_func=linear)
+        self.wait(0.1)
+
+        yval2exp = f(yval2)
+        t_val = ValueTracker(0.)
+
+        def play_shift():
+            t = t_val.get_value()
+            t1 = t * n * play_n
+            m = round(t1)
+            return m, times[1] * (m - t1)
+
+        def play_func():
+            #print('********** drawing **************')
+            m, dt = play_shift()
+            path2 = ax.plot_line_graph(times + dt, yval2exp[m:m + n], add_vertex_dots=False, line_color=BLUE,
+                                      stroke_width=5, stroke_opacity=1).set_z_index(10)
+            return path2
+
+        self.remove(pathsexp[0])
+        path2 = always_redraw(play_func)
+        self.add(path2)
+        self.play(t_val.animate.set_value(1.), run_time=play_time, rate_func=quadratic_in_out(0.15))
+        self.remove(path2)
+        pathsexp[0] = play_func()
+        self.add(pathsexp[0])
+        self.wait(0.1)
+        m, _ = play_shift()
+        yvalsexp[0] = yval2exp[m:m+n]
+
+
+        i_t = 950
+        t = times[i_t]
+        yt = yvalsexp[0][i_t]
+        pt0 = ax.coords_to_point(t, ymin)
+        pt1 = ax.coords_to_point(t, yt)
+        col = RED
+        eq1 = MathTex(r't', color=col, stroke_width=1.5).next_to(pt0, DOWN, buff=0.02).set_z_index(40)
+        dot1 = Dot(radius=0.1, fill_color=col, fill_opacity=1, stroke_width=1, stroke_color=WHITE, stroke_opacity=1).move_to(pt1).set_z_index(40)
+        line1 = Line(pt0, pt1, stroke_width=7, stroke_color=col).set_z_index(40)
+        yvals2 = (yt - ymin) * np.exp(np.abs(times - t) * mr) + ymin
+
+
+
+        self.play(FadeIn(dot1, eq1), Create(line1))
+
+        self.wait(0.1)
+        sw = 8
+        sc = GREEN
+        plot1 = ax.plot_line_graph(times[i_t:], yvals2[i_t:], add_vertex_dots=False, stroke_width=sw, line_color=sc).set_z_index(35)
+        plot2 = ax.plot_line_graph(times[i_t::-1], yvals2[i_t::-1], add_vertex_dots=False, stroke_width=sw, line_color=sc).set_z_index(35)
+
+        dt = i_t / (n-i_t-1)
+        eq2 = Tex(r'\sf expected path', r'$\mathbb E[Y_s\vert Y_t] = Y_t e^{\lvert s-t\rvert}$', font_size=60).set_z_index(60)
+        eq2[1].next_to(eq2[0], DOWN, buff=0.1).set(stroke_width=1.5)
+        eq2[0].set_color(YELLOW)
+        eq2.move_to(ax.coords_to_point(tmax/2, ymax * 0.6))
+        box1 = SurroundingRectangle(eq2, corner_radius=0.2, fill_color=BLACK, fill_opacity=0.4,
+                                   stroke_width=0, buff=0.05).set_z_index(50)
+
+        i = 1350
+        j = 650
+        arr1 = Arrow(eq2[1][11].get_bottom(), ax.coords_to_point(times[i], yvals2[i]), color=YELLOW, buff=0.1).set_z_index(50)
+        arr2 = Arrow(eq2[1][2].get_bottom(), ax.coords_to_point(times[j], yvals2[j]), color=YELLOW, buff=0.1).set_z_index(50)
+
+        self.play(Create(plot1, run_time=dt * 2), Create(plot2, run_time=dt * 2),
+                  FadeIn(box1, eq2, arr1, arr2), rate_func = linear)
+        self.wait(0.1)
+
+        i_s = 1300
+        s = times[i_s]
+        ys = (yt - ymin) * math.exp(s-t) + ymin
+        times1 = times[i_t:i_s+1]
+        pt0 = ax.coords_to_point(s, ymin)
+        pt1 = ax.coords_to_point(s, ys)
+        yvals2 = (yt - ymin) * np.exp(np.abs(times1 - t) * mr) + ymin
+        plot3 = ax.plot_line_graph(times1, yvals2, add_vertex_dots=False, stroke_width=sw, line_color=sc).set_z_index(35)
+        dot2 = dot1.copy().move_to(pt1)
+        line2 = Line(pt0, pt1, stroke_width=7, stroke_color=col).set_z_index(40)
+        eq3 = MathTex(r's', color=col, stroke_width=1.5).next_to(pt0, DOWN, buff=0.02).set_z_index(40)
+
+        eq4 = Tex(r'$\mathbb E[Y_s\vert Y_t]$', font_size=60).set_z_index(60).next_to(dot2, RIGHT, buff=0.25)
+        box3 = SurroundingRectangle(eq4, corner_radius=0.1, fill_color=BLACK, fill_opacity=0.5,
+                                   stroke_width=0, buff=0.05).set_z_index(50)
+
+        self.play(FadeOut(plot1, plot2, eq2, arr1, arr2, box1), FadeIn(plot3, dot2, eq3, eq4, box3), Create(line2))
+
+        yt = (ys - ymin) * math.exp(s-t) + ymin
+        yvals2 = (ys - ymin) * np.exp(np.abs(times1[::-1] - s) * mr) + ymin
+        plot3 = ax.plot_line_graph(times1[::-1], yvals2, add_vertex_dots=False, stroke_width=sw, line_color=sc).set_z_index(35)
+        pt1 = ax.coords_to_point(t, yt)
+        dot3 = dot2.copy().set_z_index(100).set_opacity(1)
+
+        eq5 = Tex(r'$\mathbb E[\mathbb E[Y_t\vert Y_s]\vert Y_t]$', font_size=60).set_z_index(60).next_to(pt1, LEFT, buff=0.35)
+        box4 = SurroundingRectangle(eq5, corner_radius=0.1, fill_color=BLACK, fill_opacity=0.5,
+                                   stroke_width=0, buff=0.05).set_z_index(50)
+
+        plot4 = plot3.copy()
+        self.play(Create(plot3, rate_func=linear),
+                  mh.rtransform(box3.copy(), box4, eq4[0][4:].copy(), eq5[0][10:], eq4[0][:2].copy(), eq5[0][:2],
+                                eq4[0][:3].copy(), eq5[0][2:5], eq4[0][4:6].copy(), eq5[0][6:8],
+                                eq4[0][7].copy(), eq5[0][9]),
+                  mh.fade_replace(eq4[0][3].copy(), eq5[0][5]),
+                  mh.fade_replace(eq4[0][6].copy(), eq5[0][8]),
+                  MoveAlongPath(dot3, plot4['line_graph'], rate_func=linear),
+                  run_time=1.2)
+
+        ys = (yt - ymin) * math.exp(s-t) + ymin
+        yvals2 = (yt - ymin) * np.exp(np.abs(times1 - t) * mr) + ymin
+        plot3 = ax.plot_line_graph(times1, yvals2, add_vertex_dots=False, stroke_width=sw, line_color=sc).set_z_index(35)
+        pt1 = ax.coords_to_point(s, ys)
+        dot4 = dot3.copy()
+        plot4 = plot3.copy()
+        self.play(Create(plot3, rate_func=linear, run_time=1.2),
+                  MoveAlongPath(dot4, plot4['line_graph'], rate_func=linear, run_time=1.32))
+
+
+        self.wait()
+
+class SDE(NormalDecomp):
+    def construct(self):
+        eq1 = Tex(r'\sf stochastic differential equation', color=YELLOW, font_size=60)
+        eq2 = MathTex(r'dX_t', r'=', r'\sigma dB_t-\lambda X_t dt', font_size=60)
+        eq2.next_to(eq1, DOWN, buff=0.2)
+        self.add(eq1, eq2)
+        self.wait(0.1)
+
+        circ1 = mh.circle_eq(eq2[2][1:3]).set_z_index(2)
+        circ2 = mh.circle_eq(eq2[2][6:-1]).set_z_index(2)
+        eq3 = Tex(r'\sf random noise', r'(Brownian motion)', color=YELLOW).set_z_index(3)
+        eq3[1].next_to(eq3[0], DOWN, buff=0.2)
+        eq4 = Tex(r'\sf drift', r'(mean reversion)', color=YELLOW).set_z_index(3)
+        eq4[1].next_to(eq3[0], DOWN, buff=0.2)
+        eq3.next_to(circ1, DOWN, buff=0).shift(LEFT*0.5)
+        eq3[1].shift(LEFT)
+        eq4.next_to(circ2, DOWN, buff=0)
+        eq4[1].shift(RIGHT)
+
+
+
+        self.play(LaggedStart(Create(circ1, rate_func=linear, run_time=0.5),
+                              FadeIn(eq3, run_time=1), lag_ratio=0.6))
+        self.play(LaggedStart(Create(circ2, rate_func=linear, run_time=0.5),
+                              FadeIn(eq4, run_time=1), lag_ratio=0.6))
+        self.wait(0.1)
+        self.play(FadeOut(eq2[2][0], eq2[2][5], rate_func=linear, run_time=1))
+        self.wait(0.1)
+
+        eq5 = MathTex(r'dX_t', r'=', r'dB_t- X_t dt', font_size=60)
+        mh.align_sub(eq5, eq5[1], eq2[1], coor_mask=UP)
+        self.play(FadeOut(circ1, circ2),
+                  mh.rtransform(eq2[:2], eq5[:2], eq2[2][1:5], eq5[2][:4], eq2[2][6:], eq5[2][4:]))
+        self.wait(0.1)
+        self.play(FadeOut(eq3, eq4, eq1, rate_func=linear))
+        self.wait()
+
+class NormalHalf(Gain25):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=1)
+        eq1 = MathTex(r'X_t\sim N(0,1/2)').set_z_index(2)
+        eq2 = MathTex(r'{\rm Corr}(X_s,X_t)', r'=', r'e^{-\lvert t-s\rvert}').set_z_index(2)
+        eq2.next_to(eq1, DOWN, buff=0.15).align_to(eq1, LEFT).shift((LEFT))
+        box = SurroundingRectangle(VGroup(eq1, eq2), corner_radius=0.2, fill_color=BLACK, fill_opacity=0.6,
+                                   stroke_width=0, buff=0.05)
+        self.add(eq1, box)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait()
+
+class MoveAlongPathExample(Scene):
+    def construct(self):
+        d1 = Dot().set_color(ORANGE)
+        l1 = Line(LEFT, RIGHT)
+        l2 = l1.copy()
+        self.add(d1)
+        self.play(MoveAlongPath(d1, l2), Create(l1), rate_func=linear)
+        self.wait()
+
+if __name__ == "__main__":
+    with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
+        OUProcess().render()
