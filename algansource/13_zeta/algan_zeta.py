@@ -168,13 +168,23 @@ def zeta_surf(quality=LD, bgcol=BLACK):
                                      "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
                                      }
                         )
+    ax2 = mn.ThreeDAxes(x_range=[ymin, ymax *1.1], y_range=[0, xmax*1.1], z_range=[0, zmax],
+                        x_length=6, y_length=6 * xmax*1.1/(xmax*1.1 - xmin), z_length=1.5,
+                        axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                     "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                     "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                     }
+                        )
+
     ax1.shift(-ax1.coords_to_point(0, 0, 0))
     xscale = torch.tensor(ax1.coords_to_point(0, 1, 0), dtype=RIGHT.dtype)
     yscale = torch.tensor(ax1.coords_to_point(1, 0, 0), dtype=RIGHT.dtype)
     zscale = torch.tensor(ax1.coords_to_point(0, 0, 1), dtype=RIGHT.dtype)
     ax1.shift(mn.IN)
     origin = torch.tensor(ax1.coords_to_point(0, 0, 0), dtype=ORIGIN.dtype)
+    ax2.shift(ax1.coords_to_point(0,0,0) - ax2.coords_to_point(0,0,0))
     ax1 = ManimMob(ax1)
+    ax2 = ManimMob(ax2)
 
     arr_r = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.RIGHT, color=mn.YELLOW))
     arr_u = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.UP, color=mn.RED))
@@ -185,7 +195,7 @@ def zeta_surf(quality=LD, bgcol=BLACK):
         cam.set_distance_to_screen(12)
         #cam.move_to(cam.get_center() * 1.4)
         cam.set_euler_angles(-120, 0, 45)
-        ax1.spawn()
+        ax2.spawn()
         #arr_r.spawn()
         #arr_u.spawn()
         #arr_o.spawn()
@@ -263,16 +273,20 @@ def zeta_surf(quality=LD, bgcol=BLACK):
     a = 0.3
     b = (a * a + (1 - a) * 2 * a)
 
-    for i in range(n+1):
-        col2 = col.clone()
-        s = i/n
-        if s < a:
-            s2 = s*s/b
-        else:
-            s2 = (a*a + (s-a)*2*a)/b
-        col2[start.gt(s2)] = 0
-        with Sync(rate_func=rate_funcs.identity, run_time=dt):
-            p.set_non_recursive(color=col2)
+    with Sync():
+        with Seq():
+            for i in range(n+1):
+                col2 = col.clone()
+                s = i/n
+                if s < a:
+                    s2 = s*s/b
+                else:
+                    s2 = (a*a + (s-a)*2*a)/b
+                col2[start.gt(s2)] = 0
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p.set_non_recursive(color=col2)
+        ax2.submobjects[1].become(ax1.submobjects[1])
+
 
     Scene.wait(1)
 
@@ -286,4 +300,4 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
 
     #sphere_bm(quality=HD, bgcol=TRANSPARENT)
-    zeta_surf(quality=LD, bgcol=BLACK)
+    zeta_surf(quality=HD, bgcol=TRANSPARENT)

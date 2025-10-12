@@ -16,6 +16,7 @@ import alganhelper as ah
 
 LD = RenderSettings((854, 480), 15)
 HD = RenderSettings((1920, 1080), 30)
+UHD = RenderSettings((3840, 2160), 30)
 
 colors = [
     #mn.ManimColor(mn.RED_D.to_rgb() * 0.5),
@@ -341,14 +342,21 @@ def normals2(render_settings=LD, animate=True):
     Scene.wait(0.2)
 
 
-def animate_normals(render_settings=LD):
-    normals(render_settings=render_settings)
+def animate_normals(render_settings=LD, **kwargs):
+    normals(render_settings=render_settings, **kwargs)
     render_to_file('normals', render_settings=render_settings, background_color=BLACK)
 
 def animate_normals2(render_settings=LD):
     normals2(render_settings=render_settings)
     render_to_file('normals2', render_settings=render_settings, background_color=BLACK)
 
+def img_normals(render_settings=LD):
+    res = normals(render_settings=render_settings, animate=False)
+    with Off():
+        res[0].despawn()
+        res[1].despawn()
+        res[2].despawn()
+    render_to_file('normals', render_settings=render_settings, background_color=BLACK)
 
 def expectedXY(render_settings=LD):
     eq1, eq1_1, eq2, gp1, gp2, surf, xmax, xlen, ylen = normals(render_settings=render_settings, animate=False)
@@ -476,4 +484,4 @@ def expectedXY(render_settings=LD):
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
-    animate_normals2(render_settings=HD)
+    img_normals(render_settings=UHD)
