@@ -12,7 +12,9 @@ from algan.external_libraries.manim import ArcBetweenPoints
 from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
-from pygments.styles.dracula import background
+from manim import VGroup
+from matplotlib.pyplot import xscale
+from scipy.fftpack import shift
 
 sys.path.append('../')
 import alganhelper as ah
@@ -132,7 +134,7 @@ def sphere_bm(r=2., quality=LD, bgcol=BLACK, scol=YELLOW):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def surface_func(f, res_x=320, res_y=320, mesh_x=None, mesh_y=None, mesh_col=DARK_BROWN):
+def surface_func(f, res_x=319, res_y=319, mesh_x=None, mesh_y=None, mesh_col=DARK_BROWN):
     mesh_m = 32
     mesh_n = 32
     n = res_y
@@ -141,10 +143,10 @@ def surface_func(f, res_x=320, res_y=320, mesh_x=None, mesh_y=None, mesh_col=DAR
     du = 1 / (m-1)
     dv = 1 / (n-1)
     for i1 in range(m):
-        mesh_on1 = -i1 % mesh_m < 1
+        mesh_on1 = (i1+1) % mesh_m == 0
         for j1 in range(n):
             t[i1, j1, :], op = f(j1 * dv, (m-1-i1) * du)
-            mesh_on = mesh_on1 or (-j1 % mesh_n < 1)
+            mesh_on = mesh_on1 or (j1+1) % mesh_n == 0
             if mesh_on:
                 col = mesh_col.clone()
                 col[4] = op
@@ -153,12 +155,10 @@ def surface_func(f, res_x=320, res_y=320, mesh_x=None, mesh_y=None, mesh_col=DAR
     mob = ImageMob(t)
     return mob
 
-
-def zeta_surf(quality=LD, bgcol=BLACK):
-    xmin = -18
-    xmax = 14
-    ymax = 16
-    ymin = -16
+def zeta_surf_setup(xrange=(-18, 14), yrange=(-16, 16), theta=45, shift=1., clip=False, eq3_txt=r'\zeta(x+iy)'):
+    xmin, xmax = xrange
+    ymax = yrange[1]
+    ymin = yrange[0]
     zmax = 2
     zmaxplot = 2.5
     ax1 = mn.ThreeDAxes(x_range=[ymin, ymax *1.1], y_range=[xmin, xmax*1.1], z_range=[0, zmax],
@@ -168,37 +168,18 @@ def zeta_surf(quality=LD, bgcol=BLACK):
                                      "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
                                      }
                         )
-    ax2 = mn.ThreeDAxes(x_range=[ymin, ymax *1.1], y_range=[0, xmax*1.1], z_range=[0, zmax],
-                        x_length=6, y_length=6 * xmax*1.1/(xmax*1.1 - xmin), z_length=1.5,
-                        axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
-                                     "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                     "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                     }
-                        )
-
     ax1.shift(-ax1.coords_to_point(0, 0, 0))
     xscale = torch.tensor(ax1.coords_to_point(0, 1, 0), dtype=RIGHT.dtype)
     yscale = torch.tensor(ax1.coords_to_point(1, 0, 0), dtype=RIGHT.dtype)
     zscale = torch.tensor(ax1.coords_to_point(0, 0, 1), dtype=RIGHT.dtype)
-    ax1.shift(mn.IN)
+    ax1.shift(mn.IN * shift)
     origin = torch.tensor(ax1.coords_to_point(0, 0, 0), dtype=ORIGIN.dtype)
-    ax2.shift(ax1.coords_to_point(0,0,0) - ax2.coords_to_point(0,0,0))
-    ax1 = ManimMob(ax1)
-    ax2 = ManimMob(ax2)
-
-    arr_r = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.RIGHT, color=mn.YELLOW))
-    arr_u = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.UP, color=mn.RED))
-    arr_o = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.OUT, color=mn.BLUE))
 
     with Off():
         cam = Scene.get_camera()
         cam.set_distance_to_screen(12)
         #cam.move_to(cam.get_center() * 1.4)
-        cam.set_euler_angles(-120, 0, 45)
-        ax2.spawn()
-        #arr_r.spawn()
-        #arr_u.spawn()
-        #arr_o.spawn()
+        cam.set_euler_angles(-120, 0, theta)
 
     def f2(u):
         x = u[:,:,:1] * (xmax - xmin) + xmin
@@ -218,7 +199,7 @@ def zeta_surf(quality=LD, bgcol=BLACK):
         col = Color(colorsys.hls_to_rgb(np.angle(z)/(2*PI) +0.05, min(z1 /zmax, 0.7), 1))
         #col[:3] *= min(z1, 1)
 
-        if z1 > zmaxplot:
+        if z1 > zmaxplot and clip:
             col[4] = op = max(1 - (z1/zmaxplot - 1)*10, 0)
         else:
             op = 1.
@@ -228,8 +209,9 @@ def zeta_surf(quality=LD, bgcol=BLACK):
         return col, op
 
     mob1 = surface_func(g).set_shader(basic_pbr_shader)
-    mob1.smoothness = 0
+    mob1.smoothness = 0.7
     mob1.metallicness = 0
+    mob1.set_location_by_function(f2)
 
     eq1 = ManimMob(mn.MathTex(r'x')).move_to(origin + xmax * 1.21 * xscale)
     #eq1.rotate_around_point(eq1.get_center(), 90, axis=yscale)
@@ -238,16 +220,172 @@ def zeta_surf(quality=LD, bgcol=BLACK):
     eq2 = ManimMob(mn.MathTex(r'y')).move_to(origin + ymax * 1.4 * yscale + zscale * 0.3)
     eq2.orbit_around_point(eq2.get_center(), -90, axis=yscale)
     eq2.orbit_around_point(eq2.get_center(), -45, axis=zscale)
-    eq3 = ManimMob(mn.MathTex(r'\zeta(x+iy)')).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
+    eq3 = ManimMob(mn.MathTex(eq3_txt)).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
     eq3.orbit_around_point(eq3.get_center(), -90, axis=yscale)
     eq3.orbit_around_point(eq3.get_center(), -45, axis=zscale)
-    eq4 = ManimMob(mn.MathTex(r'\zeta(x+iy)', stroke_width=10, stroke_color=mn.BLACK)).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
+    eq4 = ManimMob(mn.MathTex(eq3_txt, stroke_width=10, stroke_color=mn.BLACK)).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
     eq4.move(IN * 0.01)
     eq4.orbit_around_point(eq3.get_center(), -90, axis=yscale)
     eq4.orbit_around_point(eq3.get_center(), -45, axis=zscale)
 
+    return xmin, xmax, ymin, ymax, zmax, zmaxplot, xscale, yscale, zscale, origin, eq1, eq2, eq3, eq4, mob1, ax1
+
+def xi_surf(quality=LD, bgcol=BLACK):
+    xmin, xmax, ymin, ymax, zmax, zmaxplot, xscale, yscale, zscale, origin, eq1, eq2, eq3, eq4, mob1, ax1\
+        = zeta_surf_setup((-13.5, 14.5), theta=45, shift=0.3)
+    ax1 = ManimMob(ax1)
+
+    f3scale = 8.
+    sscale = 1.
+    do_s = False
+
+    def g(u, v):
+        x = u * (xmax-xmin) + xmin
+        s = x + (v * (ymax-ymin) + ymin) * 1j
+        z = sp.special.zeta(s) * sp.special.gamma(s/2) * np.pow(PI, -s/2) * f3scale
+        if do_s:
+            z *= s * (s-1) * sscale
+        z1 = abs(z)
+        col = Color(colorsys.hls_to_rgb(np.angle(z)/(2*PI) +0.05, min(z1 /zmax, 0.7), 1))
+        #col[:3] *= min(z1, 1)
+
+        col[4] *= 0.9
+        return col, 1
+
+    mob2 = surface_func(g).set_shader(basic_pbr_shader)
+
+    zshift = origin[2] + 0.05 * zscale[2]
+    p1 = mob1.get_descendants()[1]
+    p2 = mob2.get_descendants()[1]
+    col1 = p1.color.clone()
+    col2 = p2.color.clone()
+    loc1 = p1.location
+    sgrid = loc1[:,:,:2].numpy()
+    sgrid = sgrid[:,:,1] / xscale[1] + sgrid[:,:,0] / yscale[0] * 1j
+
+    z1 = abs(sp.special.zeta(sgrid))
+    z2 = abs(sp.special.zeta(sgrid) * sp.special.gamma(sgrid/2) * np.pow(PI, -sgrid/2) * f3scale)
+    col = col1.clone()
+    col[:, :, 4] *= (1 - (z1 / zmaxplot - 1) * 10).clamp(0, 1)
+    p1.set_non_recursive(color=col)
+
     with Off():
-        mob1.set_location_by_function(f2)
+        ax1.spawn()
+        mob1.spawn()
+        eq1.spawn()
+        eq2.spawn()
+        eq3.spawn()
+        eq4.spawn()
+
+    fps = quality.frames_per_second
+    t = 1.
+    n = round(fps * t)
+    dt = 1. / fps
+    a = 0.3
+
+    Scene.wait(0.5)
+    with Sync(rate_func=rate_funcs.identity):
+        #mob1.become(mob2)
+        #mob1.set_location_by_function(f3)
+        #p1.set_non_recursive(location=loc2)
+        eq3.despawn()
+        eq4.despawn()
+        with Seq():
+            for i in range(n+1):
+                u = i/n * 1.
+                u = math.sin(PI*u/2)
+                col = col1 * (1 - u) + col2 * u
+                loc = loc1.clone()
+                z = z1 * (1-u) + z2 * u
+                loc[:,:,2] = z.clamp(0, zmaxplot*1.2) * zscale[2] + zshift
+                col[:,:,4] *= (1 - (z/zmaxplot-1)*10).clamp(0, 1)
+
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p1.set_non_recursive(color=col, location=loc)
+    Scene.wait(0.5)
+
+    with Sync(run_time=1.5):
+        mob1.orbit_around_point(xscale/2, 180, OUT)
+
+    Scene.wait(0.5)
+
+    do_s = True
+    sscale=0.1
+    mob3 = surface_func(g).set_shader(basic_pbr_shader)
+    mob3.smoothness = 0
+    mob3.metallicness = 0
+    col3 = mob3.get_descendants()[1].color
+    z3 = z2 * abs(sgrid*(sgrid-1)) * sscale
+
+    with Sync(rate_func=rate_funcs.identity):
+        with Seq():
+            for i in range(n+1):
+                u = i/n
+                u = math.sin(PI*u/2)
+                u = u**2
+                col = col2 * (1 - u) + col3 * u
+                loc = loc1.clone()
+                z = z2 * (1-u) + z3 * u
+                loc[:,:,2] = z.clamp(0, zmaxplot*1.2) * zscale[2] + zshift
+                col[:,:,4] *= (1 - (z/zmaxplot-1)*10).clamp(0, 1)
+
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p1.set_non_recursive(color=col, location=loc)
+
+    Scene.wait(0.5)
+    with Sync(rate_func=rate_funcs.identity):
+        with Seq():
+            for i in range(n+1):
+                u = i/n
+                u = math.sin(PI*u/2)**2
+                col = col3.clone()
+                loc = loc1.clone()
+                z = z3 * (1-u) + z3 * u/2
+                loc[:,:,2] = z.clamp(0, zmaxplot*1.2) * zscale[2] + zshift
+                col[:,:,4] *= (1 - (z/zmaxplot-1)*10).clamp(0, 1)
+
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p1.set_non_recursive(color=col, location=loc)
+    Scene.wait(0.5)
+
+    with Sync(run_time=1.5):
+        mob1.orbit_around_point(xscale/2, 180, OUT)
+
+    Scene.wait(0.5)
+
+
+    name = 'xi_surf'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
+def zeta_surf(quality=LD, bgcol=BLACK, **kwargs):
+    xmin, xmax, ymin, ymax, zmax, zmaxplot, xscale, yscale, zscale, origin, eq1, eq2, eq3, eq4, mob1, ax1\
+        = zeta_surf_setup(clip=True, **kwargs)
+    ax2 = mn.ThreeDAxes(x_range=[ymin, ymax *1.1], y_range=[0, xmax*1.1], z_range=[0, zmax],
+                        x_length=6, y_length=6 * xmax*1.1/(xmax*1.1 - xmin), z_length=1.5,
+                        axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                     "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                     "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                     }
+                        )
+
+    ax2.shift(ax1.coords_to_point(0,0,0) - ax2.coords_to_point(0,0,0))
+    ax1 = ManimMob(ax1)
+    ax2 = ManimMob(ax2)
+
+    arr_r = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.RIGHT, color=mn.YELLOW))
+    arr_u = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.UP, color=mn.RED))
+    arr_o = ManimMob(mn.Arrow3D(mn.ORIGIN, mn.OUT, color=mn.BLUE))
+
+    with Off():
+        ax2.spawn()
+        #arr_r.spawn()
+        #arr_u.spawn()
+        #arr_o.spawn()
+
+
+
+    with Off():
         mob1.spawn()
         eq1.spawn()
         eq2.spawn()
@@ -294,10 +432,64 @@ def zeta_surf(quality=LD, bgcol=BLACK):
     name = 'zeta_surf'
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def gamma_surf(quality=LD, bgcol=BLACK, **kwargs):
+    xmin, xmax, ymin, ymax, zmax, zmaxplot, xscale, yscale, zscale, origin, eq1, eq2, eq3, eq4, mob1, ax1\
+        = zeta_surf_setup((-3, 5), (-4, 4), clip=True, eq3_txt=r'\Gamma(x+iy)', shift=-0.2, **kwargs)
+    ax1 = ManimMob(ax1)
+    Group(eq3, eq4).move_to(origin + zscale * zmax/2 + yscale * -ymax/2 + xscale * xmax/3)
+    eq2.move_to(origin + yscale * ymax * 1.3)
+    eq1.move_to(origin + xscale * xmax * 1.2)
+    with Off():
+        eq1.spawn()
+        eq2.spawn()
+        eq3.spawn()
+        eq4.spawn()
+        ax1.spawn()
+
+    fscale = 0.3
+
+    def g(u, v):
+        x = u * (xmax-xmin) + xmin
+        s = x + (v * (ymax-ymin) + ymin) * 1j
+        z = sp.special.gamma(s) * fscale
+        z1 = abs(z)
+        col = Color(colorsys.hls_to_rgb(np.angle(z)/(2*PI) +0.05, min(z1 /zmax, 0.7), 1))
+
+        col = WHITE * 0.01 + col * 0.99
+        col[4] = 0.9
+        return col, 1
+
+    mob2 = surface_func(g)
+
+    mob2.smoothness = 1
+    mob2.metallicness = 1
+    mob2.set_shader(null_shader)
+
+    zshift = origin[2] + 0.05 * zscale[2]
+    p1 = mob1.get_descendants()[1]
+    p2 = mob2.get_descendants()[1]
+    col2 = p2.color.clone()
+    loc1 = p1.location.clone()
+    sgrid = loc1[:,:,:2].numpy()
+    sgrid = sgrid[:,:,1] / xscale[1] + sgrid[:,:,0] / yscale[0] * 1j
+
+    z = abs(sp.special.gamma(sgrid)) * 0.3
+    col2[:, :, 4] *= (1 - (z / zmaxplot - 1) * 10).clamp(0, 1)
+    loc1[:,:,2] = z.clamp(0, zmaxplot*1.2) * zscale[2] + zshift
+    p2.set_non_recursive(color=col2, location=loc1)
+
+    with Off():
+        mob2.spawn()
+
+    name = 'gamma_surf'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
 
-    #sphere_bm(quality=HD, bgcol=TRANSPARENT)
-    zeta_surf(quality=HD, bgcol=TRANSPARENT)
+    zeta_surf(quality=HD, bgcol=BLACK, xrange=(-13.5,14.5), shift=0.3)
+    #xi_surf(quality=HD, bgcol=BLACK)
+    #zeta_surf(quality=HD, bgcol=TRANSPARENT)
+    #gamma_surf(quality=HD, bgcol=TRANSPARENT)

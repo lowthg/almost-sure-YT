@@ -447,7 +447,7 @@ class Xi(Scene):
         eq1_1.move_to(ORIGIN, coor_mask=RIGHT)
         eq2 = MathTex(r'=', r'\pi^{-\frac s2}\Gamma(\!{}^{\frac s2}\!)\zeta(s)')
         eq2[1][-8:-5].move_to(eq2[0], coor_mask=UP)
-        mh.align_sub(eq2[1], eq2[1][-1], eq1[0][-1], coor_mask=UP).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq2[1], eq2[1][-1], eq1[0][-1], coor_mask=UP).move_to(RIGHT*2.4, coor_mask=RIGHT)
         eq3 = MathTex(r'=', r's(s-1)', r'\pi^{-\frac s2}\Gamma(\!{}^{\frac{s}{2} }\!)\zeta(s)')
         eq3[2][-8:-5].move_to(eq3[0], coor_mask=UP)
         mh.align_sub(eq3[1:], eq3[2][-1], eq1[0][-1], coor_mask=UP).move_to(ORIGIN, coor_mask=RIGHT)
@@ -463,15 +463,20 @@ class Xi(Scene):
         mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
         eq7 = MathTex(r'2\xi(s)', r'=', r'\mathbb E[e^{s\log X}]')
         mh.align_sub(eq7, eq7[1], eq5[1], coor_mask=UP)
+        eq8 = MathTex(r'2\xi(s)', r'=', r'\mathbb E[X^s]', r'=', r'\int_0^\infty p_X(x)x^s\,dx')
+        eq8[4].scale(0.8, about_edge=LEFT)
+        mh.align_sub(eq8, eq8[1], eq5[1], coor_mask=UP).move_to(ORIGIN, coor_mask=RIGHT)
 
         VGroup(eq1[0][0], eq2[1][-4], eq3[2][-4], eq4[0][0], eq4[-1][-4], eq5[0][1],
               eq5[-1][-4], eq6[0][1], eq6[-1][-3], eq7[0][1], eq7[-1][-2], eq1_1[0][0],
-               eq4_2[0][0], eq4_2[2][-3]).set_color(BLUE)
+               eq4_2[0][0], eq4_2[2][-3], eq8[0][1], eq8[2][-3], eq8[4][4], eq8[4][6],
+               eq8[4][-1], eq8[4][8]).set_color(BLUE)
         VGroup(eq1[0][2], eq2[-1][-2], eq2[-1][2], eq2[-1][7], eq3[1][0], eq3[1][2],
               eq3[2][-2], eq3[2][2], eq3[2][7], eq4[0][2], eq4[3][0], eq4[3][2], eq4[4][-2],
               eq4[4][2], eq4[4][7], eq5[0][3], eq5[2][0], eq5[2][2], eq5[3][-2], eq5[3][2],
                eq5[3][7], eq6[0][3], eq6[2][3], eq7[0][3], eq7[2][3], eq1_1[0][2],
-               eq1_1[2][4], eq1_1[2][8], eq1_1[2][12], eq4_2[0][2], eq4_2[2][3]).set_color(YELLOW)
+               eq1_1[2][4], eq1_1[2][8], eq1_1[2][12], eq4_2[0][2], eq4_2[2][3], eq8[0][3],
+               eq8[2][3], eq8[4][9]).set_color(YELLOW)
         eq4_1 = eq4[2:].copy().move_to(ORIGIN, coor_mask=RIGHT)
 
         self.add(eq1_1)
@@ -529,6 +534,280 @@ class Xi(Scene):
                   run_time=4, rate_func=there_and_back_with_pause)
         eq7.set_opacity(0)
         self.add(eq6_1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6_1[:], eq8[:3]),
+                  FadeIn(eq8[3:]),
+                  run_time=1.4)
+        self.wait()
+
+class GammaDef(Scene):
+    border = False
+    def construct(self):
+        sc = BLACK if self.border else WHITE
+        eq1 = MathTex(r'\Gamma(s)', r'=', r'\int_0^\infty x^{s-1}e^{-x}dx', stroke_width=8, stroke_color=sc)
+        if not self.border:
+            VGroup(eq1[0][2], eq1[2][4]).set_color(YELLOW)
+        self.add(eq1)
+
+class SReflect(Scene):
+    def construct(self):
+        eq1 = MathTex(r's\to1-s', stroke_width=2, font_size=100)[0]
+        VGroup(eq1[0], eq1[-1]).set_color(YELLOW)
+        self.add(eq1)
+
+class FunctionalEq(Scene):
+    def construct(self):
+        eq1 = MathTex(r'\xi(1-s)', r'=', r'\xi(s)', font_size=100, stroke_width=1)
+        VGroup(eq1[0][0], eq1[2][0]).set_color(BLUE)
+        VGroup(eq1[0][4], eq1[2][2]).set_color(YELLOW)
+        self.add(eq1)
+
+def psi(x, eps=0.001, maxn=10):
+    if x < 1e-6:
+        return 0
+    if x < 1:
+        return psi(1.0/x, eps, maxn) / (x * x * x)
+    n = 1
+    y = x * x
+    p = 0.0
+    while True:
+        m = n * n
+        e = math.exp(- PI * m * y)
+        p += m * (PI * 2 * m * y - 3) * e
+        if n > maxn and e < eps:
+            break
+        n += 1
+    return PI * 4 * x * p
+
+def phi2(x, eps=0.001, maxn=10):
+    n = 1
+    y = x * x
+    p = 0.0
+    while True:
+        m = (n - 0.5)*(n - 0.5)
+        e = math.exp(-m * y * PI)
+        p += (PI * 2 * m * y - 1) * e
+        if n > maxn and e < eps:
+            break
+        n += 1
+    return y * 2 * p
+
+
+def phi(x, eps=0.001, maxn=10):
+    if x < 1e-6:
+        return 0
+    if x < 1:
+        return phi2(1.0/x, eps, maxn)
+    n = 1
+    y = x * x
+    p = 0.0
+    sgn = 1
+    while True:
+        m = n * n
+        e = math.exp(-m * y * PI)
+        p += sgn * m * e
+        if n > maxn and e < eps:
+            break
+        n += 1
+        sgn = -sgn
+    return PI * 4 * x * p
+
+class Kuiper(Scene):
+    def construct(self):
+        xlen = 8.8
+        ylen = 4.4
+        xmax = 2.5
+        ymax = 1.9
+        n = 200
+        ax = Axes(x_length=xlen, y_length = ylen, x_range=(0, xmax * 1.05, 1), y_range=(0, ymax * 1.1),
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  x_axis_config={'include_ticks': True}
+                  )
+        eqs = MathTex(r'012', font_size=45)[0]
+        for i, x in enumerate([0, 1, 2]):
+            eqs[i].next_to(ax.coords_to_point(x, 0), DOWN, buff=0.2)
+        eq1 = MathTex(r'x', font_size=50).next_to(ax.x_axis.get_right(), UP, buff=0.25).shift(LEFT*0.15)
+        eq2 = MathTex(r'p_X(x)', font_size=50).next_to(ax.y_axis.get_top(), RIGHT, buff=0.25).shift(DOWN*0.2)
+        VGroup(eq1[0][0], eq2[0][1], eq2[0][3]).set_color(BLUE)
+        a = math.sqrt(2/PI)
+        xvals = np.linspace(0, xmax, n)
+        def p(x):
+            return psi(x*a)
+
+        plot = ax.plot(p, x_range=(0, xmax), stroke_color=BLUE, stroke_width=5).set_z_index(3)
+        area = ax.get_area(plot, color=ManimColor(BLUE.to_rgb()*0.5), opacity=1, x_range=(0., xmax), stroke_width=0, stroke_opacity=0).set_z_index(1)
+
+        self.add(ax, eqs, eq1, eq2)
+        self.wait(0.1)
+        self.play(LaggedStart(Create(plot, run_time=2, rate_func=linear),
+                              FadeIn(area, run_time=2, rate_func=linear), lag_ratio=0.4))
+        self.wait()
+
+class Measure(Scene):
+    def __init__(self, *args, **kwargs):
+        if config.transparent:
+            config.background_color = WHITE
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        fs = 50
+        MathTex.set_default(font_size=fs)
+        eq1 = Tex(r'{\sf Heights:}\ ', r'$X_1, X_2, X_3,\ldots,X_n$', font_size=fs)
+
+        eq2 = MathTex(r'F_n(x)', r'=', r'\frac1n\#\{{\sf elements\ in\ sample} \le x\}', font_size=fs)
+        eq3 = MathTex(r'F_n(x)', r'=', r'\frac1n\sum_{k=1}^nI(X_k\le x)', font_size=fs)
+        eq4 = MathTex(r'\mathbb P(X_k\le x)', r'=', r'F(x)', font_size=fs)
+
+        eq2.next_to(eq1, DOWN).align_to(eq1, LEFT)
+        mh.align_sub(eq3, eq3[1], eq2[1])
+        VGroup(eq1, eq2, eq3).to_edge(DL, buff=0.6).next_to(mh.pos((-0.83, -0.2)), DR, buff=0)
+        eq4.next_to(eq3, DOWN).align_to(eq1, LEFT)
+
+        eq1_1 = eq1[1][:2].copy().to_edge(DR, buff=0.8).move_to(mh.pos((0.82, -0.2)))
+        eq1_2 = eq1[1][3:5].copy().to_edge(DR, buff=0.8).move_to(mh.pos((0.82, -0.2)))
+        eq1_3 = eq1[1][6:8].copy().to_edge(DR, buff=0.8).move_to(mh.pos((0.82, -0.2)))
+
+        self.add(eq1[0])
+        self.wait(0.1)
+        self.play(FadeIn(eq1_1), run_time=0.7)
+        self.wait(0.1)
+        self.play(ReplacementTransform(eq1_1, eq1[1][:2]),
+                  FadeIn(eq1[1][2], rate_func=rush_into), run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq1_2), run_time=0.7)
+        self.wait(0.1)
+        self.play(ReplacementTransform(eq1_2, eq1[1][3:5]),
+                  FadeIn(eq1[1][5], rate_func=rush_into), run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq1_3), run_time=0.7)
+        self.wait(0.1)
+        self.play(ReplacementTransform(eq1_3, eq1[1][6:8]),
+                  FadeIn(eq1[1][8], rate_func=rush_into), run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq1[1][9:]))
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait(0.1)
+
+        n_sample = 15
+        xlen = 5
+        ylen = 2.8
+        seeds = [0, 4, 5]
+        xmax = 1.2
+        x0 = 0.1
+        np.random.seed(seeds[-1])
+        ax = Axes(x_range=[0, xmax * 1.05], y_range=[0, 1.2], x_length=xlen, y_length=ylen,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+
+        x_rand = np.random.beta(2, 2, n_sample) + x0
+        def f(x): return sp.special.betainc(2, 2, min(max(x-x0, 0),1))
+
+        ax.next_to(mh.pos((0.1, -0.15)), DR, buff=0)
+
+        ticks = [ax.x_axis.get_tick(x) for x in x_rand]
+        eqax1 = MathTex(r'x', font_size=45).next_to(ax.x_axis.get_right(), UP, buff=0.15)
+        eqx = MathTex(r'X_1', r'X_2', r'X_3', r'X_n', font_size=32)
+        eqx.next_to(ax.x_axis, DOWN, buff=0.1)
+        for i in [0, 1, 2, -1]:
+            eqx[i].move_to(ticks[i], coor_mask=RIGHT)
+        #eqx[2].move_to(ticks[3], coor_mask=RIGHT)
+        axline = DashedLine(ax.coords_to_point(0, 1), ax.coords_to_point(xmax, 1), stroke_width=4, stroke_color=GREY).set_z_index(1)
+        axlabel = MathTex(r'0', r'1', font_size=32)
+        axlabel[0].move_to(ax.coords_to_point(0, 0), aligned_edge=RIGHT).shift(LEFT*0.1)
+        axlabel[1].move_to(ax.coords_to_point(0, 1), aligned_edge=RIGHT).shift(LEFT*0.1)
+
+        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq2[:2], eq3[:2], eq2[2][-3:-1], eq3[2][-3:-1], eq2[2][:3], eq3[2][:3]),
+                  mh.fade_replace(eq2[2][-1], eq3[2][-1]),
+                  mh.fade_replace(eq2[2][4], eq3[2][8]),
+                  FadeOut(eq2[2][5:-3], eq2[2][3]),
+                  FadeIn(eq3[2][9:-3], eq3[2][3:8]), run_time=1),
+                  FadeIn(ax, eqax1, axline, axlabel, run_time=1), lag_ratio=0.3))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[1][:2].copy(), eqx[0][:], eq1[1][3:5].copy(), eqx[1][:],
+                                eq1[1][6:8].copy(), eqx[2][:], eq1[1][-2:].copy(), eqx[-1][:]),
+                  FadeIn(*ticks),
+                  run_time=1.5)
+
+        ps = [(0,0)]
+        x_rand.sort()
+        for x in x_rand:
+            y = ps[-1][1]
+            ps.append((x, y))
+            ps.append((x, y+1/n_sample))
+        ps.append((xmax, 1))
+
+        tval = ValueTracker(0.)
+        def emp():
+            x1 = tval.get_value() * xmax
+            lines = []
+            for i in range(0, n_sample*2 + 1, 2):
+                if i > 0:
+                    lines.append(Line(ax.coords_to_point(*ps[i-1]), ax.coords_to_point(*ps[i]), stroke_color=BLUE,
+                                  stroke_width=2).set_z_index(4))
+                x, y = ps[i+1]
+                lines.append(Line(ax.coords_to_point(*ps[i]), ax.coords_to_point(min(x, x1), y), stroke_color=BLUE,
+                                  stroke_width=7).set_z_index(5))
+                if x1 < x:
+                    break
+            return VGroup(*lines)
+
+
+        self.wait(0.1)
+
+        axlabel2 = MathTex(r'F_n(x)', font_size=40, color=BLUE).move_to(ax.coords_to_point(0.5, 0.8)).set_z_index(3)
+        axlabel3 = MathTex(r'F(x)', font_size=40, color=YELLOW).move_to(ax.coords_to_point(0.8, 0.55)).set_z_index(3)
+
+        plt2 = always_redraw(emp)
+        self.add(plt2)
+        self.play(tval.animate.set_value(1.), FadeIn(axlabel2), rate_func=linear, run_time=1.5)
+        plt2.clear_updaters()
+
+        self.wait(0.1)
+        self.play(FadeIn(eq4))
+
+        plt1 = ax.plot(f, (0, xmax), stroke_width=5, stroke_color=YELLOW).set_z_index(3)
+
+        self.play(Create(plt1), FadeIn(axlabel3), rate_func=linear, run_time=1.5)
+        self.wait(0.1)
+        circ2 = mh.circle_eq(eq4).set_z_index(4)
+        txt1 = Tex(r'\sf Null Hypothesis', color=RED, stroke_width=4).next_to(circ2, UR).shift(LEFT*1.45+DOWN*0.35).set_z_index(3)
+        self.play(LaggedStart(Create(circ2, run_time=1, rate_func=linear),
+                              FadeIn(txt1, run_time=1), lag_ratio=0.5))
+        self.wait(0.1)
+
+        gp1 = VGroup(ax, axlabel, axlabel2, axlabel3, axline, plt1, plt2, eqx, *ticks).copy()
+        self.play(LaggedStart(FadeOut(txt1, circ2, eq1, eq3, eq4, run_time=1),
+                  gp1.animate(run_time=1.5).next_to(mh.pos((-0.83, -0.15)), DR, buff=0),
+                  lag_ratio=0.3))
+        self.wait(0.1)
+
+        y0 = 0.5
+        s = 3
+        lines = []
+        for i in range(0, n_sample * 2 + 1, 2):
+            x, y = ps[i]
+            #lines.append(ax.plot(lambda x: y0, x_range=(ps[i-1][0], ps[i][0]), stroke_color=BLUE, stroke_width=7).set_z_index(5))
+            if i > 0:
+                lines.append(Line(ax.coords_to_point(x, y0 + s*(ps[i-1][1]-f(x))), ax.coords_to_point(x, y0+s*(y-f(x))), stroke_color=BLUE,
+                                  stroke_width=2).set_z_index(4))
+            lines.append(ax.plot(lambda x: y0 + s*(y - f(x)), x_range=(ps[i][0], ps[i+1][0]), stroke_color=BLUE, stroke_width=7).set_z_index(5))
+
+        lines = VGroup(*lines)
+        plt3 = ax.plot(lambda _: y0, (0, xmax), stroke_width=5, stroke_color=YELLOW).set_z_index(3)
+        axlabel4 = MathTex(r'F_n(x)', r'-', r'F(x)', font_size=40, color=BLUE).move_to(ax.coords_to_point(0.32, 1)).set_z_index(3)
+
+        self.play(FadeOut(eqx, *ticks, axlabel, axline, ax.x_axis, eqax1),
+                  mh.rtransform(axlabel2[0], axlabel4[0], axlabel3[0], axlabel4[2]),
+                  FadeIn(axlabel4[1]),
+                  mh.transform(plt2, lines, plt1, plt3, run_time=2))
+
         self.wait()
 
 
