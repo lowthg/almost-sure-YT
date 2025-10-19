@@ -30,18 +30,24 @@ def fade_replace(obj1: Mobject, obj2: Mobject, coor_mask=np.array([1, 1, 1]), **
     return FadeOut(obj1, shift=shift, **kwargs), FadeIn(obj2, shift=shift, **kwargs)
 
 
-def stretch_replace(source: Mobject, target: Mobject, **kwargs):
+def stretch_replace(*obj: Mobject, **kwargs):
     """
     Fade out obj1 into obj2, stretching to fit
     For when the objects differ so that ReplacementTransform doesn't work
     """
-    w1 = source.width
-    w2 = target.width
-    h1 = source.height
-    h2 = target.height
-    source2 = target.copy().move_to(source).stretch_to_fit_height(h1).stretch_to_fit_width(w1).set_opacity(0)
-    target2 = source.copy().move_to(target).stretch_to_fit_height(h2).stretch_to_fit_width(w2).set_opacity(0)
-    return ReplacementTransform(VGroup(source, source2), VGroup(target2, target), **kwargs)
+    obj1 = []
+    obj2 = []
+    for i in range(0, len(obj), 2):
+        source, target = (obj[i], obj[i+1])
+        w1 = source.width
+        w2 = target.width
+        h1 = source.height
+        h2 = target.height
+        source2 = target.copy().move_to(source).stretch_to_fit_height(h1).stretch_to_fit_width(w1).set_opacity(0)
+        target2 = source.copy().move_to(target).stretch_to_fit_height(h2).stretch_to_fit_width(w2).set_opacity(0)
+        obj1 += [source2, source]
+        obj2 += [target, target2]
+    return ReplacementTransform(VGroup(*obj1), VGroup(*obj2), **kwargs)
 
 
 def transform(*args, **kwargs):

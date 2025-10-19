@@ -441,7 +441,7 @@ class Xi(Scene):
     def construct(self):
         MathTex.set_default(font_size=100)
         #mathtex.set_defaults(t2c={'s': YELLOW, 'X': BLUE, r'\xi': BLUE, r'\zeta': BLUE})
-        eq1 = MathTex('\zeta(s)', font_size=120)
+        eq1 = MathTex(r'\zeta(s)', font_size=120)
         eq1_1 = MathTex(r'\zeta(s)', r'=', r'1+2^{-s}+3^{-s}+4^{-s}+\cdots')
         eq1_1[1:].scale(0.9, about_edge=LEFT)
         eq1_1.move_to(ORIGIN, coor_mask=RIGHT)
@@ -613,9 +613,23 @@ def phi(x, eps=0.001, maxn=10):
     return PI * 4 * x * p
 
 class Kuiper(Scene):
+    scale=1
+    text_scale = 1
+
+    def get_p(self):
+        a = math.sqrt(2/PI)
+        return lambda x: psi(x * a)
+
+    def get_eq(self):
+        eq = MathTex(r'p_X(x)', font_size=50 * self.text_scale)
+        VGroup(eq[0][1], eq[0][3]).set_color(BLUE)
+        return eq
+
     def construct(self):
-        xlen = 8.8
-        ylen = 4.4
+        s = self.scale
+        s2 = self.text_scale
+        xlen = 8.8 * s
+        ylen = 4.4 * s
         xmax = 2.5
         ymax = 1.9
         n = 200
@@ -626,16 +640,13 @@ class Kuiper(Scene):
                                },
                   x_axis_config={'include_ticks': True}
                   )
-        eqs = MathTex(r'012', font_size=45)[0]
+        eqs = MathTex(r'012', font_size=45 * s2)[0]
         for i, x in enumerate([0, 1, 2]):
             eqs[i].next_to(ax.coords_to_point(x, 0), DOWN, buff=0.2)
-        eq1 = MathTex(r'x', font_size=50).next_to(ax.x_axis.get_right(), UP, buff=0.25).shift(LEFT*0.15)
-        eq2 = MathTex(r'p_X(x)', font_size=50).next_to(ax.y_axis.get_top(), RIGHT, buff=0.25).shift(DOWN*0.2)
-        VGroup(eq1[0][0], eq2[0][1], eq2[0][3]).set_color(BLUE)
-        a = math.sqrt(2/PI)
-        xvals = np.linspace(0, xmax, n)
-        def p(x):
-            return psi(x*a)
+        eq1 = MathTex(r'x', font_size=50*s).next_to(ax.x_axis.get_right(), UP, buff=0.25).shift(LEFT*0.15)
+        eq2 = self.get_eq().next_to(ax.y_axis.get_top(), RIGHT, buff=0.25).shift(DOWN*0.2)
+        VGroup(eq1[0][0]).set_color(BLUE)
+        p = self.get_p()
 
         plot = ax.plot(p, x_range=(0, xmax), stroke_color=BLUE, stroke_width=5).set_z_index(3)
         area = ax.get_area(plot, color=ManimColor(BLUE.to_rgb()*0.5), opacity=1, x_range=(0., xmax), stroke_width=0, stroke_opacity=0).set_z_index(1)
@@ -644,6 +655,29 @@ class Kuiper(Scene):
         self.wait(0.1)
         self.play(LaggedStart(Create(plot, run_time=2, rate_func=linear),
                               FadeIn(area, run_time=2, rate_func=linear), lag_ratio=0.4))
+        self.wait()
+
+class Kolmogorov(Kuiper):
+    scale = 0.6
+    text_scale = 0.7
+
+    def get_eq(self):
+        eq = MathTex(r'p_D(x)', font_size=50 * self.text_scale)
+        VGroup(eq[0][1], eq[0][3]).set_color(BLUE)
+        return eq
+
+    def get_p(self):
+        a = math.sqrt(2/PI)
+        return lambda x: phi(x * a) * 0.88
+
+class KolmogorovP(Scene):
+    def construct(self):
+        eq1 = MathTex(r'p_D(x)', r'=', r'8xe^{-2x^2}\!\!\!-32xe^{-8x^2}\!\!\!+\cdots',
+                      r'=', r'8x\sum_{n=1}^\infty n^2e^{-2n^2x^2}')
+        eq1[3:].next_to(eq1[2], DOWN).align_to(eq1[1], LEFT)
+        self.add(eq1[:3])
+        self.wait(0.1)
+        self.play(FadeIn(eq1[3:]), run_time=1.2)
         self.wait()
 
 class Measure(Scene):
@@ -695,10 +729,10 @@ class Measure(Scene):
         n_sample = 15
         xlen = 5
         ylen = 2.8
-        seeds = [0, 4, 5]
+        seeds = [5, 6, 10, 17, 18]
         xmax = 1.2
         x0 = 0.1
-        np.random.seed(seeds[-1])
+        np.random.seed(seeds[0])
         ax = Axes(x_range=[0, xmax * 1.05], y_range=[0, 1.2], x_length=xlen, y_length=ylen,
                   axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
                                "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
@@ -717,7 +751,7 @@ class Measure(Scene):
         eqx.next_to(ax.x_axis, DOWN, buff=0.1)
         for i in [0, 1, 2, -1]:
             eqx[i].move_to(ticks[i], coor_mask=RIGHT)
-        #eqx[2].move_to(ticks[3], coor_mask=RIGHT)
+        eqx[2].move_to(ticks[3], coor_mask=RIGHT)
         axline = DashedLine(ax.coords_to_point(0, 1), ax.coords_to_point(xmax, 1), stroke_width=4, stroke_color=GREY).set_z_index(1)
         axlabel = MathTex(r'0', r'1', font_size=32)
         axlabel[0].move_to(ax.coords_to_point(0, 0), aligned_edge=RIGHT).shift(LEFT*0.1)
@@ -789,13 +823,15 @@ class Measure(Scene):
         self.wait(0.1)
 
         y0 = 0.5
-        s = 3
+        s = 2.6
+        ys = []
         lines = []
         for i in range(0, n_sample * 2 + 1, 2):
             x, y = ps[i]
             #lines.append(ax.plot(lambda x: y0, x_range=(ps[i-1][0], ps[i][0]), stroke_color=BLUE, stroke_width=7).set_z_index(5))
             if i > 0:
-                lines.append(Line(ax.coords_to_point(x, y0 + s*(ps[i-1][1]-f(x))), ax.coords_to_point(x, y0+s*(y-f(x))), stroke_color=BLUE,
+                ys += [s*(ps[i-1][1]-f(x)), s*(y-f(x))]
+                lines.append(Line(ax.coords_to_point(x, ys[-2]+y0), ax.coords_to_point(x, y0+ys[-1]), stroke_color=BLUE,
                                   stroke_width=2).set_z_index(4))
             lines.append(ax.plot(lambda x: y0 + s*(y - f(x)), x_range=(ps[i][0], ps[i+1][0]), stroke_color=BLUE, stroke_width=7).set_z_index(5))
 
@@ -808,7 +844,211 @@ class Measure(Scene):
                   FadeIn(axlabel4[1]),
                   mh.transform(plt2, lines, plt1, plt3, run_time=2))
 
+        self.wait(0.1)
+
+        statD = max(ys)
+        tval.set_value(0.7)
+
+        def boxgen():
+            t = tval.get_value()
+            pt0 = ax.coords_to_point(0, y0 - t)
+            pt1 = ax.coords_to_point(xmax, y0 + max(t, statD))
+            box1 = Rectangle(width=pt1[0]-pt0[0], height=pt1[1]-pt0[1], stroke_width=0, stroke_opacity=0,
+                             fill_color=GREY, fill_opacity=0.6).set_z_index(1)
+            box1.next_to(pt0, UR, buff=0)
+            return box1
+
+        box1 = always_redraw(boxgen)
+        self.play(FadeIn(box1), run_time=0.8)
+        self.wait(0.1)
+        self.play(tval.animate.set_value(statD), run_time=0.8)
+        self.wait(0.1)
+        arr1 = Arrow(ax.coords_to_point(0.85, y0), ax.coords_to_point(0.85, y0+statD), buff=0).set_z_index(5)
+        eq5 = MathTex(r'D_n').set_z_index(5).next_to(arr1, RIGHT, buff=0)
+        self.play(FadeIn(arr1, eq5))
+
+        eq6 = MathTex(r'D_n', r'=', r'\max_x\lvert F_n(x)-F(x)\rvert').set_z_index(5)
+        eq6.next_to(ax, UP, buff=0.05, coor_mask=UP)
+        self.play(FadeIn(eq6))
+        self.wait(0.1)
+
+        eq6_1 = MathTex(r'\sqrt nD_n', r'=', r'\sqrt n\max_x\lvert F_n(x)-F(x)\rvert').set_z_index(5)
+        mh.align_sub(eq6_1, eq6_1[0][-2], eq6[0][-2])
+        self.play(mh.rtransform(eq6[0][:], eq6_1[0][-2:], eq6[1], eq6_1[1], eq6[2][:], eq6_1[2][3:]),
+                  FadeIn(eq6_1[0][:-2], eq6_1[2][:3]))
+        self.wait(0.1)
+
+        eq7 = MathTex(r'\sqrt nD_n', r'\to', r'D', r'\ {\sf(in\ distribution)}')
+        mh.align_sub(eq7, eq7[0][-2], eq6[0][-2])
+        self.play(mh.rtransform(eq6_1[0], eq7[0]),
+                  #FadeIn(eq7[0][:-2], shift=mh.diff(eq6[0][:], eq7[0][-2:])),
+                  mh.fade_replace(eq6_1[1], eq7[1]),
+                  FadeOut(eq6_1[2]),
+                  FadeIn(eq7[2:]),
+                  run_time=1.5)
+        self.wait(0.1)
+
+        eq8 = MathTex(r'\mathbb E[D^s]', r'=', r's', r'2^{-\frac s2}', r'(1-2^{1-s})', r'\Gamma({}^{\frac s2})', r'\zeta(s)')
+        eq8[5][2:5].move_to(eq8[1], coor_mask=UP)
+        mh.align_sub(eq8, eq8[0][-2], eq7[0][-2], coor_mask=UP)
+
+        VGroup(eq8[0][-2], eq8[2][0], eq8[3][2], eq8[4][-2], eq8[5][2], eq8[6][2]).set_color(YELLOW)
+        self.play(mh.rtransform(eq7[2][0], eq8[0][2]),
+                  FadeIn(eq8[0][:2], eq8[0][-2:], shift=mh.diff(eq7[2][0], eq8[0][2])),
+                  FadeOut(eq7[:2], eq7[3]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq8[1:3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq8[3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq8[4]))
+        self.wait(0.1)
+        self.play(FadeIn(eq8[5]))
+        self.wait(0.1)
+        self.play(FadeIn(eq8[6]))
+        self.wait(0.1)
+
+        eq10 = MathTex(r'V_n', r'=', r'\max_x( F_n(x)-F(x)) + \max_x(F(x)-F_n(x))').set_z_index(5)
+        eq10.next_to(ax, UP, buff=0.05, coor_mask=UP)
+        self.play(FadeIn(eq10), FadeOut(eq8))
+        self.wait(0.1)
+
+        statV = -min(ys)
+        self.play(tval.animate.set_value(statV), run_time=0.8)
+        self.wait(0.1)
+        arr2 = Arrow(ax.coords_to_point(1.15, y0-statV), ax.coords_to_point(1.15, y0+statD), buff=0).set_z_index(5)
+        eq9_1 = MathTex(r'V_n').set_z_index(5).next_to(arr2, RIGHT, buff=0).shift(UP*0.2)
+        self.play(FadeIn(arr2, eq9_1))
+        self.wait(0.1)
+
+        eq11 = MathTex(r'\sqrt nV_n', r'\to', r'V', r'\ {\sf(in\ distribution)}')
+        mh.align_sub(eq11, eq11[1], eq10[1], coor_mask=UP)
+        self.play(mh.rtransform(eq10[0][:], eq11[0][-2:]),
+                  mh.fade_replace(eq10[1], eq11[1]),
+                  FadeIn(eq11[0][:-2], shift=mh.diff(eq10[0][:], eq11[0][-2:])),
+                  FadeIn(eq11[2:]),
+                  FadeOut(eq10[2:]),
+                  run_time=1.5)
+        self.wait(0.1)
+
+        eq12 = MathTex(r'\mathbb E[V^s]', r'=', r'2^{-\frac s2}', r's(s-1)', r'\Gamma({}^{\frac s2})', r'\zeta(s)')
+        eq12[4][2:5].move_to(eq12[1], coor_mask=UP)
+        mh.align_sub(eq12, eq12[0][-2], eq11[0][-2], coor_mask=UP)
+        VGroup(eq12[0][-2], eq12[2][-3], eq12[3][0], eq12[3][2], eq12[4][2], eq12[5][2]).set_color(YELLOW)
+
+        self.play(mh.rtransform(eq11[2][0], eq12[0][2]),
+                  FadeIn(eq12[0][:2], eq12[0][-2:], shift=mh.diff(eq11[2][0], eq11[0][2])),
+                  FadeOut(eq11[:2], eq11[3]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq12[1:3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq12[3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq12[4]))
+        self.wait(0.1)
+        self.play(FadeIn(eq12[5]))
+        self.wait(0.1)
+
+        eq13 = MathTex(r'\mathbb E[V^s]', r'=', r'\left(\frac\pi2\right)^{\frac s2}', r'\pi^{-\frac s2}', r's(s-1)', r'\Gamma({}^{\frac s2})', r'\zeta(s)')
+        eq13[5][2:5].move_to(eq12[1], coor_mask=UP)
+        mh.align_sub(eq13, eq13[1], eq12[1], coor_mask=UP)
+        VGroup(eq13[0][-2], eq13[2][-3], eq13[3][-3], eq13[4][0], eq13[4][2], eq13[5][2], eq13[6][2]).set_color(YELLOW)
+        self.play(mh.rtransform(eq12[:2], eq13[:2], eq12[3:], eq13[4:],
+                  eq12[2][-4:], eq13[3][-4:], eq12[2][-3:].copy(), eq13[2][-3:], eq12[2][0], eq13[2][3]),
+                  FadeIn(eq13[2][0], eq13[2][2], eq13[2][-4]),
+                  FadeIn(eq13[2][1], target_position=eq12[2][0]),
+                  FadeIn(eq13[3][0], target_position=eq12[2][0]),
+                  run_time=1.5)
+
+        eq14 = MathTex(r'\mathbb E[V^s]', r'=', r'\left(\frac\pi2\right)^{\frac s2}', r'2\xi(s)')
+        VGroup(eq14[0][-2], eq14[2][-3], eq14[3][3]).set_color(YELLOW)
+        mh.align_sub(eq14, eq14[1], eq13[1])
+        self.play(mh.rtransform(eq13[:3], eq14[:3]),
+                  FadeOut(eq13[3:]),
+                  FadeIn(eq14[3:]),
+                  run_time=1.5)
+        self.wait(0.1)
+        eq15 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }V)^s]', r'=', r'2\xi(s)')
+        eq15[0][3:8].move_to(eq15[1], coor_mask=UP)
+        VGroup(eq15[0][-2], eq15[2][3]).set_color(YELLOW)
+        mh.align_sub(eq15, eq15[1], eq14[1])
+        self.play(mh.rtransform(eq14[0][:2], eq15[0][:2], eq14[0][-3], eq15[0][-4], eq14[0][-2:], eq15[0][-2:],
+                                eq14[1], eq15[1], eq14[3], eq15[2]),
+                  mh.stretch_replace(eq14[2][5], eq15[0][-2], eq14[2][0], eq15[0][2], eq14[2][1], eq15[0][-5],
+                                     eq14[2][2], eq15[0][-6], eq14[2][3], eq15[0][-7], eq14[2][4], eq15[0][-3]),
+                  FadeOut(eq14[2][6:8], shift=mh.diff(eq14[2][5], eq15[0][-2])),
+                  FadeIn(eq15[0][3:-7], rate_func=rush_into),
+                  run_time=1.8)
+        self.wait(0.1)
+
+        eq15.generate_target().next_to(mh.pos((-0.83, -0.23)), DR, buff=0)
+        self.play(FadeOut(gp1), MoveToTarget(eq15), FadeIn(eq8), run_time=1.6)
+        self.wait(0.1)
+        eq16 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }D)^s]', r'=', r'(1-2^{1-s})', r's', r'\pi^{-\frac s2}',
+                       r'\Gamma({}^{\frac s2})', r'\zeta(s)')
+        eq16[0][3:8].move_to(eq16[1], coor_mask=UP)
+        eq16[-2][2:5].move_to(eq16[1], coor_mask=UP)
+        mh.align_sub(eq16, eq16[1], eq8[1], coor_mask=UP)
+        VGroup(eq16[0][-2], eq16[2][-2], eq16[3][0], eq16[4][-3], eq16[5][2], eq16[6][2]).set_color(YELLOW)
+        self.play(mh.rtransform(eq8[0][:2], eq16[0][:2], eq8[0][-3], eq16[0][-4], eq8[0][-2:], eq16[0][-2:],
+                                eq8[1], eq16[1], eq8[2], eq16[3], eq8[4], eq16[2], eq8[5], eq16[5], eq8[6], eq16[6],
+                                eq8[3][-4:], eq16[4][-4:]),
+                  FadeIn(eq16[4][0], target_position=eq8[3][0]),
+                  mh.stretch_replace(eq8[3][0], eq16[0][-7]),
+                  FadeIn(eq16[0][-6:-4], shift=mh.diff(eq8[3][0], eq16[0][-7])),
+                  FadeIn(eq16[0][2:-7], eq16[0][-3], rate_func=rush_into),
+                  run_time=1.8)
+        self.wait(0.1)
+        eq17 = MathTex(r'()', r'(s-1)^{-1}', r's', r'(s-1)', r'\pi')
+        VGroup(eq17[1][1], eq17[3][1]).set_color(YELLOW)
+        mh.align_sub(eq17, eq17[2], eq16[3])
+        eq17_1 = eq17[1].copy()
+        mh.align_sub(eq17_1, eq17_1[:-2], eq17[2], coor_mask=RIGHT)
+        self.play(FadeIn(eq17[1], target_position=eq17_1),
+                  FadeIn(eq17[3], target_position=eq17_1[:-2]),
+                  eq16[:3].animate.shift(mh.diff(eq16[2][-1], eq17[0][-1])*RIGHT),
+                  eq16[4:].animate.shift(mh.diff(eq16[4][0], eq17[4][0])*RIGHT),
+                  run_time=1.5
+                  )
+        self.wait(0.1)
+        eq18 = MathTex(r'(s-1)^{-1}', r'2\xi(s)')
+        VGroup(eq18[0][1], eq18[1][3]).set_color(YELLOW)
+        mh.align_sub(eq18, eq18[0], eq17[1])
+        self.play(mh.rtransform(eq17[1], eq18[0]),
+                  FadeOut(eq17[3], eq16[3:]),
+                  FadeIn(eq18[1]),
+                  run_time=1.6)
+        self.wait(0.1)
+
+        eq19 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }D)^s]', r'=', r'\frac{1-2^{1-s} }{s-1}', r'2\xi(s)')
+        VGroup(eq19[0][-2], eq19[2][5], eq19[2][-3], eq19[-1][-2]).set_color(YELLOW)
+        eq19[0][3:-4].move_to(eq19[1], coor_mask=UP)
+        eq19.next_to(eq15, DOWN).align_to(eq15, LEFT)
+        self.play(mh.rtransform(eq16[:2], eq19[:2], eq16[2][1:-1], eq19[2][:6],
+                                eq18[0][1:-3], eq19[2][-3:],
+                                eq18[1], eq19[-1]),
+                  FadeOut(eq16[2][0], eq16[2][-1], shift=mh.diff(eq16[2][1:-1], eq19[2][:6])),
+                  FadeOut(eq18[0][0], eq18[0][-3:], shift=mh.diff(eq18[0][1:-3], eq19[2][-3:])),
+                  FadeIn(eq19[2][-4], rate_func=rush_into),
+                  run_time=2)
+
         self.wait()
+
+class ConfidenceLevel(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        eq1 = MathTex(r'\mathbb P(D_n\le\alpha)', r'=', r'99\%')
+        eq2 = Tex(r'$D_n > \alpha$', r'\ $\Rightarrow$\ ', r'reject null hypothesis')
+        VGroup(eq1[0][2:4], eq1[0][-2], eq2[0][:2], eq2[0][-1]).set_color(BLUE)
+        eq2[2].set_color(RED)
+        self.add(eq1)
+
+
+        eq2.next_to(eq1, DOWN)
+
+        self.play(FadeIn(eq2))
 
 
 if __name__ == "__main__":
