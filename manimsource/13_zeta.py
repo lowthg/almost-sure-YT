@@ -1160,8 +1160,8 @@ class BMDefs(Scene):
 
 
 class Bridge(Scene):
-    def get_axes(self):
-        ymax = 1.5
+    def get_axes(self, scale=1.):
+        ymax = 1.5 / scale
         xlen = 1.8 * config.frame_x_radius
         ylen = 1.9 * config.frame_y_radius
         ax = Axes(x_range=[0, 1.05], y_range=[-ymax, ymax], x_length=xlen, y_length=ylen,
@@ -1169,9 +1169,9 @@ class Bridge(Scene):
                                "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
                                },
-                  ).set_z_index(2)
+                  ).set_z_index(1.9)
         eqt = MathTex(r't').next_to(ax.x_axis.get_right(), UP, buff=0.2)
-        mark1 = ax.x_axis.get_tick(1, size=0.1).set_stroke(width=6)
+        mark1 = ax.x_axis.get_tick(1, size=0.1).set_stroke(width=6).set_z_index(11)
         line1 = DashedLine(ax.coords_to_point(1, -ymax), ax.coords_to_point(1, ymax), color=GREY).set_z_index(10).set_opacity(0.6)
         eq2 = MathTex(r'T', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
         eq6 = MathTex(r'1', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
@@ -1179,7 +1179,7 @@ class Bridge(Scene):
         return ax, eqt, xlen, ylen, ymax, mark1, line1, eq2, eq6
 
     def construct(self):
-        seeds = [3, 4, 10]
+        seeds = [3, 4, 18]
         npts = 1920
         ndt = npts - 1
 
@@ -1270,7 +1270,7 @@ class Bridge(Scene):
 
         self.play(path2.animate.set_stroke(opacity=0.3, color=GREEN).set_z_index(1.51))
         np.random.seed(seeds[2])
-        b_vals3 = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+        b_vals3 = -np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
         path3 = ax.plot_line_graph(t_vals, b_vals3, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(2)
         self.play(FadeOut(eq3, eq4, eq3_1, eq4_1, box1, box2, run_time=0.8, rate_func=linear),
                   Create(path3, rate_func=linear, run_time=3))
@@ -1306,6 +1306,7 @@ class Bridge(Scene):
                   FadeIn(eq6, rate_func=linear),
                   run_time=2)
         self.wait(0.1)
+        path1.set_z_index(3)
         self.play(FadeOut(path2, path3, path4),
                   path1.animate.set_stroke(opacity=1),
                   rate_func=linear, run_time=1)
@@ -1318,7 +1319,7 @@ class Bridge(Scene):
         yknots = [b_vals[i] for i in iknots]
         pts = [ax.coords_to_point(t, y) for t, y in zip(tknots, yknots)]
         dots = [Dot(radius=0.15, fill_color=GREEN).set_z_index(5).move_to(pt) for pt in pts]
-        lines = [Line(p, q, stroke_color=GREEN, stroke_width=5).set_z_index(1.5) for p, q in zip(pts[:-1], pts[1:])]
+        lines = [Line(p, q, stroke_color=GREEN, stroke_width=5).set_z_index(2) for p, q in zip(pts[:-1], pts[1:])]
         self.play(FadeIn(*dots, *lines))
         self.wait(0.1)
 
@@ -1359,6 +1360,261 @@ class Bridge(Scene):
         self.play(FadeOut(paths_arr3, *dots, *lines),
                   FadeIn(path1), rate_func=linear)
 
+
+        self.wait()
+
+class BridgeMax(Bridge):
+    def construct(self):
+        seeds = [31, 25, 21]
+        npts = 1920
+        ndt = npts - 1
+        np.random.seed(seeds[0])
+
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.)
+        self.add(ax, eqt, mark1, line1, eq1)
+
+        origin = ax.coords_to_point(0, 0)
+        right = ax.coords_to_point(1, 0) - origin
+        up = ax.coords_to_point(0, 1) - origin
+
+        t_vals = np.linspace(0, 1., npts)
+        s = np.sqrt(t_vals[1])
+        b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+        b_vals -= t_vals * b_vals[-1]
+        if min(b_vals) + max(b_vals) > 0:
+            b_vals = -b_vals
+        path1 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(2)
+
+        self.play(Create(path1, run_time=2, rate_func=linear))
+        self.wait(0.1)
+
+        bmax = max(b_vals) * 1.05
+        line2 = DashedLine(ax.coords_to_point(0, bmax), ax.coords_to_point(1, bmax), color=GREY).set_z_index(1.5)
+        eq2 = MathTex(r'M', font_size=65).next_to(ax.coords_to_point(0.9, bmax), UP, buff=0.1).set_z_index(5)
+        eq3 = MathTex(r'\mathbb P(M > x)', r'=', r'e^{-2x^2}', font_size=70).move_to(ax.coords_to_point(0.5, ymax*0.6)).set_z_index(5)
+        eq5 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }D)^s]', r'=', r'\frac{1-2^{1-s} }{s-1}', r'2\xi(s)', font_size=65).set_z_index(5)
+        eq5[0][3:-4].move_to(eq5[1], coor_mask=UP)
+        eq7 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }V)^s]', r'=', r'2\xi(s)', font_size=70).set_z_index(5)
+        eq7[0][3:-4].move_to(eq7[1], coor_mask=UP)
+        eq5.move_to(ax.coords_to_point(0.4, ymax * 0.5)).next_to(origin, RIGHT, buff=0.1, coor_mask=RIGHT)
+        eq7.move_to(ax.coords_to_point(0.4, ymax * 0.2)).next_to(origin, RIGHT, buff=0.5, coor_mask=RIGHT)
+
+        eq3_1 = eq3.copy().set_stroke(color=BLACK, width=8).set_z_index(4.9)
+        eq3 = VGroup(VGroup(a, b) for a, b in zip(eq3[:], eq3_1[:]))
+        eq5_1 = eq5.copy().set_stroke(color=BLACK, width=8).set_z_index(4.9)
+        eq7_1 = eq7.copy().set_stroke(color=BLACK, width=8).set_z_index(4.9)
+
+        self.play(FadeIn(line2, eq2))
+        self.wait(0.1)
+        self.play(FadeIn(eq3[0]))
+        self.wait(0.1)
+        self.play(FadeIn(eq3[1:]))
+        self.wait(0.1)
+
+        bmin = -min(b_vals) * 1.03
+
+        boxes = [Rectangle(width=right[0], height=h*up[1], stroke_width=0, stroke_opacity=0,
+                           fill_color=GREY, fill_opacity=0.6).set_z_index(1)
+                 for h in (2 * ymax, 2 * bmin, bmin + bmax)]
+        boxes[0].next_to(origin, RIGHT, buff=0)
+        boxes[1].next_to(origin, RIGHT, buff=0)
+        boxes[2].next_to(boxes[1].get_corner(DL), UR, buff=0)
+        arr1 = Arrow(ax.coords_to_point(0.6, -bmin), ax.coords_to_point(0.6, 0), buff=0).set_z_index(5)
+        eq4 = MathTex(r'D', stroke_width=2).set_z_index(5).next_to(arr1, RIGHT, buff=0).shift(UP*0.5)
+        arr2 = Arrow(ax.coords_to_point(0.75, -bmin), ax.coords_to_point(0.75, bmax), buff=0).set_z_index(5)
+        eq6 = MathTex(r'V', stroke_width=2).set_z_index(5).next_to(arr2, RIGHT, buff=0).shift(DOWN*1)
+
+        self.play(FadeIn(boxes[0]), eq3.animate.scale(0.8).to_edge(UP, buff=0.5))
+        self.wait(0.1)
+        self.play(mh.rtransform(*boxes[:2]), run_time=1.6)
+        self.wait(0.1)
+        self.play(FadeIn(eq4, arr1))
+        self.wait(0.1)
+        self.play(FadeIn(eq5[0][3:-3], eq5_1[0][3:-3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq5[0][:3], eq5[0][-3:], eq5_1[0][:3], eq5_1[0][-3:]))
+        self.wait(0.1)
+        self.play(FadeIn(eq5[1:3], eq5_1[1:3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq5[3:], eq5_1[3:]))
+        self.wait(0.1)
+        self.play(VGroup(eq5, eq5_1).animate.scale(0.9).next_to(eq3, RIGHT, buff=0.5).next_to(origin, RIGHT).to_edge(UP, buff=0.4),
+                  eq3.animate.to_edge(RIGHT, buff=0.5))
+        self.play(mh.rtransform(*boxes[1:]), run_time=1.6)
+        self.play(FadeIn(arr2, eq6))
+        self.wait(0.1)
+        self.play(FadeIn(eq7[0][3:-3], eq7_1[0][3:-3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq7[0][:3], eq7[0][-3:], eq7_1[0][:3], eq7_1[0][-3:]))
+        self.wait(0.1)
+        self.play(FadeIn(eq7[1:], eq7_1[1:]))
+        self.wait(0.1)
+        gp = VGroup(eq7, eq7_1)
+        eq7_2 = gp.copy().scale(0.9)
+        mh.align_sub(eq7_2, eq7_2[0][1], eq5[1]).to_edge(RIGHT, buff=0.4)
+        self.play(FadeOut(ax, eqt, line1, path1, eq1, boxes[-1], arr1, arr2, mark1, line2, eq2, eq4, eq6, eq3),
+                  mh.rtransform(gp, eq7_2),
+                  eq5.animate.to_edge(LEFT, buff=0.4),
+                  rate_func=linear, run_time=1.6)
+        self.wait()
+
+
+class BridgeLimit(Scene):
+    def construct(self):
+        seeds = [3]
+        np.random.seed(seeds[0])
+        xmin=0.1
+        xmax = 1.1 + xmin
+        xlen = 6
+        ylen = 4
+        ymax2 = 1.
+        nf = 100
+        n0 = 4
+
+        ax1 = Axes(x_range=[0, xmax * 1.05], y_range=[0, 1.2], x_length=xlen, y_length=ylen,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+
+        ax2 = Axes(x_range=[0, xmax * 1.05], y_range=[-ymax2, ymax2], x_length=xlen, y_length=ylen,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+
+        ax2.next_to(ax1, RIGHT, buff=1)
+        eq1 = Tex(r'{{\sf nsamples}} $= {} $'.format(n0), font_size=60).to_edge(DOWN)
+        VGroup(ax1, ax2).move_to(ORIGIN).next_to(eq1, UP)
+        eq1x = MathTex(r'x', font_size=50).next_to(ax1.x_axis.get_right(), UP, buff=0.2)
+        eq2x = eq1x.copy().next_to(ax2.x_axis.get_right(), UP, buff=0.15)
+
+        self.add(ax1, ax2, eq1x, eq2x, eq1)
+
+        xvals1 = np.concatenate(([0], np.linspace(xmin, xmin+1, nf), [xmax]))
+        yvals1 = (xvals1 - xmin).clip(0, 1)
+        path1 = ax1.plot_line_graph(xvals1, yvals1, stroke_width=5, stroke_color=YELLOW, add_vertex_dots=False).set_z_index(3)
+
+        eq3 = MathTex(r'F_n', color=BLUE, font_size=50).move_to(ax1.coords_to_point(xmin+0.5, 0.84))
+        eq4 = MathTex(r'F', color=YELLOW, font_size=50).move_to(ax1.coords_to_point(xmin+0.7, 0.5))
+        eq5 = MathTex(r'\sqrt n(F_n-F)', color=BLUE, font_size=45).set_z_index(6).move_to(ax2.coords_to_point(0.3, 0.9))
+
+        self.wait(0.1)
+        self.play(Create(path1, rate_func=linear, run_time=1), FadeIn(eq4))
+        self.wait(0.1)
+
+        def emp(x_rand, t=1.1):
+            x1 = t * xmax
+            n_sample = len(x_rand)
+            ps = [(0, 0), (xmin, 0)]
+            ps2 = [(0, 0), (xmin, 0)]
+            s = math.sqrt(n_sample)
+            for x in x_rand + xmin:
+                y = ps[-1][1]
+                ps.append((x, y))
+                ps.append((x, y + 1 / n_sample))
+                ps2.append((x, (y - x + xmin)*s))
+                ps2.append((x, (y + 1 / n_sample - x + xmin)*s))
+            ps.append((xmin+1, 1))
+            ps2.append((xmin+1, 0))
+            ps.append((xmax, 1))
+            ps2.append((xmax, 0))
+
+            lines = []
+            lines2 = []
+            # assert len(ps) == n_sample*2 + 4
+            for i in range(n_sample*2 + 3):
+                x, y = ps[i + 1]
+                stop = x1 < x
+                if stop:
+                    x = x1
+                if n_sample*2 >= i > 1 and i % 2 ==0:
+                    lines.append(Line(ax1.coords_to_point(*ps[i]), ax1.coords_to_point(x, y), stroke_color=BLUE,
+                                  stroke_width=2).set_z_index(4))
+                    lines2.append(Line(ax2.coords_to_point(*ps2[i]), ax2.coords_to_point(*ps2[i+1]), stroke_color=BLUE,
+                                      stroke_width=2).set_z_index(4))
+                else:
+                    lines.append(Line(ax1.coords_to_point(*ps[i]), ax1.coords_to_point(x, y), stroke_color=BLUE,
+                                      stroke_width=7).set_z_index(5))
+                    lines2.append(Line(ax2.coords_to_point(*ps2[i]), ax2.coords_to_point(*ps2[i+1]), stroke_color=BLUE,
+                                      stroke_width=7).set_z_index(5))
+                if stop:
+                    break
+            if t <= 1.:
+                return VGroup(VGroup(*lines), VGroup(*lines2))
+
+            ys = [p[1] for p in ps2]
+            bmin = min(ys)
+            bmax = max(ys)
+            p = ax2.coords_to_point(0., bmin)
+            q = ax2.coords_to_point(xmax, bmax) - p
+            box = Rectangle(width=q[0], height=q[1], fill_color=DARK_GREY, fill_opacity=1, stroke_opacity=0).set_z_index(1).next_to(p, UR, buff=0)
+            return VGroup(VGroup(*lines), VGroup(*lines2), box)
+
+        x_rand = np.random.uniform(0, 1, n0)
+        x_rand.sort()
+
+        track = ValueTracker(0.)
+        def f():
+            return emp(x_rand, track.get_value())[0]
+
+        obj = always_redraw(f)
+        self.add(obj)
+        self.play(track.animate.set_value(1.), FadeIn(eq3), rate_func=linear, run_time=1.6)
+        obj.clear_updaters()
+        self.wait(0.1)
+
+        lines1 = emp(x_rand)
+        self.add(lines1[0])
+        self.play(mh.rtransform(obj, lines1[1]), FadeIn(lines1[-1], eq5), run_time=1.6)
+        self.wait(0.1)
+
+        eq1_1 = eq1[0][-1:]
+        imax = 96
+        dts = [0.25, 0.2, 0.17, 0.14, 0.12, 0.1]
+        for i in range(imax):
+            x = np.random.uniform(0, 1)
+            k = np.searchsorted(x_rand, x)
+            x_rand = np.insert(x_rand, k, x)
+            lines2 = emp(x_rand)
+            eq2 = Tex(r'$={}$'.format(len(x_rand)), font_size=60)
+            mh.align_sub(eq2, eq2[0][0], eq1[0][-2])
+
+            j = min(i, imax-i-1)
+            dt = dts[min(j, len(dts) - 1)]
+
+            self.play(FadeIn(lines2[:-1], eq2[0][1:]), FadeOut(lines1[:-1], eq1_1),
+                      ReplacementTransform(lines1[-1], lines2[-1]),
+                      run_time=dt,
+                      rate_func=linear)
+            eq1_1 = eq2[0][1:]
+            lines1 = lines2
+
+        self.wait(0.1)
+
+
+        def gfunc(ax):
+            p1 = ax.coords_to_point(xmin, 0)[0]
+            q1 = ax.coords_to_point(xmin + 1, 0)[0]
+            def g(p):
+                q = p.copy()
+                if q1-0.005 > q[0] > p1+0.005:
+                    x = (q[0] - p1) / (q1 - p1)
+                    y = math.acos(1-2*x)/PI
+                    #y = x * 0.99
+                    q[0] = p1 *(1-y) + q1 * y
+                    #q[0] -= 0.2
+                    #print(x, y)
+                return q
+            return g
+
+        self.play(ApplyPointwiseFunction(gfunc(ax1), VGroup(path1, lines1[0])),
+                  ApplyPointwiseFunction(gfunc(ax2), lines1[1]),
+                  run_time=3,
+                  rate_func=there_and_back_with_pause
+                  )
 
         self.wait()
 
