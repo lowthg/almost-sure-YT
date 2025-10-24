@@ -83,10 +83,9 @@ def create_sphere(r=1., simple_sphere=True, anim='', min_op_s1=0.1, max_op_s2 = 
 
     return s3, interior_col_update
 
-def sphere_bm(r=2., quality=LD, bgcol=BLACK, scol=YELLOW):
-    tscale = 6
+def sphere_bm(r=2., quality=LD, bgcol=BLACK, scol=YELLOW, tscale=6, scale=1., xscale=1.):
     dt = 1. / 60 / tscale
-    dev = math.sqrt(dt)
+    dev = math.sqrt(dt) * xscale
     seeds = [3, 10, 13]
     np.random.seed(seeds[-1])
     pts = [np.zeros(3)]
@@ -103,7 +102,7 @@ def sphere_bm(r=2., quality=LD, bgcol=BLACK, scol=YELLOW):
     t_end = (n-1) * dt
     print('T =', t_end)
 
-    sphere, col_update = create_sphere(r=r, simple_sphere=False, max_op_s2 = 0.9, min_op_s1=0.0002, base_op_s1 = 0.4)
+    sphere, col_update = create_sphere(r=r*scale, simple_sphere=False, max_op_s2 = 0.9, min_op_s1=0.0002, base_op_s1 = 0.4)
     dot = Sphere(radius=r * 0.06, color=scol)
     col_update(dot, color=scol)
     with Off():
@@ -489,7 +488,9 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
 
-    zeta_surf(quality=HD, bgcol=BLACK, xrange=(-13.5,14.5), shift=0.3)
+    sphere_bm(quality=HD, bgcol=TRANSPARENT, tscale=12, xscale=0.94)
+    #sphere_bm(r=2.1, quality=LD, bgcol=BLACK, tscale=12, xscale=0.94)
+    #zeta_surf(quality=HD, bgcol=BLACK, xrange=(-13.5,14.5), shift=0.3)
     #xi_surf(quality=HD, bgcol=BLACK)
     #zeta_surf(quality=HD, bgcol=TRANSPARENT)
     #gamma_surf(quality=HD, bgcol=TRANSPARENT)
