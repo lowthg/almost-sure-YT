@@ -1877,6 +1877,141 @@ class Excursion(Bridge):
 
         self.wait()
 
+class ThreeProcs(Bridge):
+    def construct(self):
+        seeds = [129, 115, 103] # 140
+        npts = 1920
+        ndt = npts - 1
+        np.random.seed(seeds[0])
+
+        t0 = 0.7
+
+        t_vals = np.linspace(0, 1., npts)
+        i0 = round(t0 * ndt)
+        t0 = t_vals[i0]
+
+        ax, eqt, xlen, ylen, ymax, mark1, line1, eqt, eq1 = self.get_axes(1.6, ylen=0.75)
+        ax.y_axis.set_z_index(10)
+        gp = VGroup(ax, eqt, mark1, line1, eqt).to_edge(DOWN, buff=0.2)
+        line2 = line1.copy()
+        mark2 = mark1.copy()
+        VGroup(mark1, line1, eqt).shift(ax.coords_to_point(t0, 0)-mark1.get_center())
+        self.add(gp)
+        self.wait(0.1)
+
+        s = np.sqrt(t_vals[1])
+
+        while True:
+            b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+            if b_vals[i0] < 0:
+                b_vals = -b_vals
+            i1 = i0 - np.argmax(b_vals[i0::-1] < 0)
+            if i1 <= 100 or i1 > i0 - 100:
+                continue
+            if abs(b_vals[i1+1]) < abs(b_vals[i1]):
+                i1 += 1
+            b_vals[i1] = 0
+            i2 = np.argmax(b_vals[i0:] < 0) + i0
+            if i2 > ndt or b_vals[i2] >= 0 or i2 < i0 + 100:
+                continue
+            if abs(b_vals[i2-1]) < abs(b_vals[i2]):
+                i2 -= 1
+            if i0 - i1 < ndt/4 or i1 < ndt/4:
+                continue
+            b_vals[i2] = 0
+            break
+
+
+        path1 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW,
+                                   stroke_width=4).set_z_index(2)
+        self.play(Create(path1, rate_func=linear), run_time=3)
+        self.wait(0.1)
+
+        path2 = ax.plot_line_graph(t_vals[:i1+1], b_vals[:i1+1], add_vertex_dots=False, stroke_color=RED,
+                                   stroke_width=4).set_z_index(3)
+        path3 = ax.plot_line_graph(t_vals[i1:i0+1], b_vals[i1:i0+1], add_vertex_dots=False, stroke_color=GREEN,
+                                   stroke_width=4).set_z_index(3)
+        path4 = ax.plot_line_graph(t_vals[i0:i2+1], b_vals[i0:i2+1], add_vertex_dots=False, stroke_color=BLUE,
+                                   stroke_width=4).set_z_index(3)
+        path5 = ax.plot_line_graph(t_vals[i2:npts], b_vals[i2:npts], add_vertex_dots=False, stroke_color=YELLOW,
+                                   stroke_width=4).set_z_index(2.5)
+
+        tscale=5
+        self.play(Create(path2), rate_func=linear, run_time=t_vals[i1] * tscale)
+        self.wait(0.1)
+        self.play(Create(path3), rate_func=linear, run_time=(t_vals[i0]-t_vals[i1]) * tscale)
+        self.wait(0.1)
+        self.play(Create(path4), rate_func=linear, run_time=(t_vals[i2]-t_vals[i0]) * tscale)
+        self.wait(0.1)
+        self.add(path5)
+        self.remove(path1)
+        self.play(FadeIn(path5), FadeOut(path1))
+        self.wait(0.1)
+
+        scale = 0.47
+
+        gax = VGroup(ax, line2, mark2, eq1.next_to(mark2, DR, buff=0.1))
+        gax2 = gax.copy().scale(scale, about_edge=DL)
+        gax3 = gax.copy().scale(scale, about_edge=UR)
+        gax4 = gax.copy().scale(scale, about_edge=DR)
+        ax2, ax3, ax4 = (gax2[0], gax3[0], gax4[0])
+
+        t_vals2 = t_vals[:i1+1].copy()
+        a = 1. / t_vals2[-1]
+        t_vals2 *= a
+        b_vals2 = b_vals[:i1+1] * math.sqrt(a)
+        path6 = ax2.plot_line_graph(t_vals2, b_vals2, add_vertex_dots=False, stroke_color=RED,
+                                   stroke_width=4).set_z_index(2.5)
+
+        t_vals4 = t_vals[i1:i0+1] - t_vals[i1]
+        a = 1. / t_vals4[-1]
+        t_vals4 *= a
+        b_vals4 = b_vals[i1:i0+1] * math.sqrt(a)
+        path8 = ax4.plot_line_graph(t_vals4, b_vals4, add_vertex_dots=False, stroke_color=GREEN,
+                                   stroke_width=4).set_z_index(2.5)
+
+        t_vals3 = t_vals[i1:i2+1] - t_vals[i1]
+        a = 1. / t_vals3[-1]
+        t_vals3 *= a
+        b_vals3 = b_vals[i1:i2+1] * math.sqrt(a)
+        path7 = ax3.plot_line_graph(t_vals3[:i0-i1+1], b_vals3[:i0-i1+1], add_vertex_dots=False, stroke_color=GREEN,
+                                   stroke_width=4).set_z_index(2.5)
+        path7_1 = ax3.plot_line_graph(t_vals3[i0-i1:i2-i1+1], b_vals3[i0-i1:i2-i1+1], add_vertex_dots=False, stroke_color=BLUE,
+                                   stroke_width=4).set_z_index(2.6)
+
+        gp2 = VGroup(gp, path2, path3, path4, path5)
+
+        eqb = MathTex(r'b_t', color=RED, font_size=60, stroke_width=2).move_to(ax2.coords_to_point(0.5, ymax*0.6)).set_z_index(10)
+        eqe = MathTex(r'e_t', color=BLUE, font_size=60, stroke_width=2).move_to(ax3.coords_to_point(0.5, ymax*0.6)).set_z_index(10)
+        eqm = MathTex(r'm_t', color=GREEN, font_size=60, stroke_width=2).move_to(ax4.coords_to_point(0.5, ymax*0.7)).set_z_index(10)
+
+        self.play(gp2.animate.scale(0.45, about_edge=UL),
+                  mh.rtransform(gax.copy().set_opacity(0), gax2, gax.copy().set_opacity(0), gax3,
+                                gax.copy().set_opacity(0), gax4,
+                                path2.copy(), path6,
+                                path3.copy(), path8,
+                                path3.copy(), path7,
+                                path4.copy(), path7_1),
+                  FadeIn(eqb, shift=mh.diff(path2, path6)),
+                  FadeIn(eqe, shift=mh.diff(path3, path7)),
+                  FadeIn(eqm, shift=mh.diff(path3.copy(), path8)),
+                  run_time=2)
+        self.wait(0.1)
+        eqb2 = Tex(r'\sf bridge', font_size=80, stroke_width=2, color=RED).next_to(ax2.coords_to_point(0.5, 0), DOWN, buff=0.7).set_z_index(10).align_to(ax2, DOWN)
+        eqe2 = Tex(r'\sf excursion', font_size=80, stroke_width=2, color=BLUE).next_to(ax3.coords_to_point(0.5, 0), DOWN, buff=0.1).set_z_index(10)
+        eqm2 = Tex(r'\sf meander', font_size=80, stroke_width=2, color=GREEN).next_to(ax4.coords_to_point(0.5, 0), DOWN, buff=0.3).set_z_index(10)
+        self.play(FadeIn(eqb2))
+        self.wait(0.1)
+        self.play(FadeIn(eqe2))
+        self.wait(0.1)
+        self.play(FadeIn(eqm2))
+        self.wait(0.1)
+
+        self.play(FadeOut(gp2, rate_func=linear))
+
+        self.wait()
+
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         BridgeDev().render()
