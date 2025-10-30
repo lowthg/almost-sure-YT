@@ -2424,12 +2424,128 @@ class BridgeExcursion(Scene):
 class BridgeMeander(Scene):
     def construct(self):
         MathTex.set_default(font_size=70)
-        eq1 = MathTex(r'\max m_t', r'=', r'2\,{\rm range}\,b_t', r'\sim 2V').set_z_index(2)
+        eq1 = MathTex(r'\max m_t', r'=', r'2\,\max\lvert b_t\rvert', r'\sim 2V').set_z_index(2)
         eq1[0][-2:].set_color(GREEN)
-        eq1[2][-2:].set_color(RED)
+        eq1[2][-3:-1].set_color(RED)
         box = SurroundingRectangle(eq1, fill_color=BLACK, fill_opacity=0.7,
                                    stroke_width=0, stroke_opacity=0, buff=0.1, corner_radius=0.15)
         self.add(box, eq1)
+
+class KolDistribution(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        eq1 = MathTex(r'\mathbb P(D > x)', r'=', r'2e^{-2x^2}-2e^{-8x^2}+2e^{-18x^2}-\cdots',
+                      r'=', r'2\sum_{n=1}^\infty (-1)^{n-1}e^{-2n^2x^2}').set_z_index(2)
+        mh.align_sub(eq1[3:], eq1[3], eq1[1]).next_to(eq1[2], DOWN, buff=0.2, coor_mask=UP)
+        eq1.move_to(ORIGIN)
+        box = SurroundingRectangle(eq1, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
+                                   stroke_width=0, stroke_opacity=0, buff=0.2)
+        VGroup(eq1, box).to_edge(DOWN, buff=0.1)
+        self.add(box, eq1[:3])
+        self.wait(0.1)
+        self.play(FadeIn(eq1[3:]))
+        self.wait(0.1)
+        eq2 = eq1[:3].copy().to_edge(DOWN).shift(DOWN*37*config.frame_y_radius/540).set_color(GREY)
+        box2 = SurroundingRectangle(eq2, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
+                                   stroke_width=0, stroke_opacity=0, buff=0.2)
+        self.play(FadeOut(eq1[3:]), mh.rtransform(box, box2, eq1[:3], eq2[:]))
+        self.wait(0.1)
+        self.play(FadeOut(box2))
+        self.wait(0.1)
+        for eq in (eq2[2][:6], eq2[2][7:13], eq2[2][14:21]):
+            eq_1 = eq.copy()
+            eq_2 = eq.copy().scale(1.3).set_color(WHITE)
+            self.play(mh.transform(eq, eq_2))
+            self.play(mh.transform(eq, eq_1))
+            self.wait(0.1)
+
+        self.wait()
+
+class Reflection(Bridge):
+    def construct(self):
+        seeds = [205]
+        npts = 1920
+        ndt = npts - 1
+
+        np.random.seed(seeds[0])
+        yellow2 = ManimColor(YELLOW.to_rgb()*0.5)
+        yellow3 = ManimColor(YELLOW.to_rgb()*0.3)
+        blue3 = ManimColor(BLUE.to_rgb()*0.3)
+
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(scale_neg=0.5)
+        ax.y_axis.set_z_index(20)
+        origin = ax.coords_to_point(0, 0)
+        right = ax.coords_to_point(1, 0) - origin
+        up = ax.coords_to_point(0, ymax) - origin
+
+        t_vals = np.linspace(0, 1., npts)
+        s = np.sqrt(t_vals[1])
+
+        self.add(ax, mark1, line1, eqt, eq1)
+        self.wait(0.1)
+
+        attempts = 0
+        while True:
+            attempts += 1
+            b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+            if max(b_vals) + min(b_vals) < 0:
+                b_vals = -b_vals
+            level = max(b_vals) * 0.8
+            i0 = np.argmax(b_vals > level)
+            if b_vals[-1] > level:
+                b_vals[i0:] = 2*level - b_vals[i0:]
+            b_vals_r = b_vals.copy()
+            b_vals_r[i0:] = 2*level - b_vals_r[i0:]
+            i1 = ndt - np.argmax(b_vals[::-1] > level)
+            if not 0.4 * ndt < i0 < 0.6 * ndt < i1 < 0.8 * ndt or level < 0.35 * ymax\
+                or max(b_vals) > ymax or max(b_vals_r) > ymax:# or abs(b_vals[-1]) < ymax * 0.08\
+            #    or min(b_vals[:i0]) > -ymax * 0.1:
+                continue
+            if abs(b_vals[i0-1] - level) < abs(b_vals[i0] - level): i0 -= 1
+            b_vals[i0] = level
+            print('attempts: ', attempts)
+            break
+
+        b_vals[:i0-20] -= t_vals[:i0-20] * ymax * 0.05 # nudge away from barrier
+
+        path1_1 = ax.plot_line_graph(t_vals[:i0+1], b_vals[:i0+1], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3)
+        path1_2 = ax.plot_line_graph(t_vals[i0:], b_vals[i0:], add_vertex_dots=False, stroke_color=yellow2, stroke_width=5).set_z_index(2.9)
+        path1_3 = ax.plot_line_graph(t_vals[i0:], 2*level-b_vals[i0:], add_vertex_dots=False, stroke_color=BLUE, stroke_width=5).set_z_index(4)
+
+        dt = 8
+        t0 = t_vals[i0]
+        line2 = Line(ax.coords_to_point(0, level), ax.coords_to_point(1, level), stroke_width=5, stroke_color=RED).set_z_index(2)
+        txt2 = Tex(r'\sf level', stroke_width=1, color=RED, font_size=60).move_to(ax.coords_to_point(0.1, level + ymax * 0.2)).set_z_index(2)
+        p = txt2.get_right()
+        arr1 = CurvedArrow(p + 0.005 * right, p * RIGHT + 0.05 * right + line2.get_center() * UP + 0.01 * up, color=RED, radius=-1.6, stroke_width=6)
+        self.play(Create(path1_1, rate_func=linear, run_time = dt * t0),
+                  Succession(Wait(2), FadeIn(line2, txt2, arr1)))
+        self.wait(0.1)
+
+        txt3 = Tex(r'\sf original process', font_size=60, color=YELLOW, stroke_width=1).set_z_index(10)
+        txt4 = Tex(r'\sf reflected', font_size=60, color=BLUE, stroke_width=1).set_z_index(10)
+        txt3.move_to(ax.coords_to_point(0.58, 0.15 * ymax))
+        txt4.move_to(ax.coords_to_point(0.58, 0.67 * ymax))
+        txt3_1 = txt3.copy().set_z_index(9.9).set_color(BLACK).set_stroke(width=4)
+
+        self.play(AnimationGroup(Create(path1_2, rate_func=linear), Create(path1_3, rate_func=linear), run_time=dt*(1-t0)),
+                  FadeIn(txt3, txt3_1, txt4, rate_func=linear, run_time=1.5))
+        self.wait(0.1)
+        #self.play(path1_1.animate.set_stroke(color=BLUE), path1_2.animate.set_stroke(yellow3))
+
+        path1_4 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(5)
+        self.play(FadeIn(path1_4), path1_3.animate.set_stroke(color=blue3), txt4.animate.set_color(blue3), rate_func=linear)
+
+        self.wait(0.1)
+        path1_2.set_stroke(color=yellow3)
+        self.play(FadeOut(path1_4), txt3.animate.set_color(yellow3),
+                  path1_3.animate.set_stroke(color=BLUE),
+                  path1_1.animate.set_stroke(color=BLUE),
+                  txt4.animate.set_color(BLUE), rate_func=linear)
+
+
+
+        self.wait()
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
