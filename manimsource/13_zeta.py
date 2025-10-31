@@ -2547,6 +2547,296 @@ class Reflection(Bridge):
 
         self.wait()
 
+class ReflectBridge(Bridge):
+    def construct(self):
+        seeds = [205]
+        npts = 1920
+        ndt = npts - 1
+
+        np.random.seed(seeds[0])
+        yellow2 = ManimColor(YELLOW.to_rgb()*0.5)
+        yellow3 = ManimColor(YELLOW.to_rgb()*0.3)
+        blue2 = ManimColor(BLUE.to_rgb()*0.5)
+        blue3 = ManimColor(BLUE.to_rgb()*0.3)
+        scale_neg=0.5
+
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(scale_neg=scale_neg)
+        ax.y_axis.set_z_index(20)
+        origin = ax.coords_to_point(0, 0)
+        right = ax.coords_to_point(1, 0) - origin
+        up = ax.coords_to_point(0, ymax) - origin
+
+        t_vals = np.linspace(0, 1., npts)
+        s = np.sqrt(t_vals[1])
+
+        self.add(ax, mark1, line1, eqt, eq1)
+        self.wait(0.1)
+
+        attempts = 0
+        eps = ymax * 0.07
+        while True:
+            attempts += 1
+            b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+            b_vals -= t_vals * (b_vals[-1] - eps/2)
+            if max(b_vals) + min(b_vals) < 0:
+                b_vals = -b_vals
+            level = np.max(b_vals) * 0.8
+            i0 = np.argmax(b_vals > level)
+            if abs(b_vals[i0-1] - level) < abs(b_vals[i0] - level): i0 -=1
+            b_vals[i0] = level
+            break
+
+        #path1 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3)
+        path1_1 = ax.plot_line_graph(t_vals[:i0+1], b_vals[:i0+1], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(4)
+        path1_2 = ax.plot_line_graph(t_vals[i0:], b_vals[i0:], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3)
+        path1_3 = ax.plot_line_graph(t_vals[i0:], 2*level-b_vals[i0:], add_vertex_dots=False, stroke_color=BLUE, stroke_width=5).set_z_index(5)
+        path1_4 = path1_3.copy().set_stroke(color=blue2).set_z_index(2.9)
+
+
+        pts = [ax.coords_to_point(1, eps), ax.coords_to_point(1, -eps)]
+        box1 = Rectangle(width=0.4, height=up[1] -(pts[0]-origin)[1], color=DARK_GREY, fill_opacity=1, stroke_opacity=0).set_z_index(1)
+        box2 = Rectangle(width=0.4, height=up[1]*scale_neg -(pts[0]-origin)[1], color=DARK_GREY, fill_opacity=1, stroke_opacity=0).set_z_index(1)
+        box1.next_to(pts[0], UR, buff=0)
+        box2.next_to(pts[1], DR, buff=0)
+        eq3 = MathTex(r'\varepsilon', font_size=60).set_z_index(4).next_to(pts[0], LEFT, buff=0.1)
+        eq4 = MathTex(r'-\varepsilon', font_size=60).set_z_index(4).next_to(pts[1], LEFT, buff=0.1)
+        eq4_1 = eq4.copy().set_stroke(width=12, color=BLACK).set_z_index(3.5).next_to(pts[1], LEFT, buff=0.1)
+        eq3_1 = eq3.copy().set_stroke(width=12, color=BLACK).set_z_index(3.5).next_to(pts[0], LEFT, buff=0.1)
+        eqb1 = MathTex(r'B_t', font_size=60, color=YELLOW)[0].set_z_index(5)
+        eqb2 = MathTex(r'B^r_t', font_size=60, color=BLUE)[0].set_z_index(5)
+        eqb3 = MathTex(r'b_t', font_size=60, color=YELLOW)[0].set_z_index(5)
+        eqb1.move_to(ax.coords_to_point(0.48, 0.13 * ymax))
+        eqb2.move_to(ax.coords_to_point(0.48, level*2 - 0.11 * ymax))
+        eqb3.move_to(eqb1)
+
+        self.play(Create(VGroup(path1_1, path1_2), rate_func=linear, run_time=5),
+                  Succession(Wait(3), FadeIn(box1, box2, eq3, eq4, eq3_1, eq4_1)),
+                  Succession(Wait(2.7), FadeIn(eqb1, rate_func=linear)))
+        self.wait(0.1)
+
+        line2 = Line(ax.coords_to_point(0, level), ax.coords_to_point(1, level), stroke_width=5, stroke_color=RED).set_z_index(2)
+        eq5 = MathTex(r'x').next_to(line2.get_left(), UR, buff=0.1)
+        self.play(FadeIn(line2, eq5))
+        self.wait(0.1)
+        self.play(mh.rtransform(path1_2.copy(), path1_3, run_time=1.6),
+                  Succession(Wait(0.6), FadeIn(eqb2, rate_func=linear)))
+        self.wait(0.1)
+
+        p = path1_2['line_graph'].get_end()
+        arr1 = Arrow(p+RIGHT, p, color=WHITE, buff=0).set_z_index(6)
+        self.add(path1_4)
+        self.play(FadeIn(arr1), FadeOut(path1_3), eqb2.animate.set_color(blue2))
+        self.wait(0.1)
+        line3 = DashedLine(ax.coords_to_point(0, level*2), ax.coords_to_point(1, level*2), stroke_width=5, stroke_color=RED).set_z_index(2)
+        eq6 = MathTex(r'2x').next_to(line3.get_left(), UR, buff=0.1)
+        box3 = Rectangle(width=0.4, height=(level-eps)*2*up[1]/ymax, color=DARK_GREY, fill_opacity=1, stroke_opacity=0).set_z_index(1)
+        box4 = Rectangle(width=0.4, height=(ymax-2*level-eps)*up[1]/ymax, color=DARK_GREY, fill_opacity=1, stroke_opacity=0).set_z_index(1)
+        box3.align_to(box1, DL)
+        box4.align_to(box1, UL)
+        arr2 = arr1.copy()
+
+        self.add(box3, box4)
+        self.play(FadeIn(line3, eq6),
+                  FadeIn(path1_3),
+                  eqb2.animate.set_color(BLUE),
+                  eqb1.animate.set_color(yellow2),
+                  path1_2.animate.set_stroke(yellow2),
+                  path1_1.animate.set_stroke(BLUE),
+                  FadeOut(box1, rate_func=linear),
+                  arr1.animate.next_to(path1_3['line_graph'].get_end(), RIGHT, buff=0),
+                  rate_func=linear, run_time=1.2
+                  )
+        self.remove(path1_4)
+        self.wait(0.1)
+
+        b_vals2 = b_vals - t_vals*(1-t_vals)
+        path1_1c = path1_1.copy().set_color(YELLOW)
+        path1_2c = path1_2.copy()
+        path2_1 = ax.plot_line_graph(t_vals[:i0+1], b_vals2[:i0+1], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(4)
+        path2_2 = ax.plot_line_graph(t_vals[i0:], b_vals2[i0:], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3)
+        self.play(mh.transform(path1_1, path2_1, path1_2, path2_2),
+                  FadeOut(path1_3, arr1), FadeIn(arr2),
+                  eqb1.animate.shift(-up * 0.25/ymax).set_color(YELLOW),
+                  eqb2.animate.shift(-up * 0.5/ymax))
+        self.wait(0.1)
+        self.play(mh.transform(path1_1, path1_1c, path1_2, path1_2c),
+                  FadeIn(path1_3, arr1), FadeOut(arr2),
+                  eqb1.animate.shift(up * 0.25/ymax).set_color(yellow2),
+                  eqb2.animate.shift(up * 0.5/ymax)
+                  )
+        self.wait(0.1)
+        self.add(path1_4)
+        self.play(FadeOut(path1_3, arr1),
+                  FadeIn(arr2),
+                  eqb2.animate.set_color(blue2),
+                  eqb1.animate.set_color(YELLOW),
+                  path1_2.animate.set_stroke(YELLOW),
+                  rate_func=linear, run_time=1
+                  )
+        self.wait(0.1)
+        self.play(FadeIn(path1_3, arr1),
+                  FadeOut(arr2),
+                  path1_2.animate.set_stroke(yellow2),
+                  path1_1.animate.set_stroke(BLUE),
+                  eqb2.animate.set_color(BLUE),
+                  eqb1.animate.set_color(yellow2),
+                  rate_func = linear, run_time = 1)
+        self.wait(0.1)
+        path1_4.set_color(blue3)
+        b_vals3 = b_vals - t_vals * b_vals[-1]
+        path4_1 = ax.plot_line_graph(t_vals[:i0+1], b_vals3[:i0+1], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(4)
+        path4_2 = ax.plot_line_graph(t_vals[i0:], b_vals3[i0:], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(4)
+        path4_3 = ax.plot_line_graph(t_vals[i0:], 2*level-b_vals3[i0:], add_vertex_dots=False, stroke_color=blue3, stroke_width=4).set_z_index(3)
+        box5 = box2.copy().stretch(ymax * scale_neg / (ymax * scale_neg-eps), 1).align_to(box2, DL)
+        box6 = box3.copy().stretch(level / (level-eps), 1).align_to(line3.get_end(), UL)
+        box7 = box4.copy().stretch((ymax-2*level) / (ymax-2*level-eps), 1).align_to(line3.get_end(), DL)
+        self.play(FadeOut(eqb1, eqb2),
+                  FadeIn(eqb3),
+                  mh.rtransform(path1_1, path4_1, path1_2, path4_2,
+                                path1_3, path4_3.copy().set_z_index(5).set_stroke(opacity=0),
+                                path1_4, path4_3),
+                  FadeOut(arr1, eq3, eq4, eq3_1, eq4_1),
+                  mh.rtransform(box2, box5, box3, box6, box4, box7))
+        self.wait(0.1)
+        self.play(FadeOut(box5, box6, box7, path4_3, line3, eq6), rate_func=linear)
+        self.wait(0.1)
+
+        line4 = line2.copy().next_to(ax.coords_to_point(0, -level), RIGHT, buff=0)
+        eq7 = MathTex(r'-x').next_to(line4.get_left(), UR, buff=0.1)
+
+        self.play(mh.rtransform(line2.copy(), line4, eq5[0][0].copy(), eq7[0][1]),
+                  FadeIn(eq7[0][0], shift=mh.diff(eq5[0][0], eq7[0][1])),
+                  run_time=1.6)
+        self.wait(0.1)
+        eqU = MathTex(r'U', stroke_width=1, color=RED).next_to(line2.get_left(), DR, buff=0.15)
+        eqL = MathTex(r'L', stroke_width=1, color=RED).next_to(line4.get_left(), DR, buff=0.15)
+        self.play(FadeIn(eqU))
+        self.wait(0.1)
+        self.play(FadeIn(eqL))
+
+        self.wait()
+
+class BridgeCalcMax(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        eq1 = MathTex(r'\mathbb P\left(\max B_t > x, \lvert B_1\rvert < \epsilon\right)',
+                      r'=', r'\mathbb P\left(\lvert B^r_1-2x\rvert < \epsilon\right)')
+        eq2 = MathTex(r'\mathbb P\left(\max B_t > x\vert\; \lvert B_1\rvert < \epsilon\right)',
+                      r'=', r'\frac{\mathbb P\left(\lvert B^r_1-2x\rvert < \epsilon\right)}'
+                      r'{\mathbb P\left(\lvert B_1\rvert < \epsilon\right)}')
+        eq3 = MathTex(r'\mathbb P\left(\max b_t > x\right)',
+                      r'=', r'\frac{p(2x)}{p(0)}')
+        eq4 = MathTex(r'=', r'e^{-\frac12(2x)^2')
+        eq5 = MathTex(r'\mathbb P\left(\max b_t > x\right)', r'=', r'e^{-2x^2}')
+
+        VGroup(eq1[0][5:7], eq1[0][11:13], eq2[0][5:7], eq2[0][11:13], eq2[2][-6:-4]).set_color(YELLOW)
+        VGroup(eq1[2][3:6], eq2[2][3:6]).set_color(BLUE)
+        VGroup(eq3[0][5:7], eq5[0][5:7]).set_color(YELLOW)
+
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        VGroup(eq1, eq2).to_edge(DOWN, buff=0.1)
+        mh.align_sub(eq3, eq3[1], eq2[0], coor_mask=UP)
+        mh.align_sub(eq4, eq4[0], eq3[1])
+        mh.align_sub(eq5, eq5[1], eq4[0])
+
+        self.wait(0.1)
+        self.play(FadeIn(eq1[0]))
+        self.wait(0.1)
+        self.play(FadeIn(eq1[1:]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[0][:9], eq2[0][:9], eq1[0][10:], eq2[0][10:], eq1[1], eq2[1],
+                                eq1[2][:], eq2[2][:13], eq1[0][:2].copy(), eq2[2][14:16],
+                                eq1[0][-7:].copy(), eq2[2][-7:]),
+                  FadeIn(eq2[2][13], rate_func=rush_into),
+                  mh.fade_replace(eq1[0][9], eq2[0][9], coor_mask=RIGHT),
+                  run_time=2)
+        self.wait(0.1)
+        eq3_1 = eq3[0][5:7].copy().move_to(eq2[0][5:7], coor_mask=RIGHT)
+        eq3_2 = eq3[2][:5].copy().move_to(eq2[2], coor_mask=RIGHT)
+        eq3_3 = eq3[2][-4:].copy().move_to(eq2[2], coor_mask=RIGHT)
+        self.play(FadeOut(eq2[0][-8:-1]),
+                  mh.fade_replace(eq2[0][5], eq3_1[0]),
+                  mh.rtransform(eq2[0][6], eq3_1[1]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeOut(eq2[2][:7], eq2[2][9:13], eq2[2][-9:]),
+                  FadeIn(eq3_2[:2], eq3_2[-1], eq3_3),
+                  mh.rtransform(eq2[2][7:9], eq3_2[2:-1]),
+                  run_time=1.5)
+        self.play(mh.rtransform(eq2[0][:5], eq3[0][:5], eq3_1, eq3[0][5:7],
+                                eq2[0][7:9], eq3[0][7:9], eq2[0][-1], eq3[0][-1],
+                                eq2[1], eq3[1], eq3_2, eq3[2][:5], eq2[2][13], eq3[2][5],
+                                eq3_3, eq3[2][-4:]))
+        self.wait(0.1)
+        self.play(mh.stretch_replace(eq3[2][1:5], eq4[1][5:9]),
+                  FadeOut(eq3[2][0], eq3[2][5:]),
+                  FadeIn(eq4[1][:5], eq4[1][9:]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[:2], eq5[:2], eq4[1][:2], eq5[2][:2],
+                                eq4[1][4], eq5[2][2], eq4[1][7], eq5[2][3],
+                                eq4[1][9], eq5[2][4]),
+                  mh.rtransform(eq4[1][6], eq5[2][2]),
+                  FadeOut(eq4[1][2:4], eq4[1][5], eq4[1][8]))
+        self.wait(0.1)
+        self.play(eq5.animate.to_edge(UP, buff=0.1).set_opacity(0.5), run_time=1.4)
+        self.wait(0.1)
+
+        # do absolute maximum
+
+        eq6 = MathTex(r'\mathbb P\left(\max \lvert b_t\rvert > x\right)', r'=', r'\mathbb P(L{\sf\ or\ }U)')
+        eq7 = MathTex(r'\mathbb P(L)', r'=', r'\mathbb P(U)', r'=', r'\mathbb P\left(\max b_t > x\right)', r'=', r'e^{-2x^2}')
+        eq8 = MathTex(r'\mathbb P(L)', r'=', r'\mathbb P(U)', r'=', r'e^{-2x^2}')
+
+        VGroup(eq6[0][6:8], eq7[4][5:7]).set_color(YELLOW)
+        VGroup(eq7[0][2], eq7[2][2], eq8[0][2], eq8[2][2], eq6[2][2], eq6[2][5]).set_color(RED)
+        eq6.next_to(eq5, DOWN, buff=0.2)
+        mh.align_sub(eq7, eq7[3], eq5[1], coor_mask=UP)
+        mh.align_sub(eq8, eq8[3], eq5[1], coor_mask=UP)
+
+        eq5_1 = eq5[0].copy()
+        eq6_1 = eq6[0].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq5_1[:5], eq6_1[:5], eq5_1[5:7], eq6_1[6:8],
+                                eq5_1[7:], eq6_1[9:]))
+        self.play(FadeIn(eq6_1[5], eq6_1[8]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6_1, eq6[0]),
+                  FadeIn(eq6[1:]),
+                  run_time=1.2)
+        self.wait(0.1)
+        eq7_1 = eq7[2:].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq5[:], eq7_1[2:]),
+                  FadeIn(eq7_1[:2]),
+                  run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7_1, eq7[2:]),
+                  FadeIn(eq7[:2]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7[:4], eq8[:4], eq7[-1], eq8[-1]),
+                  mh.rtransform(eq7[-2], eq8[3]),
+                  FadeOut(eq7[-3]))
+
+        self.wait()
+
+def font_size_sub(eq: Mobject, index: int, font_size: float):
+    n = len(eq[:])
+    eq_1 = eq[index].copy()
+    pos = eq.get_center()
+    eq[index].set(font_size=font_size).align_to(eq_1, RIGHT)
+    eq[index:].align_to(eq_1, LEFT)
+    return eq.move_to(pos, coor_mask=RIGHT)
+
+class NormalDensity(Scene):
+    def construct(self):
+        eq1=MathTex(r'p(x)', r'=', r'\frac1{\sqrt{2\pi}}', r'e^{-\frac12x^2}', font_size=60)
+        font_size_sub(eq1, 2, 45)
+        self.add(eq1)
+
+class EpsToZero(Scene):
+    def construct(self):
+        col = ManimColor('#FFAC2B')
+        eq2 = Tex(r'\sf send $\varepsilon$ to zero', font_size=70, color=col, stroke_width=2)
+        self.add(eq2)
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         MeanderTfm().render()
