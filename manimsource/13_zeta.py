@@ -2837,6 +2837,7 @@ class ReflectBridge(Bridge):
             eqU.animate.next_to(pts[0], DR, buff=0.1).shift(UP*0.05).scale(0.9, about_edge=UL),
             eqL.animate.next_to(pts[1], DR, buff=0.1).shift(UP * 0.05).scale(0.9, about_edge=UL),
         )
+        print('level3', level3)
 
         levels = [level3 * (1+2*i) for i in range(n)] + [2 * n * level3]
         level_end = levels[-1]
@@ -2939,6 +2940,194 @@ class ReflectBridge(Bridge):
 
 
         self.wait()
+
+class ReflectAssym(Bridge):
+    def construct(self):
+        scale_neg3 = 0.2
+        scale=0.8
+        ax, eqt3, xlen3, ylen3, ymax3, mark3, line1_3, _, eq1_3 = self.get_axes(scale=scale, scale_neg=scale_neg3)
+        ax.y_axis.set_z_index(20)
+        levely = 0.166
+        levelx = levely * 2
+
+        line2 = Line(ax.coords_to_point(0, levely), ax.coords_to_point(1, levely), stroke_width=5, stroke_color=RED).set_z_index(2)
+        line3 = line2.copy().move_to(ax.coords_to_point(0, -levely), coor_mask=UP)
+
+        eq1 = MathTex(r'x').next_to(line2.get_left(), UR, buff=0.1)[0].set_z_index(11)
+        eq2 = MathTex(r'-x').next_to(line3.get_left(), UR, buff=0.1)[0].set_z_index(11)
+        eqU = MathTex(r'U', stroke_width=1, color=RED).next_to(line2.get_left(), DR, buff=0.15).set_z_index(10)
+        eqU2 = eqU.copy().set_stroke(width=4, color=BLACK).set_z_index(9)
+        eqL = MathTex(r'L', stroke_width=1, color=RED).next_to(line3.get_left(), DR, buff=0.15).set_z_index(10)
+        eq2_1 = MathTex(r'-y').next_to(line3.get_left(), UR, buff=0.1).shift(DOWN*0.1)[0].set_z_index(11)
+
+        gp = VGroup(eq1, eqU, line2, eqU2)
+        gp.generate_target().shift(ax.coords_to_point(0, levelx) - ax.coords_to_point(0, levely))
+
+        npts = 1920
+        ndt = npts - 1
+
+        np.random.seed(300)
+
+        t_vals = np.linspace(0, 1., npts)
+        s = np.sqrt(t_vals[1])
+
+        n = 3
+        level_end = 2 * levelx + (n-1) * (levelx + levely)
+        levels = [levelx + i*(levelx+levely) for i in range(n)] + [level_end]
+        levels2 = []
+        for i in range(n):
+            if i % 2 == 0:
+                levels2.append(levelx)
+            else:
+                levels2.append(-levely)
+
+        attempts = 0
+        while True:
+            attempts += 1
+            b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+            b_vals += t_vals * (level_end - b_vals[-1])
+            iarr = []
+            i0 = 0
+            steps = []
+            for i in range(n):
+                level4 = levels[i]
+                i1 = np.argmax(b_vals[i0+1:] > level4) + i0 + 1
+                if abs(b_vals[i1-1] - level4) < abs(b_vals[i1] - level4): i1 -= 1
+                b_vals[i1] = level4
+                iarr.append(i1)
+                dt = t_vals[i1] - t_vals[i0]
+                if i > 0: dt /= 2
+                steps.append(dt)
+                i0 = i1
+            steps.append(1-t_vals[iarr[-1]])
+            s1 = min(steps)
+            s2 = max(steps)
+            if s2/s1 > 2:
+                continue
+            #if min(b_vals[:iarr[0]]) < -level3 * 0.9:
+            #    continue
+            print(s2/s1)
+            break
+        print('attempts', attempts)
+
+        b_vals2 = b_vals.copy()
+        print(levelx, levely)
+        for i in iarr:
+            b_vals[i+1:] = 2 * b_vals[i] - b_vals[i+1:]
+        iarr.append(ndt)
+
+        self.add(ax, eqt3, mark3, line1_3, eq1_3, line2, line3, eq1, eq2, eqU, eqL, eqU2)
+        self.wait(0.1)
+        self.play(MoveToTarget(gp), mh.fade_replace(eq2[1], eq2_1[1]), mh.rtransform(eq2[0], eq2_1[0]), run_time=1.6)
+
+        path1 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3)
+        path2 = ax.plot_line_graph(t_vals, b_vals2, add_vertex_dots=False, stroke_color=BLUE, stroke_width=5).set_z_index(2.5)
+        dot = Dot(radius=0.1, color=RED).set_z_index(8)
+        paths1 = []
+        dots1 = []
+        t = 4
+        i0 = 0
+        for i in range(n+1):
+            i1 = iarr[i]
+            paths1.append(ax.plot_line_graph(t_vals[i0:i1+1], b_vals[i0:i1+1], add_vertex_dots=False, stroke_color=YELLOW, stroke_width=5).set_z_index(3))
+            dt = t_vals[i1] - t_vals[i0]
+            anims = [Succession(Wait(0.1), Create(paths1[i], rate_func=linear, run_time=dt * t))]#, rate_func=linear, run_time=dt * t+0.1)]
+            if i > 0:
+                anims.append(FadeIn(dots1[i-1], run_time=0.4))
+            self.play(*anims)
+            if i < n:
+                dots1.append(dot.copy().move_to(paths1[i]['line_graph'].get_end()))
+                #self.play(FadeIn(dots1[i]), run_time=0.5)
+            i0 = i1
+
+        self.wait(0.1)
+
+        dash1 = DashedLine(ax.coords_to_point(0, 0), ax.coords_to_point(1, 0), stroke_width=5, stroke_color=RED).set_z_index(2)
+
+
+        paths2 = [path.copy().set_stroke(color=BLUE).set_z_index(2.9) for path in paths1]
+        dots2 = [dot.copy() for dot in dots1]
+        b_vals3 = b_vals.copy()
+        for i in range(n):
+            i1 = iarr[i]
+            b_vals3[i1+1:] = b_vals3[i1] * 2 - b_vals3[i1+1:]
+
+            j0 = i1
+            anims=[]
+            for j in range(i+1, n+1):
+                print('i,j:', i, j)
+                j1 = iarr[j]
+                newpath = ax.plot_line_graph(t_vals[j0:j1+1], b_vals3[j0:j1+1], add_vertex_dots=False,
+                                             stroke_color=BLUE, stroke_width=5).set_z_index(3)
+                anims.append(mh.transform(paths2[j], newpath))
+
+                if j < n:
+                    newdot = dots2[j].copy().move_to(newpath['line_graph'].get_end())
+                    anims.append(mh.transform(dots2[j], newdot))
+
+                j0 = j1
+            if i < n-1:
+                p = paths2[i+1]['line_graph']
+                line = dash1.copy().move_to(p.get_end(), coor_mask=UP)
+                line.generate_target().move_to(2*p.get_start() - p.get_end(), coor_mask=UP)
+                anims.append(MoveToTarget(line))
+            self.play(*anims)
+            self.wait(0.2)
+        line_end = dash1.copy().move_to(ax.coords_to_point(0, level_end), coor_mask=UP)
+
+        eq4 = MathTex(r'n(x+y)+x-y').next_to(line_end.get_left(), UR, buff=0.1)[0].set_z_index(9)
+        mh.align_sub(eq4, eq4[0], line_end.get_left(), direction=UR, buff=0.1)
+        self.play(FadeIn(line_end, eq4))
+        self.wait(0.1)
+
+        box = Rectangle(width=2*config.frame_x_radius, height=2*config.frame_y_radius, stroke_width=0, stroke_opacity=0,
+                        fill_color=BLACK, fill_opacity=0.7).set_z_index(30)
+
+        eq5 = MathTex(r'\mathbb P(UL\cdots U)', r'=', r'e^{-\frac12(n(x+y)+x-y)^2}', stroke_width=1, font_size=80).set_z_index(51)
+        (eq5[0][2:4] + eq5[0][7]).set_color(RED)
+        eq5.next_to(ax.coords_to_point(0.01, (levels[-3]+levels[-2])/2), RIGHT, buff=0)
+        eq5_1 = eq5[2].copy().set_z_index(50).set_stroke(color=BLACK, width=12)
+        eq4_1 = eq4.copy().set_z_index(50).set_stroke(color=BLACK, width=8)
+        eq6 = Tex(r'($n$\sf\ odd)', font_size=80).set_z_index(51).next_to(eq5[2], DOWN, buff=0.5)
+        self.play(FadeIn(eq5[:2], eq5[2][:6], eq5[2][16:], eq5_1[:6], eq5_1[16:]),
+                  mh.stretch_replace(VGroup(eq4.copy().set_z_index(51), eq4_1), VGroup(eq5[2][6:16], eq5_1[6:16])),
+                  FadeIn(box, rate_func=linear),
+                  FadeIn(eq6)
+                  #VGroup(ax, eq1_3, eqt3, mark3, line1_3, eqL, eqU, lin).animate.set_opacity(0),
+                  #VGroup(*paths1, *paths2).animate.set_stroke(opacity=0)
+                  )
+        self.wait(0.1)
+
+        eq7 = MathTex(r'\mathbb P(UL\cdots L)', r'=', r'e^{-\frac12(n(x+y))^2}', stroke_width=1, font_size=80).set_z_index(51)
+        (eq7[0][2:4] + eq7[0][7]).set_color(RED)
+        mh.align_sub(eq7, eq7[1], eq5[1])
+        mh.align_sub(eq7[0][:-1], eq7[0][0], eq5[0][0])
+        eq7_1 = eq7[2].copy().set_z_index(50).set_stroke(color=BLACK, width=12)
+        eq8 = Tex(r'($n$\sf\ even)', font_size=80).set_z_index(51)
+        mh.align_sub(eq8, eq8[0][1], eq6[0][1])
+        self.play(mh.rtransform(eq5[0][:-2], eq7[0][:-2], eq5[0][-1], eq7[0][-1], eq5[1], eq7[1],
+                                eq5_1[:12], eq7_1[:12], eq5_1[-2:], eq7_1[-2:],
+                                eq5[2][:12], eq7[2][:12], eq5[2][-2:], eq7[2][-2:]),
+                  FadeOut(eq5[2][12:-2], eq5_1[12:-2]),
+                  mh.fade_replace(eq5[0][-2], eq7[0][-2]),
+                  mh.rtransform(eq6[0][:2], eq8[0][:2], eq6[0][-1], eq8[0][-1]),
+                  mh.fade_replace(eq6[0][2:-1], eq8[0][2:-1]),
+                  )
+        self.wait(0.1)
+        eq9 = MathTex(r'\mathbb P(\max b_t > x, \min b_t < -y)', r'=', r'\sum_{n=1}^\infty(-1)^{n-1}',
+                      r'\left(\mathbb P(LU\cdots)+\mathbb P(UL\cdots)\right)', font_size=80, stroke_width=1).set_z_index(51)
+        eq9[2:].scale(7/8)
+        VGroup(eq9[0][5:7], eq9[0][13:15]).set_color(BLUE)
+        VGroup(eq9[3][3:5], eq9[3][12:14]).set_color(RED)
+        eq9[2:].next_to(eq9[0], DOWN, buff=0.2).align_to(eq9[0], LEFT).shift(RIGHT*0.2)
+        mh.align_sub(eq9, eq9[0][0], eq7[0][0])
+        eq9_1 = eq9.copy().set_z_index(50).set_stroke(color=BLACK, width=12)
+
+        self.play(FadeOut(eq8, eq7, eq7_1), FadeIn(eq9, eq9_1))
+        self.wait(0.1)
+        self.wait()
+
+
 
 class BridgeCalcMax(Scene):
     def eqfinal(self):
@@ -3086,7 +3275,12 @@ class BridgeCalcMax(Scene):
         self.wait(0.1)
         self.play(mh.rtransform(eq9_1, eq9[:3]), FadeIn(eq9[3:]), run_time=1.4)
         self.wait(0.1)
-        self.play(VGroup(eq8, eq9).animate.set_opacity(0.7))
+
+        top_buff=0.6
+        #self.play(VGroup(eq8, eq9).animate.set_opacity(0.7))
+        eq9.generate_target().to_edge(UP, buff=top_buff).set_opacity(0.7)
+        self.play(MoveToTarget(eq9), FadeOut(eq8))
+
 
         self.play(FadeIn(box1, eq10[0]))
         self.wait(0.1)
@@ -3127,7 +3321,8 @@ class BridgeCalcMax(Scene):
         self.play(FadeIn(br1))
         self.wait(0.1)
         gp = VGroup(eq16, br1)
-        gp.generate_target().next_to(eq8, DOWN, buff=0.2)
+        #gp.generate_target().next_to(eq8, DOWN, buff=0.2)
+        gp.generate_target().to_edge(UP, top_buff)
         gp.target[0].set_opacity(0.7)
         gp.target[1].set_opacity(0)
         eq9.generate_target().set_opacity(1).next_to(gp.target[0], DOWN, buff=0.3)
@@ -3223,7 +3418,7 @@ class BridgeCalcMax(Scene):
         eq21 = self.eqfinal()
         self.play(mh.rtransform(eq16[:2], eq21[:2], eq20[1], eq21[2]),
                   mh.rtransform(eq20[0], eq21[1]),
-                  FadeOut(eq8, gp[0], eq16[2], eq17[:2], eq18))
+                  FadeOut(gp[0], eq16[2], eq17[:2], eq18))  # maybe fade eq8 out
         self.wait(0.1)
         circ = mh.circle_eq(eq21[2][-7:-2]).shift(RIGHT*0.55+DOWN*0.14)
         gp1.next_to(eq21, DOWN, buff=0.4).to_edge(RIGHT, buff=0.2)
@@ -3582,6 +3777,7 @@ class MomentsCalc(BridgeCalcMax):
         eq25[0][2].set_color(YELLOW)
         VGroup(eq25[0][-2], eq25[2][-1], eq25[2][2], eq25[3][-2], eq25[4][2], eq25[5][2]).set_color(RED)
         mh.align_sub(eq25, eq25[1], eq14[1]).move_to(ORIGIN, coor_mask=RIGHT)
+        eq25.scale(1.2)
         self.play(mh.rtransform(eq14[:2], eq25[:2], eq14[2][:6], eq25[2][:], eq23[0], eq25[3],
                                 eq23[1], eq25[5], eq15[1], eq25[-2]),
                   run_time=1.2)
@@ -3606,6 +3802,24 @@ class EpsToZero(Scene):
         col = ManimColor('#FFAC2B')
         eq2 = Tex(r'\sf send $\varepsilon$ to zero', font_size=70, color=col, stroke_width=2)
         self.add(eq2)
+
+class ExpXs(Scene):
+    def construct(self):
+        eq = MathTex(r'\mathbb E\left[X^s\right]', font_size=120)[0]
+        eq[2].set_color(YELLOW)
+        eq[3].set_color(RED)
+        self.add(eq)
+
+class JointMaxMin(Scene):
+    def construct(self):
+        eq1 = MathTex(r'\mathbb P(\max b_t > x, \min b_t < -y)', r'=', r'\sum_{n=1}^\infty(-1)^{n-1}',
+                      r'\left(\mathbb P(LU\cdots)+\mathbb P(UL\cdots)\right)', font_size=70)
+        VGroup(eq1[0][5:7], eq1[0][13:15]).set_color(BLUE)
+        VGroup(eq1[3][3:5], eq1[3][12:14]).set_color(RED)
+        eq1[2:].next_to(eq1[0], DOWN, buff=0.2).align_to(eq1, LEFT).shift(RIGHT*2)
+        eq1.move_to(ORIGIN).to_edge(LEFT)
+
+        self.add(eq1)
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
