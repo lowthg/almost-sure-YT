@@ -2461,6 +2461,38 @@ class KolDistribution(Scene):
 
         self.wait()
 
+class KuiDistribution(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        eq1 = MathTex(r'\mathbb P(V > x)', r'=', r'-2\frac{d}{dx}\sum_{n=1}^\infty x e^{-2 n^2x^2}').set_z_index(2)
+        eq2 = MathTex(r'\mathbb P(V > x)', r'=', r'2\sum_{n=1}^\infty (4 n^2 x^2-1)e^{-2 n^2x^2}').set_z_index(2)
+        eq1.move_to(ORIGIN)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        box = SurroundingRectangle(VGroup(eq1, eq2), fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
+                                   stroke_width=0, stroke_opacity=0, buff=0.2)
+        VGroup(eq1, box, eq2).to_edge(DOWN, buff=0.1)
+        self.add(box, eq1)
+        self.wait(0.1)
+        eq2_1 = eq2[2][10].copy()
+        eq2_2 = MathTex(r'2').move_to(eq2[2][7]).set_opacity(0)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][1], eq2[2][0], eq1[2][6:11], eq2[2][1:6],
+                  eq1[2][-7:], eq2[2][-7:], eq1[2][-4:-2].copy(), eq2[2][8:10], eq1[2][11], eq2[2][10],
+                                eq1[2][-1].copy(), eq2_2, eq1[2][0], eq2[2][12]),
+                  FadeOut(eq1[2][2:6]),
+                  mh.stretch_replace(eq1[2][-2].copy(), eq2_1),
+                  mh.fade_replace(eq1[2][-5].copy(), eq2[2][7]),
+                  FadeOut(eq1[2][-6].copy(), shift=mh.diff(eq1[2][-5], eq2[2][7])),
+                  mh.fade_replace(eq1[2][11].copy(), eq2[2][13]),
+                  FadeIn(eq2[2][11], shift=mh.diff(eq1[2][11], eq2[2][10])),
+                  FadeIn(eq2[2][6], shift=mh.diff(eq1[2][10], eq2[2][5])),
+                  FadeIn(eq2[2][-8], shift=mh.diff(eq1[2][-7], eq2[2][-7])),
+                  run_time=2)
+        self.remove(eq2_1, eq2_2)
+        #self.play(FadeIn(eq1[3:]))
+        #self.wait(0.1)
+
+        self.wait()
+
 class Reflection(Bridge):
     def construct(self):
         seeds = [205]
@@ -3821,6 +3853,95 @@ class JointMaxMin(Scene):
 
         self.add(eq1)
 
+class RHFormulation(BMPathIntro):
+    def construct(self):
+        MathTex.set_default(font_size=70)
+        eq1 = MathTex(r'V', r'=', r'\max e_t')
+        eq2 = MathTex(r'\mathbb E[V^s]', r'=', r'2({}^{\!\frac {\pi}2\!})^{\frac s2}', r'\xi(s)')
+        eq2[2][2:5].move_to(eq2[1], coor_mask=UP)
+        eq3 = MathTex(r'\mathbb E[V^s]', r'\not=', r'0',
+                      r'{\sf\ unless\ }', r'\Re[s]=\frac12')
+        VGroup(eq1[2][-2:], eq1[0], eq2[0][2], eq2[3][0], eq3[0][2]).set_color(BLUE)
+        VGroup(eq2[0][-2], eq2[2][-3], eq2[3][-2], eq3[0][3], eq3[4][2]).set_color(YELLOW)
+
+        mh.align_sub(eq2, eq2[1], eq1, coor_mask=UP)
+        mh.align_sub(eq3, eq3[1], eq2[1])
+        eq3_1 = eq3.copy().move_to(ORIGIN, coor_mask=RIGHT)
+
+        gp = VGroup(eq1, eq2, eq3_1).set_z_index(2)
+        box1 = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.7,
+                                    corner_radius=0.15, buff=0.2)
+        VGroup(box1, gp, eq3).to_edge(DOWN)
+
+        self.add(box1, eq1)
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq1[0][0], eq2[0][2], eq1[1], eq2[1]),
+                                             eq1[2].animate.shift(mh.diff(eq1[1], eq2[1]))),
+                  run_time=0.8)
+        self.play(FadeIn(eq2[0][:2], eq2[0][-2:], eq2[2:]),
+                                 FadeOut(eq1[2]), run_time=1, rate_func=linear)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[0], eq3[0]),
+                  mh.fade_replace(eq2[1], eq3[1]),
+                  FadeOut(eq2[2:]),
+                  FadeIn(eq3[2]), run_time=1.4)
+        self.wait(0.1)
+        #eq3[3:].set_opacity(0).shift(RIGHT*0.5)
+        #eq3.generate_target().set_opacity(1).move_to(ORIGIN, coor_mask=RIGHT)
+        #self.play(MoveToTarget(eq3), run_time=1.4)
+        self.play(LaggedStart(mh.rtransform(eq3[:3], eq3_1[:3], run_time=1.4),
+                              FadeIn(eq3_1[3:], run_time=1), lag_ratio=0.5))
+
+
+        self.wait()
+
+class Li(BMPathIntro):
+    def construct(self):
+        MathTex.set_default(font_size=60)
+        eq1 = MathTex(r'\lambda_n', r'=', r'\frac1{(n-1)!}\frac{d^n}{ds^n}\left(s^{n-1}\log', r'\xi(s)', r'\right)\Big\vert_{s=1}')
+
+        eq2 = Tex(r'\sf R.H. is equivalent to ', r'$\lambda_1,\lambda_2,\lambda_3,\cdots > 0$')
+        eq2.next_to(eq1, DOWN, buff=0.4)
+
+        gp = VGroup(eq1, eq2).set_z_index(2)
+
+        box1 = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.7,
+                                    corner_radius=0.15, buff=0.2)
+        VGroup(gp, box1).to_edge(DOWN, buff=0.1)
+
+        eq3 = MathTex(r'\lambda_n', r'=', r'\frac1{(n-1)!}\frac{d^n}{ds^n}\left(s^{n-1}\log', r'\mathbb E[({}^{\sqrt{\!\frac2{\pi} } }V)^s]', r'\right)\Big\vert_{s=1}').set_z_index(2)
+        eq3[3][3:8].move_to(eq3[1], coor_mask=UP)
+        #eq4 = MathTex(r'\lambda_n', r'=', r'\mathbb E[({}^{\!\frac2{\pi} }V)^s]', r'\right)\Big\vert_{s=1}').set_z_index(2)
+        eq5 = MathTex(r'{\sf using\ }', r'(d/ds)^k\mathbb E[V^s]\vert_{s=1}', r'=', r'\mathbb E[V(\log V)^k]')
+
+        VGroup(eq1[2][12], eq1[2][15], eq1[3][2], eq1[4][-3]).set_color(YELLOW)
+        VGroup(eq1[3][0]).set_color(BLUE)
+        VGroup(eq1[0], eq2[1][:2], eq2[1][3:5], eq2[1][6:8]).set_color(RED)
+
+        eq3.next_to(eq2, UP, buff=0.4)
+        #eq5.next_to(eq3, DOWN, buff=0.4)
+        eq5.move_to(eq2, coor_mask=UP).shift(UP*0.1)
+
+        VGroup(eq3[2][12], eq3[2][15], eq3[3][-2], eq3[4][-3], eq5[1][4], eq5[1][10], eq5[1][-3]).set_color(YELLOW)
+        VGroup(eq3[3][-4], eq5[1][9], eq5[3][2], eq5[3][7]).set_color(BLUE)
+
+        box2 = SurroundingRectangle(VGroup(eq2, eq3), stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.7,
+                                    corner_radius=0.15, buff=0.2)
+
+        self.add(box1, eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[:3], eq3[:3], #eq1[2][:22], eq3[2][:22],
+                                eq1[3][-2], eq3[3][-2], eq1[-1], eq3[-1]),
+                  mh.rtransform(box1, box2),
+                  FadeOut(eq1[3][:2]),
+                  FadeIn(eq3[3][:-2]),
+                  mh.stretch_replace(eq1[3][-1], eq3[3][-1]))
+        self.wait(0.1)
+        self.play(FadeIn(eq5), FadeOut(eq2))
+
+        self.wait()
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         MeanderTfm().render()
