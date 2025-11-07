@@ -673,7 +673,7 @@ class Kuiper2(Kuiper):
 
     def get_eq(self):
         eq = MathTex(r'p_V(x)', font_size=50 * self.text_scale)
-        VGroup(eq[0][1], eq[0][3]).set_color(BLUE)
+        eq[0].set_color(BLUE)
         return eq
 
 class Kolmogorov(Kuiper):
@@ -682,7 +682,7 @@ class Kolmogorov(Kuiper):
 
     def get_eq(self):
         eq = MathTex(r'p_D(x)', font_size=50 * self.text_scale)
-        VGroup(eq[0][1], eq[0][3]).set_color(BLUE)
+        eq[0].set_color(BLUE)
         return eq
 
     def get_p(self):
@@ -693,6 +693,7 @@ class KolmogorovP(Scene):
     def construct(self):
         eq1 = MathTex(r'p_D(x)', r'=', r'8xe^{-2x^2}\!\!\!-32xe^{-8x^2}\!\!\!+\cdots',
                       r'=', r'8x\sum_{n=1}^\infty (-1)^{n-1}n^2e^{-2n^2x^2}')
+        eq1[0].set_color(BLUE)
         eq1[3:].next_to(eq1[2], DOWN).align_to(eq1[1], LEFT)
         self.add(eq1[:3])
         self.wait(0.1)
@@ -704,6 +705,7 @@ class KuiperP(Scene):
     def construct(self):
         eq1 = MathTex(r'p_V(x)', r'=', r'8x(3-4x^2)e^{-2x^2}\!\!\!', r'+32x(3-16x^2)e^{-8x^2}\!\!\!+\cdots',
                       r'=', r'8x\sum_{n=1}^\infty n^2(3-4n^2x^2)e^{-2n^2x^2}')
+        eq1[0].set_color(BLUE)
         eq1[3].next_to(eq1[2], DOWN, buff=0.).align_to(eq1[2][2], LEFT)
         eq1[4:].next_to(eq1[3], DOWN).align_to(eq1[1], LEFT)
         eq1.move_to(ORIGIN)
@@ -723,10 +725,15 @@ class Measure(Scene):
         fs = 50
         MathTex.set_default(font_size=fs)
         eq1 = Tex(r'{\sf Heights:}\ ', r'$X_1, X_2, X_3,\ldots,X_n$', font_size=fs)
+        VGroup(eq1[0]).set_color(RED)
 
         eq2 = MathTex(r'F_n(x)', r'=', r'\frac1n\#\{{\sf elements\ in\ sample} \le x\}', font_size=fs)
         eq3 = MathTex(r'F_n(x)', r'=', r'\frac1n\sum_{k=1}^nI(X_k\le x)', font_size=fs)
         eq4 = MathTex(r'\mathbb P(X_k\le x)', r'=', r'F(x)', font_size=fs)
+
+        VGroup(eq1[0]).set_color(RED)
+        VGroup(eq2[0], eq3[0]).set_color(BLUE)
+        VGroup(eq4[2]).set_color(YELLOW)
 
         eq2.next_to(eq1, DOWN).align_to(eq1, LEFT)
         mh.align_sub(eq3, eq3[1], eq2[1])
@@ -870,7 +877,9 @@ class Measure(Scene):
 
         lines = VGroup(*lines)
         plt3 = ax.plot(lambda _: y0, (0, xmax), stroke_width=5, stroke_color=YELLOW).set_z_index(3)
-        axlabel4 = MathTex(r'F_n(x)', r'-', r'F(x)', font_size=40, color=BLUE).move_to(ax.coords_to_point(0.32, 1)).set_z_index(3)
+        axlabel4 = MathTex(r'F_n(x)', r'-', r'F(x)', font_size=40).move_to(ax.coords_to_point(0.32, 1)).set_z_index(3)
+        axlabel4[0].set_color(BLUE)
+        axlabel4[2].set_color(YELLOW)
 
         self.play(FadeOut(eqx, *ticks, axlabel, axline, ax.x_axis, eqax1),
                   mh.rtransform(axlabel2[0], axlabel4[0], axlabel3[0], axlabel4[2]),
@@ -902,17 +911,22 @@ class Measure(Scene):
 
         eq6 = MathTex(r'D_n', r'=', r'\max_x\lvert F_n(x)-F(x)\rvert').set_z_index(5)
         eq6.next_to(ax, UP, buff=0.05, coor_mask=UP)
+        (eq6[2][5:10] + eq6[0]).set_color(BLUE)
+        eq6[2][11:15].set_color(YELLOW)
         self.play(FadeIn(eq6))
         self.wait(0.1)
 
         eq6_1 = MathTex(r'\sqrt nD_n', r'=', r'\sqrt n\max_x\lvert F_n(x)-F(x)\rvert').set_z_index(5)
         mh.align_sub(eq6_1, eq6_1[0][-2], eq6[0][-2])
+        (eq6_1[2][8:13] + eq6_1[0][-2:]).set_color(BLUE)
+        eq6_1[2][14:18].set_color(YELLOW)
         self.play(mh.rtransform(eq6[0][:], eq6_1[0][-2:], eq6[1], eq6_1[1], eq6[2][:], eq6_1[2][3:]),
                   FadeIn(eq6_1[0][:-2], eq6_1[2][:3]))
         self.wait(0.1)
 
         eq7 = MathTex(r'\sqrt nD_n', r'\to', r'D', r'\ {\sf(in\ distribution)}')
         mh.align_sub(eq7, eq7[0][-2], eq6[0][-2])
+        (eq7[0][-2:] + eq7[2]).set_color(BLUE)
         self.play(mh.rtransform(eq6_1[0], eq7[0]),
                   #FadeIn(eq7[0][:-2], shift=mh.diff(eq6[0][:], eq7[0][-2:])),
                   mh.fade_replace(eq6_1[1], eq7[1]),
@@ -926,6 +940,7 @@ class Measure(Scene):
         mh.align_sub(eq8, eq8[0][-2], eq7[0][-2], coor_mask=UP)
 
         VGroup(eq8[0][-2], eq8[2][0], eq8[3][2], eq8[4][-2], eq8[5][2], eq8[6][2]).set_color(YELLOW)
+        VGroup(eq8[0][-3], eq8[5][0], eq8[6][0]).set_color(BLUE)
         self.play(mh.rtransform(eq7[2][0], eq8[0][2]),
                   FadeIn(eq8[0][:2], eq8[0][-2:], shift=mh.diff(eq7[2][0], eq8[0][2])),
                   FadeOut(eq7[:2], eq7[3]),
@@ -943,6 +958,8 @@ class Measure(Scene):
         self.wait(0.1)
 
         eq10 = MathTex(r'V_n', r'=', r'\max_x( F_n(x)-F(x)) + \max_x(F(x)-F_n(x))').set_z_index(5)
+        VGroup(eq10[0], eq10[2][5:10], eq10[2][27:32]).set_color(BLUE)
+        VGroup(eq10[2][11:15], eq10[2][22:26]).set_color(YELLOW)
         eq10.next_to(ax, UP, buff=0.05, coor_mask=UP)
         self.play(FadeIn(eq10), FadeOut(eq8))
         self.wait(0.1)
@@ -956,6 +973,7 @@ class Measure(Scene):
         self.wait(0.1)
 
         eq11 = MathTex(r'\sqrt nV_n', r'\to', r'V', r'\ {\sf(in\ distribution)}')
+        (eq11[0][-2:] + eq11[2]).set_color(BLUE)
         mh.align_sub(eq11, eq11[1], eq10[1], coor_mask=UP)
         self.play(mh.rtransform(eq10[0][:], eq11[0][-2:]),
                   mh.fade_replace(eq10[1], eq11[1]),
@@ -969,6 +987,7 @@ class Measure(Scene):
         eq12[4][2:5].move_to(eq12[1], coor_mask=UP)
         mh.align_sub(eq12, eq12[0][-2], eq11[0][-2], coor_mask=UP)
         VGroup(eq12[0][-2], eq12[2][-3], eq12[3][0], eq12[3][2], eq12[4][2], eq12[5][2]).set_color(YELLOW)
+        VGroup(eq12[0][2], eq12[4][0], eq12[5][0]).set_color(BLUE)
 
         self.play(mh.rtransform(eq11[2][0], eq12[0][2]),
                   FadeIn(eq12[0][:2], eq12[0][-2:], shift=mh.diff(eq11[2][0], eq11[0][2])),
@@ -985,9 +1004,10 @@ class Measure(Scene):
         self.wait(0.1)
 
         eq13 = MathTex(r'\mathbb E[V^s]', r'=', r'\left(\frac\pi2\right)^{\frac s2}', r'\pi^{-\frac s2}', r's(s-1)', r'\Gamma({}^{\frac s2})', r'\zeta(s)')
-        eq13[5][2:5].move_to(eq12[1], coor_mask=UP)
+        eq13[5][2:5].move_to(eq13[1], coor_mask=UP)
         mh.align_sub(eq13, eq13[1], eq12[1], coor_mask=UP)
         VGroup(eq13[0][-2], eq13[2][-3], eq13[3][-3], eq13[4][0], eq13[4][2], eq13[5][2], eq13[6][2]).set_color(YELLOW)
+        VGroup(eq13[0][2], eq13[5][0], eq13[6][0]).set_color(BLUE)
         self.play(mh.rtransform(eq12[:2], eq13[:2], eq12[3:], eq13[4:],
                   eq12[2][-4:], eq13[3][-4:], eq12[2][-3:].copy(), eq13[2][-3:], eq12[2][0], eq13[2][3]),
                   FadeIn(eq13[2][0], eq13[2][2], eq13[2][-4]),
@@ -997,6 +1017,7 @@ class Measure(Scene):
 
         eq14 = MathTex(r'\mathbb E[V^s]', r'=', r'\left(\frac\pi2\right)^{\frac s2}', r'2\xi(s)')
         VGroup(eq14[0][-2], eq14[2][-3], eq14[3][3]).set_color(YELLOW)
+        VGroup(eq14[0][2], eq14[3][1]).set_color(BLUE)
         mh.align_sub(eq14, eq14[1], eq13[1])
         self.play(mh.rtransform(eq13[:3], eq14[:3]),
                   FadeOut(eq13[3:]),
@@ -1006,6 +1027,7 @@ class Measure(Scene):
         eq15 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }V)^s]', r'=', r'2\xi(s)')
         eq15[0][3:8].move_to(eq15[1], coor_mask=UP)
         VGroup(eq15[0][-2], eq15[2][3]).set_color(YELLOW)
+        VGroup(eq15[0][-4], eq15[2][1]).set_color(BLUE)
         mh.align_sub(eq15, eq15[1], eq14[1])
         self.play(mh.rtransform(eq14[0][:2], eq15[0][:2], eq14[0][-3], eq15[0][-4], eq14[0][-2:], eq15[0][-2:],
                                 eq14[1], eq15[1], eq14[3], eq15[2]),
@@ -1025,6 +1047,7 @@ class Measure(Scene):
         eq16[-2][2:5].move_to(eq16[1], coor_mask=UP)
         mh.align_sub(eq16, eq16[1], eq8[1], coor_mask=UP)
         VGroup(eq16[0][-2], eq16[2][-2], eq16[3][0], eq16[4][-3], eq16[5][2], eq16[6][2]).set_color(YELLOW)
+        VGroup(eq16[0][-4], eq16[5][0], eq16[6][0]).set_color(BLUE)
         self.play(mh.rtransform(eq8[0][:2], eq16[0][:2], eq8[0][-3], eq16[0][-4], eq8[0][-2:], eq16[0][-2:],
                                 eq8[1], eq16[1], eq8[2], eq16[3], eq8[4], eq16[2], eq8[5], eq16[5], eq8[6], eq16[6],
                                 eq8[3][-4:], eq16[4][-4:]),
@@ -1048,6 +1071,7 @@ class Measure(Scene):
         self.wait(0.1)
         eq18 = MathTex(r'(s-1)^{-1}', r'2\xi(s)')
         VGroup(eq18[0][1], eq18[1][3]).set_color(YELLOW)
+        eq18[1][1].set_color(BLUE)
         mh.align_sub(eq18, eq18[0], eq17[1])
         self.play(mh.rtransform(eq17[1], eq18[0]),
                   FadeOut(eq17[3], eq16[3:]),
@@ -1057,6 +1081,7 @@ class Measure(Scene):
 
         eq19 = MathTex(r'\mathbb E[({}^{\sqrt{\frac2\pi} }D)^s]', r'=', r'\frac{1-2^{1-s} }{s-1}', r'2\xi(s)')
         VGroup(eq19[0][-2], eq19[2][5], eq19[2][-3], eq19[-1][-2]).set_color(YELLOW)
+        VGroup(eq19[0][-4], eq19[3][1]).set_color(BLUE)
         eq19[0][3:-4].move_to(eq19[1], coor_mask=UP)
         eq19.next_to(eq15, DOWN).align_to(eq15, LEFT)
         self.play(mh.rtransform(eq16[:2], eq19[:2], eq16[2][1:-1], eq19[2][:6],
@@ -1401,6 +1426,8 @@ class BridgeMax(Bridge):
         eq7[0][3:-4].move_to(eq7[1], coor_mask=UP)
         eq5.move_to(ax.coords_to_point(0.4, ymax * 0.5)).next_to(origin, RIGHT, buff=0.1, coor_mask=RIGHT)
         eq7.move_to(ax.coords_to_point(0.4, ymax * 0.2)).next_to(origin, RIGHT, buff=0.5, coor_mask=RIGHT)
+        VGroup(eq2[0], eq3[0][2], eq5[0][-4], eq5[3][1], eq7[0][-4], eq7[2][1]).set_color(BLUE)
+        VGroup(eq5[0][-2], eq5[2][-3], eq5[2][-5], eq5[3][-2], eq7[0][-2], eq7[2][-2]).set_color(YELLOW)
 
         eq3_1 = eq3.copy().set_stroke(color=BLACK, width=8).set_z_index(4.9)
         eq3 = VGroup(VGroup(a, b) for a, b in zip(eq3[:], eq3_1[:]))
@@ -1423,9 +1450,9 @@ class BridgeMax(Bridge):
         boxes[1].next_to(origin, RIGHT, buff=0)
         boxes[2].next_to(boxes[1].get_corner(DL), UR, buff=0)
         arr1 = Arrow(ax.coords_to_point(0.6, -bmin), ax.coords_to_point(0.6, 0), buff=0).set_z_index(5)
-        eq4 = MathTex(r'D', stroke_width=2).set_z_index(5).next_to(arr1, RIGHT, buff=0).shift(UP*0.5)
+        eq4 = MathTex(r'D', stroke_width=2, color=BLUE).set_z_index(5).next_to(arr1, RIGHT, buff=0).shift(UP*0.5)
         arr2 = Arrow(ax.coords_to_point(0.75, -bmin), ax.coords_to_point(0.75, bmax), buff=0).set_z_index(5)
-        eq6 = MathTex(r'V', stroke_width=2).set_z_index(5).next_to(arr2, RIGHT, buff=0).shift(DOWN*1)
+        eq6 = MathTex(r'V', stroke_width=2, color=BLUE).set_z_index(5).next_to(arr2, RIGHT, buff=0).shift(DOWN*1)
 
         self.play(FadeIn(boxes[0]), eq3.animate.scale(0.8).to_edge(UP, buff=0.5))
         self.wait(0.1)
@@ -1629,9 +1656,9 @@ class BridgeDev(Bridge):
         ndt = npts - 1
         np.random.seed(seeds[0])
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.6, ylen=0.75)
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.6, ylen=0.9)
         ax.y_axis.set_z_index(10)
-        gp = VGroup(ax, eqt, mark1, line1, eq1).to_edge(DOWN, buff=0.2)
+        gp = VGroup(ax, eqt, mark1, line1, eq1)#.to_edge(DOWN, buff=0.2)
         self.add(gp)
         self.wait(0.1)
         t_vals = np.linspace(0, 1., npts)
@@ -1693,6 +1720,7 @@ class BridgeDev(Bridge):
 
         eq5 = MathTex(r'D', r'\sim', r'\pi\sqrt{\int_0^1(b_t-\bar b)^2\,dt}', font_size=60).move_to(ax.coords_to_point(0.42, ymax*0.35)).set_z_index(15)
         eq5[2][6:14].set_color(YELLOW)
+        eq5[0].set_color(BLUE)
         self.play(LaggedStart(mh.rtransform(eq4[0][:], eq5[2][6:14], run_time=1.2),
                   FadeIn(eq5[2][3:6], eq5[2][14:]), lag_ratio=0.5))
         self.wait(0.1)
@@ -1703,13 +1731,17 @@ class BridgeDev(Bridge):
         #box = Rectangle(width=2*config.frame_x_radius, height=2*config.frame_y_radius,
         #                stroke_width=0, stroke_opacity=0, fill_opacity=0.5, fill_color=BLACK).set_z_index(12)
         self.play(VGroup(ax, line1, eq1, mark1, eqt).animate.set_opacity(0.6),
+                  #ax.animate.set_opacity(0.6).set_stroke(opacity=0.6),
+                  ax.y_axis.tip.animate.set_fill(opacity=0.6).set_stroke(opacity=0.6),
+                  ax.x_axis.tip.animate.set_fill(opacity=0.6).set_stroke(opacity=0.6),
                   path[0].animate.set_stroke(opacity=0.5),
                   path[1].animate.set_fill(opacity=0.42),
                   path[2].animate.set_fill(opacity=0.42),
                   eq5.animate.set_opacity(0.7), run_time=1, rate_func=linear)
         self.wait(0.1)
         eq6 = MathTex(r'\frac{\pi}2\sqrt{T}', r'\sim', r'D', r'\sim', r'\pi\sqrt{\int_0^1(b_t-\bar b)^2dt}', font_size=70).set_z_index(15)
-        VGroup(eq6[2][6:14]).set_color(YELLOW)
+        VGroup(eq6[4][6:14]).set_color(YELLOW)
+        eq6[2].set_color(BLUE)
         eq6[4][1:].scale(6/7, about_edge=LEFT)
         eq6.move_to(ORIGIN).to_edge(DOWN)
         self.play(FadeOut(path, ax, line1, eq1, mark1, eqt, rate_func=linear),
@@ -1721,6 +1753,8 @@ class BridgeDev(Bridge):
 class TDist(BMPathIntro):
     def construct(self):
         eq1 = MathTex(r'\frac{\pi}2\sqrt{T}', r'\sim', r'D', r'\sim', r'\pi\sqrt{\int_0^1(b_t-\bar b)^2dt}', font_size=70).set_z_index(2)
+        VGroup(eq1[0][-1], eq1[4][6:14]).set_color(YELLOW)
+        eq1[2].set_color(BLUE)
         eq1[4][1:].scale(6/7, about_edge=LEFT)
         mh.align_sub(eq1, eq1[:3], mh.pos(89/960 * LEFT + 205/540 * DOWN))
 
@@ -1738,7 +1772,10 @@ class TDist(BMPathIntro):
         self.wait(0.1)
 
         eq3 = MathTex(r'2\left(\frac{X}{\pi}\right)^2', font_size=70).set_z_index(2)
+        eq3[0][2].set_color(BLUE)
         eq4 = MathTex(r'\mathbb E\left[e^{s2\left(\frac{X}{\pi}\right)^2 }\right]', r'=', r'\frac{\sqrt s}{\sin \sqrt s', font_size=70).set_z_index(2)
+        VGroup(eq4[0][6], eq4[2][-6:-3]).set_color(BLUE)
+        VGroup(eq4[0][3], eq4[2][2], eq4[2][-1]).set_color(YELLOW)
         eq4.move_to(box)
         eq3.move_to(box)
         eq3.move_to(eq4[0][3:-1], coor_mask=RIGHT)
@@ -1779,9 +1816,9 @@ class Excursion(Bridge):
         ndt = npts - 1
         np.random.seed(seeds[0])
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1, ylen=0.75, scale_neg=0.5)
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1, ylen=0.9, scale_neg=0.5)
         ax.y_axis.set_z_index(10)
-        gp = VGroup(ax, eqt, mark1, line1, eq1).to_edge(DOWN, buff=0.2)
+        gp = VGroup(ax, eqt, mark1, line1, eq1)#.to_edge(DOWN, buff=0.2)
         self.add(gp)
         self.wait(0.1)
         t_vals = np.linspace(0, 1., npts)
@@ -1937,9 +1974,9 @@ class ThreeProcs(Bridge):
         i0 = round(t0 * ndt)
         t0 = t_vals[i0]
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, eqt, eq1 = self.get_axes(1.6, ylen=0.75)
+        ax, eqt, xlen, ylen, ymax, mark1, line1, eqt, eq1 = self.get_axes(1.6, ylen=0.9)
         ax.y_axis.set_z_index(10)
-        gp = VGroup(ax, eqt, mark1, line1, eqt).to_edge(DOWN, buff=0.2)
+        gp = VGroup(ax, eqt, mark1, line1, eqt)#.to_edge(DOWN, buff=0.2)
         line2 = line1.copy()
         mark2 = mark1.copy()
         VGroup(mark1, line1, eqt).shift(ax.coords_to_point(t0, 0)-mark1.get_center())
@@ -1998,9 +2035,9 @@ class ThreeProcs(Bridge):
         scale = 0.47
 
         gax = VGroup(ax, line2, mark2, eq1.next_to(mark2, DR, buff=0.1))
-        gax2 = gax.copy().scale(scale, about_edge=DL)
-        gax3 = gax.copy().scale(scale, about_edge=UR)
-        gax4 = gax.copy().scale(scale, about_edge=DR)
+        gax2 = gax.copy().scale(scale, about_edge=DL).shift(DOWN*0.125)
+        gax3 = gax.copy().scale(scale, about_edge=UR).shift(DOWN*0.25)
+        gax4 = gax.copy().scale(scale, about_edge=DR).shift(DOWN*0.125)
         ax2, ax3, ax4 = (gax2[0], gax3[0], gax4[0])
 
         t_vals2 = t_vals[:i1+1].copy()
@@ -2032,7 +2069,7 @@ class ThreeProcs(Bridge):
         eqe = MathTex(r'e_t', color=BLUE, font_size=60, stroke_width=2).move_to(ax3.coords_to_point(0.5, ymax*0.6)).set_z_index(10)
         eqm = MathTex(r'm_t', color=GREEN, font_size=60, stroke_width=2).move_to(ax4.coords_to_point(0.5, ymax*0.7)).set_z_index(10)
 
-        self.play(gp2.animate.scale(0.45, about_edge=UL),
+        self.play(gp2.animate.scale(0.45, about_edge=UL).shift(DOWN*0.25),
                   mh.rtransform(gax.copy().set_opacity(0), gax2, gax.copy().set_opacity(0), gax3,
                                 gax.copy().set_opacity(0), gax4,
                                 path2.copy(), path6,
@@ -2065,11 +2102,11 @@ class Vervaat(Bridge):
         ndt = npts - 1
         np.random.seed(seeds[0])
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.3, ylen=0.75, scale_neg=0.6)
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.3, ylen=0.9, scale_neg=0.6)
         ymax2 = 0.9375
         print(ymax)
         ax.y_axis.set_z_index(10)
-        gp = VGroup(ax, eqt, mark1, line1, eq1).to_edge(DOWN, buff=0.2)
+        gp = VGroup(ax, eqt, mark1, line1, eq1)#.to_edge(DOWN, buff=-0.2)
         txt1 = Tex(r'\sf Brownian bridge', color=YELLOW, font_size=100)
         txt1.move_to(ax.coords_to_point(0.5, 0.6*ymax))
         self.add(gp, txt1)
@@ -2172,10 +2209,15 @@ class Vervaat(Bridge):
         #self.play(Rotate(path2, PI, about_point=ax.coords_to_point(t0/2, y0/2)), run_time=2)
         self.play(path2.animate.stretch(-1, dim=0), run_time=2)
         self.wait(0.1)
-        self.play(path3.animate.shift(ushift))
-        self.play(VGroup(path2, path3).animate.shift(ushift))
+        ax3 = ax.copy().to_edge(DOWN, buff=-0.2)
+        ushift2 = (ax3.coords_to_point(0, 0) - ax.coords_to_point(0, 0))/2
+
+        self.play(path3.animate.shift(ushift+ushift2),
+                  VGroup(gp, line2, path2_1, path1_1, eqb, eqe).animate.shift(ushift2))
+        self.play(VGroup(path2, path3).animate.shift(ushift+ushift2),
+                  VGroup(gp, line2, path2_1, path1_1, eqb, eqe).animate.shift(ushift2))
         txt3 = Tex(r'meander', font_size=100, color=GREEN).set_z_index(10)
-        txt3.move_to(ax.coords_to_point(0.38, 0.9 * ymax))
+        txt3.move_to(ax.coords_to_point(0.38, 0.95 * ymax))
         self.play(FadeIn(txt3))
         self.wait()
 
@@ -2188,9 +2230,9 @@ class MeanderTfm(Bridge):
         scale_neg = 0.3
         b_scale=0.5
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.3, ylen=0.75, scale_neg=scale_neg)
+        ax, eqt, xlen, ylen, ymax, mark1, line1, _, eq1 = self.get_axes(1.3, ylen=0.9, scale_neg=scale_neg)
         ax.y_axis.set_z_index(10)
-        gp = VGroup(ax, eqt, mark1, line1, eq1).to_edge(DOWN, buff=0.2)
+        gp = VGroup(ax, eqt, mark1, line1, eq1)#.to_edge(DOWN, buff=0.2)
         txtbm = Tex(r'\sf Brownian bridge', font_size=70, color=YELLOW)[0].set_z_index(5).move_to(ax.coords_to_point(0.45, -ymax*0.15))
         self.add(gp, txtbm)
         self.wait(0.1)
@@ -2372,6 +2414,7 @@ class MaxExc(Scene):
         eq1 = MathTex(r'\max e_t', r'\sim V', r'\sim{\rm range}\,b_t', stroke_width=1, font_size=60)
         eq1[0][-2:].set_color(BLUE)
         eq1[2][-2:].set_color(RED)
+        eq1[1][-1].set_color(BLUE)
         self.add(eq1[0])
         self.wait(0.1)
         self.play(FadeIn(eq1[1]))
@@ -2387,6 +2430,7 @@ class SDExc(Scene):
         mh.align_sub(eq2, eq2[0], eq1[0])
         VGroup(eq1[0][-3:-1], eq2[0][-3:-1], eq1[1][5:7], eq1[1][8:10]).set_color(BLUE)
         eq2[2][-3:-1].set_color(RED)
+        eq2[1][-1].set_color(BLUE)
         self.add(eq1)
         self.wait(0.1)
         self.play(mh.rtransform(eq1[0], eq2[0]),
@@ -2401,6 +2445,7 @@ class MeanderMax(Scene):
         eq1 = MathTex(r'\max m_t', r'\sim 2D', r'\sim 2\max\lvert b_t\rvert')
         eq1[0][-2:].set_color(GREEN)
         eq1[2][-3:-1].set_color(RED)
+        eq1[1][-1].set_color(BLUE)
         self.add(eq1[0])
         self.wait(0.1)
         self.play(FadeIn(eq1[1]))
@@ -2415,6 +2460,7 @@ class BridgeExcursion(Scene):
         eq2 = MathTex(r'{\rm s.d.}(e_t)', r'=', r'{\rm s.d.}(b_t)', r'\sim\pi^{-1}D').set_z_index(2)
         VGroup(eq1[0][-2:], eq2[0][-3:-1]).set_color(BLUE)
         VGroup(eq1[2][-2:], eq2[2][-3:-1]).set_color(RED)
+        VGroup(eq1[-1][-1], eq2[-1][-1]).set_color(BLUE)
         eq2.next_to(eq1, DOWN, buff=0.1)
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
         box = SurroundingRectangle(VGroup(eq1, eq2), fill_color=BLACK, fill_opacity=0.7,
@@ -2427,15 +2473,42 @@ class BridgeMeander(Scene):
         eq1 = MathTex(r'\max m_t', r'=', r'2\,\max\lvert b_t\rvert', r'\sim 2V').set_z_index(2)
         eq1[0][-2:].set_color(GREEN)
         eq1[2][-3:-1].set_color(RED)
+        eq1[-1][-1].set_color(BLUE)
         box = SurroundingRectangle(eq1, fill_color=BLACK, fill_opacity=0.7,
                                    stroke_width=0, stroke_opacity=0, buff=0.1, corner_radius=0.15)
         self.add(box, eq1)
+
+class BridgeMeander2(BMPathIntro):
+    def construct(self):
+        MathTex.set_default(font_size=70)
+        eq1 = MathTex(r'\mathbb E[(\max m_t)^s]', r'=', r'\mathbb E[(2V)^s]').set_z_index(2)
+        eq2 = MathTex(r'\mathbb E[(\max m_t)^s]', r'=', r'2^{\frac s2}s(1-2^{1-s})',
+                      r'\Gamma({}^{\!\frac s2\!})', r'\zeta(s)').set_z_index(2)
+        eq2[3][2:5].move_to(eq2[1], coor_mask=UP)
+        mh.align_sub(eq1, eq1[1], eq2[1], coor_mask=UP)
+        VGroup(eq1[0][6:8], eq2[0][6:8]).set_color(GREEN)
+        VGroup(eq1[0][-2], eq2[0][-2], eq1[2][-2], eq2[2][1], eq2[2][-2], eq2[3][2], eq2[4][2]).set_color(YELLOW)
+        VGroup(eq1[2][4], eq2[3][0], eq2[4][0]).set_color(BLUE)
+        box1 = SurroundingRectangle(eq1, fill_color=BLACK, fill_opacity=0.7,
+                                   stroke_width=0, stroke_opacity=0, buff=0.1, corner_radius=0.15)
+        box2 = SurroundingRectangle(eq2, fill_color=BLACK, fill_opacity=0.7,
+                                   stroke_width=0, stroke_opacity=0, buff=0.1, corner_radius=0.15)
+
+        self.add(eq1, box1)
+        self.wait(0.1)
+        self.play(LaggedStart(mh.rtransform(box1, box2, eq1[:2], eq2[:2], run_time=1),
+                  AnimationGroup(FadeOut(eq1[2]),
+                  FadeIn(eq2[2:]),
+                  run_time=1.6), lag_ratio=0.5))
+        self.wait()
 
 class KolDistribution(Scene):
     def construct(self):
         MathTex.set_default(font_size=60)
         eq1 = MathTex(r'\mathbb P(D > x)', r'=', r'2e^{-2x^2}-2e^{-8x^2}+2e^{-18x^2}-\cdots',
                       r'=', r'2\sum_{n=1}^\infty (-1)^{n-1}e^{-2n^2x^2}').set_z_index(2)
+        eq1[0][2].set_color(YELLOW)
+        VGroup(eq1[0][-2], eq1[2][4], eq1[2][11], eq1[2][19], eq1[4][-2]).set_color(BLUE).set_stroke(width=1)
         mh.align_sub(eq1[3:], eq1[3], eq1[1]).next_to(eq1[2], DOWN, buff=0.2, coor_mask=UP)
         eq1.move_to(ORIGIN)
         box = SurroundingRectangle(eq1, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
@@ -2445,7 +2518,11 @@ class KolDistribution(Scene):
         self.wait(0.1)
         self.play(FadeIn(eq1[3:]))
         self.wait(0.1)
-        eq2 = eq1[:3].copy().to_edge(DOWN).shift(DOWN*37*config.frame_y_radius/540).set_color(GREY)
+        eq2 = eq1[:3].copy().to_edge(DOWN).shift(DOWN*37*config.frame_y_radius/540)
+        for elem1 in eq2[:]:
+            for elem2 in elem1[:]:
+                elem2.set_color(ManimColor(elem2.color.to_rgb() * 0.5))
+
         box2 = SurroundingRectangle(eq2, fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
                                    stroke_width=0, stroke_opacity=0, buff=0.2)
         self.play(FadeOut(eq1[3:]), mh.rtransform(box, box2, eq1[:3], eq2[:]))
@@ -2454,7 +2531,9 @@ class KolDistribution(Scene):
         self.wait(0.1)
         for eq in (eq2[2][:6], eq2[2][7:13], eq2[2][14:21]):
             eq_1 = eq.copy()
-            eq_2 = eq.copy().scale(1.3).set_color(WHITE)
+            eq_2 = eq.copy().scale(1.3)
+            for elem1 in eq_2[:]:
+                elem1.set_color(ManimColor(elem1.color.to_rgb() * 2))
             self.play(mh.transform(eq, eq_2))
             self.play(mh.transform(eq, eq_1))
             self.wait(0.1)
@@ -2466,6 +2545,9 @@ class KuiDistribution(Scene):
         MathTex.set_default(font_size=60)
         eq1 = MathTex(r'\mathbb P(V > x)', r'=', r'-2\frac{d}{dx}\sum_{n=1}^\infty x e^{-2 n^2x^2}').set_z_index(2)
         eq2 = MathTex(r'\mathbb P(V > x)', r'=', r'2\sum_{n=1}^\infty (4 n^2 x^2-1)e^{-2 n^2x^2}').set_z_index(2)
+        VGroup(eq1[2][5], eq1[2][-8], eq1[2][-2],
+               eq2[2][10], eq2[2][-2], eq1[0][-2], eq2[0][-2]).set_color(BLUE).set_stroke(width=1)
+        VGroup(eq1[0][2], eq2[0][2]).set_color(YELLOW)
         eq1.move_to(ORIGIN)
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
         box = SurroundingRectangle(VGroup(eq1, eq2), fill_color=BLACK, fill_opacity=0.7, corner_radius=0.15,
@@ -3146,12 +3228,12 @@ class ReflectAssym(Bridge):
                   mh.fade_replace(eq6[0][2:-1], eq8[0][2:-1]),
                   )
         self.wait(0.1)
-        eq9 = MathTex(r'\mathbb P(\max b_t > x, \min b_t < -y)', r'=', r'\sum_{n=1}^\infty(-1)^{n-1}',
+        eq9 = MathTex(r'\mathbb P(\max b_t > x, \min b_t < -y)', r'=', r'\sum_{n=2}^\infty(-1)^n',
                       r'\left(\mathbb P(LU\cdots)+\mathbb P(UL\cdots)\right)', font_size=80, stroke_width=1).set_z_index(51)
         eq9[2:].scale(7/8)
         VGroup(eq9[0][5:7], eq9[0][13:15]).set_color(BLUE)
         VGroup(eq9[3][3:5], eq9[3][12:14]).set_color(RED)
-        eq9[2:].next_to(eq9[0], DOWN, buff=0.2).align_to(eq9[0], LEFT).shift(RIGHT*0.2)
+        eq9[2:].next_to(eq9[0], DOWN, buff=0.2).align_to(eq9[0], LEFT).shift(RIGHT*0.8)
         mh.align_sub(eq9, eq9[0][0], eq7[0][0])
         eq9_1 = eq9.copy().set_z_index(50).set_stroke(color=BLACK, width=12)
 
@@ -3166,6 +3248,7 @@ class BridgeCalcMax(Scene):
         eq21 = MathTex(r'\mathbb P\left(\max\,\lvert b_t\rvert > x\right)', r'=',
                        r'2\sum_{n=1}^\infty(-1)^{n-1} e^{-2n^2x^2}')
         eq21[0][6:8].set_color(YELLOW)
+        VGroup(eq21[0][-2], eq21[2][-2]).set_color(BLUE).set_stroke(width=1)
         return eq21
 
     def construct(self):
@@ -3508,8 +3591,9 @@ class MomentsCalc(BridgeCalcMax):
                eq4[2][-4], eq5[2][7], eq5[2][10], eq5[2][-1], eq6[2][-9], eq6[2][-3],
                eq6[2][-1], eq6[2][-6], eq7[2][-1], eq7[2][-3], eq7[2][-6], eq7[2][-8],
                eq8[1][3], eq10[0][0], eq11[0][0], eq12[0][3], eq13[0][1], eq13[0][-2]).set_color(BLUE).set_stroke(width=1)
+        VGroup(eq15[1][0]).set_color(BLUE)
         VGroup(eq4[0][-1], eq4[2][-5], eq4[2][-3], eq5[0][-2], eq5[2][-5], eq5[2][-7],
-               eq6[0][-2], eq6[2][-5], eq6[2][-7], eq7[0][-2], eq7[2][1],
+               eq6[0][-2], eq6[2][-5], eq6[2][-7], eq7[0][-2], eq7[2][1], eq7[2][-5],
                eq9[0][-2], eq9[2][1], eq9[2][-7], eq9[2][-9], eq9[2][-14],
                eq14[0][-2], eq14[2][2], eq14[2][5], eq14[2][20], eq14[2][28],
                eq15[1][2], eq16[0][2], eq16[0][6], eq16[0][10],
@@ -3666,6 +3750,7 @@ class MomentsCalc(BridgeCalcMax):
         eq16_3 = MathTex(r'=\eta(s)')[0]
         eq16_3 = mh.align_sub(eq16_3[1:], eq16_3[0], eq14[1]).move_to(eq14[2][6:21]).scale(1.4)
         eq16_3[2].set_color(RED)
+        eq16_3[0].set_color(BLUE)
         #eq16_3 = mh.align_sub(eq16[0][:-1].copy(), eq16[0][-1], eq14[1]).move_to(eq14[2][6:21])
         for x, y in zip(eq16_1, eq16_2): y.move_to(x)
         self.play(FadeOut(eq16_1), FadeIn(eq16_2), rate_func=linear)
@@ -3787,6 +3872,7 @@ class MomentsCalc(BridgeCalcMax):
 
         eq22 = MathTex(r'(1-2^{1-s})', r'\zeta(s)')
         VGroup(eq22[0][-2], eq22[1][-2]).set_color(RED)
+        eq22[1][0].set_color(BLUE)
         eq23 = eq22.copy()
 
         mh.align_sub(eq22, eq22[0], eq21[0])
@@ -3808,6 +3894,7 @@ class MomentsCalc(BridgeCalcMax):
         eq25[-2][2:5].move_to(eq25[1], coor_mask=UP)
         eq25[0][2].set_color(YELLOW)
         VGroup(eq25[0][-2], eq25[2][-1], eq25[2][2], eq25[3][-2], eq25[4][2], eq25[5][2]).set_color(RED)
+        VGroup(eq25[4][0], eq25[5][0]).set_color(BLUE)
         mh.align_sub(eq25, eq25[1], eq14[1]).move_to(ORIGIN, coor_mask=RIGHT)
         eq25.scale(1.2)
         self.play(mh.rtransform(eq14[:2], eq25[:2], eq14[2][:6], eq25[2][:], eq23[0], eq25[3],
@@ -3944,4 +4031,4 @@ class Li(BMPathIntro):
         self.wait()
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
-        MeanderTfm().render()
+        KolDistribution().render()
