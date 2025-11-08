@@ -4029,6 +4029,28 @@ class Li(BMPathIntro):
         self.play(FadeIn(eq5), FadeOut(eq2))
 
         self.wait()
+
+class Math_x(Scene):
+    sw = 2.5
+    sw2 = 6
+    eq_str = r'x'
+    def construct(self):
+        eq1 = MathTex(self.eq_str, font_size=60, stroke_width=self.sw).set_z_index(2)
+        eq2 = eq1.copy().set_stroke(width=self.sw2).set_color(BLACK).set_z_index(0)
+        self.add(eq1, eq2)
+
+class Math_y(Math_x):
+    eq_str = r'y'
+
+class Math_zeta(Math_x):
+    eq_str = r'\zeta(x+iy)'
+
+class Math_xi(Math_x):
+    eq_str = r'\xi(x+iy)'
+
+class Math_strip(Math_x):
+    eq_str = r'0 < x < 1'
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         KolDistribution().render()

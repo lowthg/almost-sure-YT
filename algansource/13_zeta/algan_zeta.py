@@ -12,9 +12,6 @@ from algan.external_libraries.manim import ArcBetweenPoints
 from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
 from functools import partial
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader
-from manim import VGroup
-from matplotlib.pyplot import xscale
-from scipy.fftpack import shift
 
 sys.path.append('../')
 import alganhelper as ah
@@ -483,14 +480,151 @@ def gamma_surf(quality=LD, bgcol=BLACK, **kwargs):
     name = 'gamma_surf'
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def colordomain(fvals, out, f0=1., prescale=1., postscale=1.):
+    lightness = (np.atan(prescale * np.log10(abs(fvals) / f0)) / math.pi + 0.5) * postscale
+    h = np.angle(fvals) / (2 * PI) + 0.05
+    m, n = fvals.shape
+    for i in range(m):
+        for j in range(n):
+            out[i, j] = Color(torch.tensor(colorsys.hls_to_rgb(h[i, j], lightness[i, j], 1)))
+
+def hypothesis(quality=LD, bgcol=BLACK, **kwargs):
+
+    with Off():
+        cam = Scene.get_camera()
+        cam.set_distance_to_screen(100)
+
+    print(' part 1')
+
+    nx = 400
+    zeros = [14.134725, 21.022040, 25.010858, 30.424876, 32.935062, 37.586178]
+
+    im_size = 2.58
+    mob = Surface(grid_height=nx, grid_width=nx)
+    p = mob.get_descendants()[1]
+    loc = p.location
+    col = p.color.clone()
+    sgrid = loc[:,:,:2].numpy()
+    sgrid = sgrid[:,:,0] + sgrid[:,:,1] * 1j
+    mob.scale(im_size).move(0.1 * IN)
+
+    xmax1 = 4.
+    xmax2 = 39.
+    fvals = sp.special.zeta(sgrid * xmax1)
+    colordomain(fvals, col, f0=1., prescale=0.8, postscale=0.7)
+    p.set_non_recursive(color=col)
+
+    line_x = ManimMob(mn.Line(mn.LEFT * im_size, mn.RIGHT * im_size, stroke_width=3, stroke_opacity=0.7))
+    line_y = ManimMob(mn.Line(mn.DOWN * im_size, mn.UP * im_size, stroke_width=3, stroke_opacity=0.7))
+    line_1 = ManimMob(mn.Line(mn.DOWN * im_size, mn.UP * im_size, stroke_width=3, stroke_opacity=0.7))
+    line_2 = ManimMob(mn.DashedLine(mn.DOWN * im_size, mn.UP * im_size, stroke_width=3, stroke_opacity=0.7))
+    line_1.move(RIGHT * im_size / xmax1)
+    line_2.move(RIGHT * im_size * 0.5 / xmax1)
+    pos0 = (DOWN + LEFT) * im_size * 0.2
+    pos1 = RIGHT * im_size + (DOWN + RIGHT) * im_size * 0.2
+    eq0 = ManimMob(mn.MathTex(r'0')).scale(0.5).move_to(pos0/xmax1)
+    eq1 = ManimMob(mn.MathTex(r'1')).scale(0.5).move_to(pos1/xmax1)
+
+    dot0 = ManimMob(mn.Dot(radius=0.03, color=mn.BLACK))
+    dot1 = ManimMob(mn.Dot(radius=0.02, color=mn.BLACK))
+    nzeros = len(zeros*2)
+    dot_pos = [(0.5 * RIGHT + y * UP) * im_size for y in zeros + [-z for z in zeros]]
+    dot_pos += [x * LEFT * im_size for x in range(2, 40, 2)]
+    dots = ([dot0.clone().move_to(pos/xmax1) for pos in dot_pos[:nzeros]] +
+            [dot1.clone().move_to(pos/xmax1) for pos in dot_pos[nzeros:]])
+    objs1 = Group(*dots[:nzeros]).move(0.1*OUT)
+    objs2 = Group(*dots[nzeros:]).move(0.1*OUT)
+
+    print(' part 2')
+
+    with Off():
+        mob.spawn()
+        line_x.spawn()
+        line_y.spawn()
+        line_1.spawn()
+        objs1.spawn()
+        objs2.spawn()
+        eq0.spawn()
+        eq1.spawn()
+
+    Scene.wait(0.5)
+    line_2.spawn()
+    Scene.wait(0.5)
+
+    fps = quality.frames_per_second
+    t = 2.
+    n = round(fps * t)
+    dt = 1. / fps
+
+    print(' part 3')
+
+    xmax0 = xmax1
+    with Sync():
+        with Seq():
+            for i in range(n+1):
+                print('frame', i)
+                s = mn.smooth(i/n)
+                xmax = xmax1  + s * (xmax2 - xmax1)
+                fvals = sp.special.zeta(sgrid * xmax)
+                col1 = col.clone()
+                colordomain(fvals, col1, f0=1., prescale=0.8, postscale=0.7)
+
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p.set_non_recursive(color=col1)
+                    line_1.move_to(RIGHT * im_size / xmax)
+                    line_2.move_to(RIGHT * im_size * 0.5 / xmax)
+                    for i, pos in enumerate(dot_pos):
+                        dots[i].move_to(pos/xmax + 0.1 * OUT)
+                    eq0.scale(xmax0/xmax).move_to(pos0/xmax)
+                    eq1.scale(xmax0 / xmax).move_to(pos1 / xmax)
+                xmax0 = xmax
+
+    print(' part 4')
+
+    with Sync(run_time=0.5):
+        eq0.despawn()
+        eq1.despawn()
+
+    s1 = sgrid * xmax
+    s2 = s1 * 0.5
+    fvals2 = fvals * sp.special.gamma(s2) * np.pow(math.pi, -s2) * s2 * s1
+
+    t = 1.
+    n = round(fps * t)
+    col2 = col.clone()
+    colordomain(fvals2, col2, f0=1., prescale=0.8, postscale=0.7)
+    print(' part 5')
+    with Sync():
+        with Seq():
+            for i in range(n+1):
+                print('frame', i)
+                s = mn.smooth(i/n)
+                with Sync(rate_func=rate_funcs.identity, run_time=dt):
+                    p.set_non_recursive(color=col1 * (1-s) + col2 * s)
+        objs2.despawn()
+    print(' part 6')
+
+    Scene.wait(0.5)
+
+    rect = ManimMob(mn.Rectangle(width=im_size / xmax, height=im_size, stroke_width=0, stroke_opacity=0,
+                        fill_opacity=0.8, fill_color=mn.GREY))
+    rect.move(RIGHT*0.5*im_size/xmax)
+    #with Sync(run_time=0.5):
+    #    rect.spawn()
+    Scene.wait(0.5)
+
+    name = 'hypothesis'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
 
-    sphere_bm(quality=HD, bgcol=TRANSPARENT, tscale=12, xscale=0.94)
+    #sphere_bm(quality=HD, bgcol=TRANSPARENT, tscale=12, xscale=0.94)
     #sphere_bm(r=2.1, quality=LD, bgcol=BLACK, tscale=12, xscale=0.94)
     #zeta_surf(quality=HD, bgcol=BLACK, xrange=(-13.5,14.5), shift=0.3)
     #xi_surf(quality=HD, bgcol=BLACK)
     #zeta_surf(quality=HD, bgcol=TRANSPARENT)
     #gamma_surf(quality=HD, bgcol=TRANSPARENT)
+    hypothesis(quality=HD, bgcol=BLACK)
