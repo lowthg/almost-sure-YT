@@ -4051,6 +4051,20 @@ class Math_xi(Math_x):
 class Math_strip(Math_x):
     eq_str = r'0 < x < 1'
 
+class eqnthumb(Scene):
+    def construct(self):
+        eq1 = MathTex(r'\mathbb E[X^s]', r'=', r'2\xi(s)', stroke_width=3, font_size=80)
+        VGroup(eq1[0][2], eq1[2][1]).set_color(BLUE)
+        VGroup(eq1[0][-2], eq1[2][-2]).set_color(YELLOW)
+        self.add(eq1)
+
+class eqnthumb3(Scene):
+    def construct(self):
+        eq1 = MathTex(r'2\xi(s)', r'=', r'\mathbb E[X^s]', stroke_width=3, font_size=80)
+        VGroup(eq1[2][2], eq1[0][1]).set_color(BLUE)
+        VGroup(eq1[2][-2], eq1[0][-2]).set_color(YELLOW)
+        self.add(eq1)
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         KolDistribution().render()
