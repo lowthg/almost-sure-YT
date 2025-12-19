@@ -634,7 +634,7 @@ class PhotonMeasure(Scene):
         pthet = ver.copy().set_z_index(2)
         #pthet2 = pthet.copy().rotate(90 * DEGREES)
         arc = Arc(start_angle=90 * DEGREES, angle=theta, radius=len * 0.7).set_z_index(1)
-        eq_thet = MathTex(r'\theta', z_index=1)[0].move_to((UP*math.cos(theta/2) + LEFT*math.sin(theta/2)) * len * 0.5)
+        eq_thet = MathTex(r'\theta')[0].set_z_index(1).move_to((UP*math.cos(theta/2) + LEFT*math.sin(theta/2)) * len * 0.5)
         top = tdir
         dotted1 = DashedLine(top, top * RIGHT, color=GREY).set_z_index(1)
         dotted2 = DashedLine(top, top * UP, color=GREY).set_z_index(1)
@@ -732,3 +732,178 @@ class PhotonMeasure(Scene):
             mh.rtransform(rect3, rect4), MoveToTarget(eq2), run_time=1),
             FadeIn(eq3, run_time=1), lag_ratio=0.5))
         self.wait()
+
+class Experiment(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+            config.background_color = GREY
+        Scene.__init__(self, *args, *kwargs)
+
+    def construct(self):
+        eqAB = MathTex(r'\mathbb P(A=B)=\frac14', stroke_width=1.5)
+        eqAC = MathTex(r'\mathbb P(A=C)=\frac14', stroke_width=1.5).next_to(eqAB, DOWN).align_to(eqAB, LEFT)
+        eqBC = MathTex(r'\mathbb P(B=C)=\frac14', stroke_width=1.5).next_to(eqAC, DOWN).align_to(eqAC, LEFT)
+        VGroup(eqAB, eqAC, eqBC).to_edge(UR)
+
+        len=0.8
+        left_buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER * 0.5
+
+        eqA1 = MathTex(r'A1', stroke_width=1.5)[0].set_z_index(1)
+        dot = Dot(radius=0.15, z_index=3).next_to(eqA1, RIGHT)
+        arr = DoubleArrow(dot.get_center()+DOWN * len, dot.get_center()+UP * len, color=BLUE, buff=0).set_z_index(2)
+        photon = VGroup(arr, dot).next_to(eqA1, RIGHT, buff=0.5)
+        filt = create_filter().next_to(photon, RIGHT, buff=0.7).set_z_index(1)
+
+        expA1 = VGroup(*[eqA1, photon, filt]).to_edge(UP).to_edge(LEFT, buff=left_buff)
+
+        pA2 = photon.copy()
+        p = pA2[1].get_center()
+        arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=-45 * DEGREES, radius=len).set_z_index(1)
+        l1 = DashedLine(p, p + UP * len*0.95).set_z_index(1)
+        q = p + (UP * math.sqrt(3) + RIGHT * 0.9) * len * 0.65
+        eq = MathTex(r'45^\circ', font_size=30, stroke_width=1).set_z_index(1).move_to(q)
+        pA2.add(arc, l1, eq)
+
+        pB1 = photon.copy()
+        p = pB1[1].get_center()
+        arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=-22.5 * DEGREES, radius=len).set_z_index(1)
+        l1 = DashedLine(p, p + UP * len*0.95, z_index=1)
+        q = p + (UP * math.sqrt(3) + RIGHT*0.65) * len * 0.7
+        eq = MathTex(r'22.5^\circ', font_size=30, stroke_width=1).set_z_index(1).move_to(q)
+        pB1.add(arc, l1, eq)
+
+        expA2 = VGroup(MathTex(r'A2', stroke_width=1.5)[0].set_z_index(1).move_to(expA1[0]).align_to(expA1[0], LEFT),
+                     pA2,
+                     filt.copy()).next_to(expA1, DOWN, coor_mask=UP)
+
+        expB1 = VGroup(MathTex(r'B1', stroke_width=1.5)[0].set_z_index(1).move_to(expA1[0]).align_to(expA1[0], LEFT),
+                     pB1,
+                     filt.copy())
+        expB1[0].shift(expB1[0].get_center()*2*LEFT)
+        expB1[1].shift(expB1[1][:2].get_center()*2*LEFT)
+        expB1[2].shift(expB1[2].get_center()*2*LEFT)
+
+        pB2 = expB1[1][:2].copy()
+        p = pB2[1].get_center()
+        q = p + (UP * math.sqrt(3) + LEFT*0.2) * len * 0.7
+        arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=22.5 * DEGREES, radius=len).set_z_index(1)
+        eq = eq.copy().move_to(q)
+        pB2.add(arc, l1.copy(), eq)
+
+        expB2 = VGroup(MathTex(r'B2', stroke_width=1.5)[0].set_z_index(1).move_to(expB1[0]).align_to(expB1[0], LEFT),
+                     pB2,
+                     expB1[2].copy())
+        mh.align_sub(expB2, expB2[0], expA2[0], coor_mask=UP)
+
+        colA = PURE_RED
+        col1 = GREEN
+        colB = PURPLE
+        VGroup(eqA1[0], expA2[0][0]).set_color(colA)
+        VGroup(eqA1[1], expA2[0][1], expB1[0][1], expB2[0][1]).set_color(col1)
+        VGroup(expB1[0][0], expB2[0][0]).set_color(colB)
+
+        box1 = SurroundingRectangle(VGroup(expA1, expA2, expA2[2].copy().rotate(-45*DEGREES),
+                                           expB1[1][4].copy().move_to(expA1, coor_mask=RIGHT)),
+                                    stroke_opacity=0, stroke_width=0, fill_color=BLACK,
+                                    fill_opacity=0.6, corner_radius=0.2, buff=0.1)
+        box2 = box1.copy().shift(box1.get_center()*2*LEFT)
+        self.add(box1)
+        self.wait(0.5)
+        self.play(FadeIn(expA1), run_time=0.5)
+        self.wait(0.5)
+
+
+        p = expA2[1][:2]
+        q = expA2[2]
+        self.play(mh.rtransform(expA1[1][:2].copy(), p, expA1[2].copy(), q,
+                                expA1[0][0].copy(), expA2[0][0]),
+                  mh.fade_replace(expA1[0][1].copy(), expA2[0][1]),
+                  run_time=2)
+        self.add(expA2[1][3])
+        self.play(Create(expA2[1][2]), FadeIn(expA2[1][4], rate_func=rate_functions.ease_in_cubic),
+                  Rotate(p, -45*DEGREES), Rotate(q, -45*DEGREES), run_time=1)
+        self.wait(0.5)
+
+        p = expB1[1][:2]
+        q = expB1[2]
+        self.play(mh.rtransform(expA1[1][:2].copy(), p, expA1[2].copy(), q),
+                  mh.fade_replace(expA1[0][1].copy(), expB1[0][1]),
+                  mh.fade_replace(expA1[0][0].copy(), expB1[0][0]),
+                  FadeIn(box2),
+                  run_time=2)
+        self.wait(0.5)
+        self.add(expB1[1][3])
+        self.play(Create(expB1[1][2]), FadeIn(expB1[1][4], rate_func=rate_functions.ease_in_cubic),
+                  Rotate(p, -22.5*DEGREES), Rotate(q, -22.5*DEGREES), run_time=1)
+        self.wait(0.5)
+
+        p = expB2[1][:2]
+        q = expB2[2]
+        self.play(mh.rtransform(expB1[1][:2].copy(), p, expB1[2].copy(), q,
+                                expB1[0][0].copy(), expB2[0][0]),
+                  mh.fade_replace(expB1[0][1].copy(), expB2[0][1]),
+                  run_time=2)
+        self.wait(0.5)
+        self.add(expB2[1][3])
+        self.play(Create(expB2[1][2]), FadeIn(expB2[1][4], rate_func=rate_functions.ease_in_cubic),
+                  Rotate(p, 22.5*DEGREES), Rotate(q, 22.5*DEGREES), run_time=1)
+        self.wait(0.5)
+
+        lines_ = []
+        lines = []
+        for exp in [expA1, expB1, expB2, expA2]:
+            dot = exp[1][1].copy()
+            p = dot.get_center()
+            v = exp[1][0].get_end() - p
+            eq = exp[0].copy()
+            lines_.append(VGroup(Arrow(p, p + v,
+                   stroke_width=5, stroke_color=BLUE, buff=0).set_z_index(2), dot, eq))
+            lines.append(VGroup(Arrow(ORIGIN, v*2.8, stroke_width=5, stroke_color=BLUE, buff=0).set_z_index(2),
+                                dot.copy().move_to(ORIGIN), eq.copy().scale(0.8).move_to(v*3.1)))
+
+        box3 = SurroundingRectangle(VGroup(*lines), stroke_opacity=0, stroke_width=0,
+                                   fill_opacity=0.7, fill_color=BLACK, corner_radius=0.2)
+        VGroup(box3, *lines).to_edge(DOWN, buff=0.1)
+
+        angles = [-1, 0, -2]
+        p = lines[0][1].get_center()
+        eqs = []
+        arcs = []
+
+        for i in range(4):
+            anims = [mh.rtransform(lines_[i], lines[i])]
+            if i == 0:
+                anims.append(FadeIn(box3))
+            else:
+                arc = Arc(arc_center=p, start_angle=(90+22.5*angles[i-1]) * DEGREES, angle=22.5 * DEGREES, radius=len*2).set_z_index(1)
+                q = arc.get_center() * 0.9 + p * 0.1
+                eq2 = MathTex(r'22.5^\circ', font_size=20).set_z_index(1).move_to(q)
+                anims.append(FadeIn(arc, eq2))
+                eqs.append(eq2)
+                arcs.append(arc)
+
+            self.play(*anims, run_time=1.6)
+
+        q = arcs[0].get_center() * 0.8 + p * 0.2
+        eq2 = MathTex(r'67.5^\circ', font_size=32).move_to(q).set_z_index(1)
+        self.wait(0.1)
+        self.play(FadeOut(*eqs, lines[0], lines[1]), FadeIn(eq2))
+        self.wait(0.1)
+
+        arr1 = lines[2][0].copy().rotate(22.5*DEGREES, about_point=p)
+        arc1 = Arc(arc_center=p, start_angle=112.5*DEGREES, angle=22.5*DEGREES, radius=len*2).set_z_index(1)
+        q = arc1.get_center() * 0.9 + p * 0.1
+        eq1 = MathTex(r'22.5^\circ', font_size=20).set_z_index(1).move_to(q)
+        box4 = SurroundingRectangle(VGroup(*lines, arr1), stroke_opacity=0, stroke_width=0,
+                                   fill_opacity=0.7, fill_color=BLACK, corner_radius=0.2)
+        rang = RightAngle(lines[3][0], arr1, length=len*0.5).set_z_index(1)
+
+        self.play(LaggedStart(mh.rtransform(box3, box4, run_time=1),
+                              FadeIn(arr1, arc1, eq1, rang, run_time=1), lag_ratio=0.5))
+
+        self.wait()
+
+
+if __name__ == "__main__":
+    with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
+        Experiment().render()
