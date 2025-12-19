@@ -614,6 +614,33 @@ class AliceBob3(AliceBob):
         self.set_filters((0 * DEGREES, 0 * DEGREES))
         self.wait()
 
+class AliceBob4(AliceBob):
+    def construct(self):
+        self.add_machine()
+        self.add(self.filters)
+        self.wait(0.1)
+        self.set_filters((-45 * DEGREES, 0 * DEGREES))
+        self.wait(0.1)
+        self.emit_photons(angle=0., op=(1,0), op2=(1,0), passthru=(False, False))
+        self.wait(0.1)
+        self.emit_photons(angle=0., op=(1,0), op2=(1,0), passthru=(True, False))
+        self.wait(0.1)
+        self.set_filters((0 * DEGREES, 0 * DEGREES))
+        self.wait()
+
+class AliceBob5(AliceBob):
+    def construct(self):
+        self.add_machine()
+        self.add(self.filters)
+        self.wait(0.1)
+        self.set_filters((0 * DEGREES, -22.5 * DEGREES))
+        self.wait(0.1)
+        self.set_filters((0 * DEGREES, 0 * DEGREES))
+        self.wait(0.1)
+        self.set_filters((0 * DEGREES, 22.5 * DEGREES))
+        self.wait(0.1)
+        self.wait()
+
 class PhotonMeasure(Scene):
     def __init__(self, *args, **kwargs):
         if not config.transparent:
@@ -862,7 +889,7 @@ class Experiment(Scene):
                                 dot.copy().move_to(ORIGIN), eq.copy().scale(0.8).move_to(v*3.1)))
 
         box3 = SurroundingRectangle(VGroup(*lines), stroke_opacity=0, stroke_width=0,
-                                   fill_opacity=0.7, fill_color=BLACK, corner_radius=0.2)
+                                   fill_opacity=0.6, fill_color=BLACK, corner_radius=0.2)
         VGroup(box3, *lines).to_edge(DOWN, buff=0.1)
 
         angles = [-1, 0, -2]
@@ -871,24 +898,23 @@ class Experiment(Scene):
         arcs = []
 
         for i in range(4):
-            anims = [mh.rtransform(lines_[i], lines[i])]
+            anims = [mh.rtransform(lines_[i], lines[i], run_time=1.6)]
             if i == 0:
-                anims.append(FadeIn(box3))
+                anims.append(FadeIn(box3, run_time=1.6))
             else:
                 arc = Arc(arc_center=p, start_angle=(90+22.5*angles[i-1]) * DEGREES, angle=22.5 * DEGREES, radius=len*2).set_z_index(1)
                 q = arc.get_center() * 0.9 + p * 0.1
                 eq2 = MathTex(r'22.5^\circ', font_size=20).set_z_index(1).move_to(q)
-                anims.append(FadeIn(arc, eq2))
+                anims = [LaggedStart(anims[0], FadeIn(arc, eq2, run_time=1), lag_ratio=0.7)]
                 eqs.append(eq2)
                 arcs.append(arc)
 
-            self.play(*anims, run_time=1.6)
+            self.play(*anims)
+
+        self.wait(0.1)
 
         q = arcs[0].get_center() * 0.8 + p * 0.2
         eq2 = MathTex(r'67.5^\circ', font_size=32).move_to(q).set_z_index(1)
-        self.wait(0.1)
-        self.play(FadeOut(*eqs, lines[0], lines[1]), FadeIn(eq2))
-        self.wait(0.1)
 
         arr1 = lines[2][0].copy().rotate(22.5*DEGREES, about_point=p)
         arc1 = Arc(arc_center=p, start_angle=112.5*DEGREES, angle=22.5*DEGREES, radius=len*2).set_z_index(1)
@@ -898,8 +924,17 @@ class Experiment(Scene):
                                    fill_opacity=0.7, fill_color=BLACK, corner_radius=0.2)
         rang = RightAngle(lines[3][0], arr1, length=len*0.5).set_z_index(1)
 
-        self.play(LaggedStart(mh.rtransform(box3, box4, run_time=1),
-                              FadeIn(arr1, arc1, eq1, rang, run_time=1), lag_ratio=0.5))
+        gp1 = VGroup(*arcs, *eqs, *lines)
+        gp2 = VGroup(eq2, arr1, arc1, eq1, rang, box4)
+        gp1.generate_target()
+        VGroup(gp1.target, gp2).align_to(box2, RIGHT)
+
+        self.play(MoveToTarget(gp1), mh.rtransform(box3, box4), run_time=1.2)
+        self.wait(0.1)
+        self.play(FadeOut(*eqs, lines[0], lines[1]), FadeIn(eq2))
+        self.wait(0.1)
+
+        self.play(FadeIn(arr1, arc1, eq1, rang, run_time=1))
 
         self.wait()
 
