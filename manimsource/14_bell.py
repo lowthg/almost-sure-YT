@@ -613,3 +613,122 @@ class AliceBob3(AliceBob):
         self.wait(0.1)
         self.set_filters((0 * DEGREES, 0 * DEGREES))
         self.wait()
+
+class PhotonMeasure(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+            config.background_color = GREY
+        Scene.__init__(self, *args, *kwargs)
+
+    def construct(self):
+        photon = Dot(radius=0.2).set_z_index(3)
+        pcol = BLUE
+        pcol2 = GREY
+        len = 1.7
+        ver = DoubleArrow(DOWN*len, UP*len, color=BLUE, buff=0).set_z_index(2)
+        hor = DoubleArrow(LEFT*len, RIGHT*len, color=BLUE, buff=0).set_z_index(2)
+        fs = 35
+
+        theta = -50 * DEGREES
+        tdir = (UP*math.cos(theta) + LEFT*math.sin(theta)) * len
+        pthet = ver.copy().set_z_index(2)
+        #pthet2 = pthet.copy().rotate(90 * DEGREES)
+        arc = Arc(start_angle=90 * DEGREES, angle=theta, radius=len * 0.7).set_z_index(1)
+        eq_thet = MathTex(r'\theta', z_index=1)[0].move_to((UP*math.cos(theta/2) + LEFT*math.sin(theta/2)) * len * 0.5)
+        top = tdir
+        dotted1 = DashedLine(top, top * RIGHT, color=GREY).set_z_index(1)
+        dotted2 = DashedLine(top, top * UP, color=GREY).set_z_index(1)
+        eq_cos = MathTex(r'\cos\theta', font_size=fs).set_z_index(1).rotate(PI/2).next_to(top*UP/2+UP*0.1, LEFT, buff=0.1)
+        eq_sin = MathTex(r'\sin\theta', font_size=fs).set_z_index(1).next_to(top*RIGHT/2+RIGHT*0.1, DOWN, buff=0.1)
+
+        eq_ver = MathTex(r'\Psi_V', font_size=fs).set_z_index(1).next_to(ver.get_end(), UR, buff=0)
+        eq_hor = MathTex(r'\Psi_H', font_size=fs).set_z_index(1).next_to(hor, RIGHT, buff=0.1)
+        eq_pthet = MathTex(r'\Psi_\theta=\cos\theta\Psi_V', font_size=fs).next_to(top, UP, buff=0.1).align_to(hor, LEFT).shift(LEFT*0.6).set_z_index(6)
+        eq_cos2 = MathTex(r'\cos^2', font_size=fs).set_opacity(0).set_z_index(6)
+
+        eq_pthet1 = MathTex(r'+\sin\theta\Psi_H', font_size=fs).set_z_index(1).next_to(eq_pthet, DOWN, buff=0.1).align_to(eq_pthet, LEFT).shift(RIGHT*0.1)
+        eqs = VGroup(eq_ver, eq_hor, eq_pthet, eq_pthet1)
+
+        eq1 = MathTex(r'\mathbb P({\sf polarization }=\theta)', r'=', r'\cos^2\theta', stroke_width=1.5, font_size=50).set_z_index(6)
+        eq2 = MathTex(r'\mathbb P(A=B)', r'=', r'\cos^2\theta', stroke_width=2, font_size=60).set_z_index(6)
+        eq3 = MathTex(r'=', r'(1+\cos2\theta)/2', stroke_width=2, font_size=60).set_z_index(6)
+
+        col1 = GREEN
+        col2 = ORANGE
+        col3 = PURPLE
+        (eq1[0][2:14]+eq1[0][0]+eq2[0][0]).set_color(YELLOW)
+        VGroup(eq1[2][3], eq_cos2[0][-1], eq2[2][3], eq3[1][-1], eq3[1][1], eq3[1][6]).set_color(BLUE)
+        VGroup(eq_thet, eq_cos[0][-1], eq_sin[0][-1], eq_ver[0][-1], eq_hor[0][-1], eq_pthet[0][-1], eq_pthet[0][1],
+               eq_pthet[0][-3], eq_pthet1[0][-3], eq_pthet1[0][-1], eq1[2][4], eq1[0][-2],
+               eq2[2][-1], eq3[1][-4]).set_color(col1)
+        VGroup(eq_cos[0][:-1], eq_sin[0][:-1], eq_pthet[0][3:6],
+               eq_pthet1[0][1:4], eq1[2][:3], eq_cos2[0][-1], eq2[2][:3], eq3[1][3:6]).set_color(col2)
+        VGroup(eq_ver[0][0], eq_hor[0][0], eq_pthet[0][0], eq_pthet[0][-2], eq_pthet1[0][-2],).set_color(col3)
+        eq2[0][2].set_color(PURE_RED)
+        eq2[0][4].set_color(PURPLE)
+
+        mob = VGroup(ver, hor, eqs, eq_ver)
+        width = 2 * (photon.get_center() - mob.get_left())[0]
+        height = 2 * (mob.get_top() - photon.get_center())[1]
+        rect = RoundedRectangle(width=width + 0.2, height=height + 0.1, corner_radius=0.3, stroke_color=WHITE,
+                                stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK, z_index=0)
+        gp1 = VGroup(photon, ver, hor, arc, eq_thet, dotted1, dotted2, eq_cos, eq_sin, eqs, pthet)
+        rect.move_to(gp1, coor_mask=UP)
+        VGroup(rect, gp1).to_corner(UR, buff=0.1)
+        gp2 = VGroup(photon, ver, hor, arc, eq_thet, dotted1, dotted2, pthet, eq_cos, eq_sin)
+        shift2 = gp2.get_center()
+        gp2.move_to(rect, coor_mask=UP)
+        shift2 -= gp2.get_center()
+        origin = photon.get_center()
+
+        rect2 = SurroundingRectangle(eq1, corner_radius=0.15, stroke_width=0,
+                                stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK).set_z_index(5)
+        VGroup(rect2, eq1).next_to(rect, DOWN, buff=0.1).align_to(rect, RIGHT)
+
+        rect3 = SurroundingRectangle(eq2, corner_radius=0.15, stroke_width=0,
+                                stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK).set_z_index(5)
+        VGroup(rect3, eq2).align_to(rect2, UR)
+        mh.align_sub(eq3, eq3[0], eq2[1]).align_to(eq2, RIGHT)
+        eq2.generate_target().next_to(eq3, UP, buff=0.3, coor_mask=UP)
+        #eq3.next_to(eq2, DOWN, buff=0.3).align_to(eq2, RIGHT)
+        rect4 = SurroundingRectangle(VGroup(eq2.target, eq3), corner_radius=0.15, stroke_width=0,
+                                stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK).set_z_index(5)
+
+        self.add(rect, photon)
+        self.wait(0.5)
+        self.play(FadeIn(ver), run_time=1)
+        self.wait(0.5)
+        self.play(FadeIn(hor.set_color(pcol2)), run_time=1)
+        #self.play(ver.animate.set_color(pcol2), FadeIn(hor), run_time=1)
+        #self.wait(0.5)
+        #self.play(ver.animate.set_color(pcol), hor.animate.set_color(pcol2), run_time=0.5)
+        #self.wait(0.5)
+        ver.set_color(pcol2)
+        self.add(pthet)
+        self.play(LaggedStart(AnimationGroup(Rotate(pthet, angle=theta, about_point=origin),
+                  Create(arc), run_time=1),
+                  FadeIn(eq_thet, run_time=1), lag_ratio=0.5))
+        self.wait(0.5)
+        self.play(FadeIn(dotted1, dotted2, eq_cos, eq_sin), run_time=1)
+        self.wait(0.5)
+        #gp2 = VGroup(photon, hor, ver, arc, eq_thet, dotted1, dotted2, pthet)#, pthet2, eq_cos, eq_sin)
+        self.play(FadeIn(eqs), gp2.animate.shift(shift2), run_time=1)
+        self.wait(0.5)
+        mh.align_sub(eq_cos2, eq_cos2[0][:-1], eq_pthet[0][3:6])
+        self.play(FadeIn(eq1[:2], rect2),
+                  mh.rtransform(eq_pthet[0][3:6].copy(), eq1[2][:3], eq_pthet[0][6].copy(), eq1[2][-1],
+                                eq_cos2[0][-1].copy(), eq1[2][3]),
+                  run_time=1.8)
+        self.wait(0.5)
+        pos2 = eq2[0][2:-1].get_center()
+        eq2[0][2:-1].move_to(eq1[0][2:-1]).set_opacity(0)
+        self.play(mh.rtransform(rect2, rect3, eq1[0][:2], eq2[0][:2], eq1[0][-1], eq2[0][-1], eq1[1:], eq2[1:]),
+                  eq1[0][2:-1].animate.set_opacity(-1).move_to(pos2),
+                  eq2[0][2:-1].animate.set_opacity(2).move_to(pos2),
+                  run_time=1.6)
+        self.wait(0.5)
+        self.play(FadeOut(gp1, rect))
+        self.play(LaggedStart(AnimationGroup(
+            mh.rtransform(rect3, rect4), MoveToTarget(eq2), run_time=1),
+            FadeIn(eq3, run_time=1), lag_ratio=0.5))
+        self.wait()
