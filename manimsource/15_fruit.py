@@ -171,7 +171,7 @@ class Rearrange1(Scene):
                   run_time=1.6)
         self.wait(0.1)
         eq2_1 = eq2[0].copy().move_to(eq10[2][3:], coor_mask=RIGHT)
-        self.play(FadeOut(eq10[2][3:]), FadeIn(eq2_1))
+        self.play(FadeOut(eq10[2][3 :]), FadeIn(eq2_1))
         self.wait(0.1)
         self.play(mh.rtransform(eq2_1[0], eq11[0][1], eq10[2][:2], eq11[2][:], eq10[1], eq11[1],
                                 eq10[0][:], eq11[0][3:]),
