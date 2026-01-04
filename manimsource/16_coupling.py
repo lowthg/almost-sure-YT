@@ -73,7 +73,7 @@ class DigitGame(Scene):
                                     corner_radius=0.1, buff=0.05).set_z_index(1)
         j = alice_steps[0]
         box1.move_to(eq_digits[j])
-        alice_small = alice.copy().scale(0.2).next_to(box1, UP, buff=0.1)
+        alice_small = alice.copy().scale(0.2).next_to(box1, UP, buff=0.1).set_z_index(2.5)
         self.play(FadeIn(box1, alice_small), eq_digits[j].animate.set_color(WHITE))
         num_alice = len(alice_steps)
 
@@ -123,11 +123,21 @@ class DigitGame(Scene):
                   run_time=2)
         self.wait(0.1)
 
+        # discussion
+        wid = mh.pos(RIGHT)[0]*2
+        hei = mh.pos(UP)[1]*2
+        box5 = Rectangle(width=wid, height=hei, stroke_width=0, stroke_opacity=0,
+                                    fill_color=BLACK, fill_opacity=0.8).set_z_index(2.5)
+        self.play(FadeIn(box5, rate_func=linear))
+        self.wait(0.1)
+        self.play(FadeOut(box5, rate_func=linear))
+        self.wait(0.1)
+
         # bob stepping
         j = bob_steps[0]
         box3 = box1.copy().set_fill(color=GREEN).move_to(eq_digits[j])
         b = bob.pixel_array.copy()
-        bob_small = ImageMobject(b[:,-50:50:-1,:]).set_z_index(2.8).scale(bob_scale * 0.2)
+        bob_small = ImageMobject(b[:,-50:50:-1,:]).set_z_index(2.4).scale(bob_scale * 0.2)
         bob_small.next_to(box3, UP, buff=0.1)
         self.play(FadeIn(box3, bob_small), eq_digits[j].animate.set_color(WHITE))
         num_bob = len(bob_steps)
@@ -157,3 +167,43 @@ class DigitGame(Scene):
                   run_time=2)
 
         self.wait()
+
+class AliceBobEqual(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+           config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        wid = mh.pos(RIGHT)[0]*2
+        hei = mh.pos(UP)[1]*2
+        fs2 = 70
+        eq1 = MathTex(r'\mathbb P({\sf Alice} > {\sf Bob})', r'=', r'\mathbb P({\sf Bob} > {\sf Alice})',
+                     font_size=fs2, stroke_width=2).set_z_index(2.9)
+        eq3 = MathTex(r'\mathbb P({\sf Alice} = {\sf Bob})', r'=', r'10\%', r'\,?', stroke_width=2,
+                      font_size=fs2).set_z_index(2.9)
+        eq1.shift(124/1920 * wid * RIGHT + 23/1080 * hei * UP)
+        eq2 = eq1.copy().set_color(BLACK).set_z_index(2.8).set_stroke(width=20)
+        VGroup(eq1[0][2:7], eq1[2][-6:-1], eq3[0][2:7]).set_color(RED)
+        VGroup(eq1[2][2:5], eq1[0][-4:-1], eq3[0][8:11]).set_color(GREEN)
+        VGroup(eq1[0][0], eq1[2][0], eq3[0][0]).set_color(YELLOW)
+        VGroup(eq3[2][:-1]).set_color(BLUE)
+        eq3[3].set_color(PURE_RED)
+
+        mh.align_sub(eq3, eq3[1], eq1[1]).align_to(eq1, LEFT).shift(RIGHT)
+        eq4 = eq3.copy().set_z_index(2.8).set_color(BLACK).set_stroke(width=20)
+
+        self.play(FadeIn(eq1, eq2, rate_func=linear))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[0][:7], eq3[0][:7], eq1[0][8:], eq3[0][8:]),
+                  FadeOut(eq1[2], eq1[1]),
+                  mh.fade_replace(eq1[0][7], eq3[0][7]),
+                  mh.rtransform(eq2[0][:7], eq4[0][:7], eq2[0][8:], eq4[0][8:]),
+                  FadeOut(eq2[2], eq2[1]),
+                  mh.fade_replace(eq2[0][7], eq4[0][7])
+                  )
+        self.wait(0.1)
+        self.play(FadeIn(eq3[1:], eq4[1:]))
+
+        self.wait(0.1)
+        self.play(FadeOut(eq3, eq4))
