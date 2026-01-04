@@ -3,6 +3,7 @@ import numpy as np
 import math
 import sys
 import scipy as sp
+from numpy.random.mtrand import Sequence
 
 sys.path.append('../')
 import manimhelper as mh
@@ -16,10 +17,10 @@ class DigitGame(Scene):
     def construct(self):
         data = [[7, 5, 1, 8, 7, 8, 2, 9, 7, 7, 7, 9, 8, 4, 2, 6, 4, 3, 0, 7, 5, 5, 9, 6, 6, 8, 0, 5, 8, 1, 2, 7, 0, 8, 3, 1, 0, 3, 2, 3, 2, 9, 2, 1, 0, 1, 9, 9, 0, 7, 2, 6, 3, 7, 8, 2, 6, 7, 7, 9, 2, 7, 5, 3, 0, 5, 4, 3, 8, 9, 5, 8, 6, 7, 0, 4, 6, 8, 4, 8, 1, 9, 5, 4, 2, 3, 4, 7, 6, 6, 8, 0, 3, 5, 6, 1, 1, 6, 0, 8], [8, 15, 21, 26, 36, 46, 55, 57, 64, 74, 84, 86, 90, 98], [3, 11, 20, 25, 33, 41, 50, 52, 55, 57, 64, 74, 84, 86, 90, 98]]
         digits, alice_steps, bob_steps = data
-        digits[alice_steps[-1]] = 7
+        digits[alice_steps[-1]] = last_digit=7
         fs1 = 60
 
-        eq_digits = MathTex(''.join([str(_) + r'\,' for _ in digits]), font_size=fs1)[0].set_z_index(2)
+        eq_digits = MathTex(''.join([str(_) + r'\,' for _ in digits]), stroke_width=1.5, font_size=fs1)[0].set_z_index(2)
         eq_digits.set_color(BLUE)
         num_digits = len(digits)
         print(num_digits)
@@ -77,8 +78,9 @@ class DigitGame(Scene):
         num_alice = len(alice_steps)
 
         self.wait(0.1)
-        box2 = box1.copy().set_fill(opacity=0).set_stroke(width=4, color=RED, opacity=1)
+        box2 = box1.copy().set_fill(opacity=0).set_stroke(width=6, color=RED, opacity=1)
         alice_boxes = [box1]
+        first_10 = True
         for i in range(1, num_alice):
             j0 = j
             j = alice_steps[i]
@@ -90,8 +92,36 @@ class DigitGame(Scene):
             if i == 1:
                 rate_func=linear
                 dt *= 1.5
+            if first_10 and digits[j0] == 0:
+                rate_func=linear
+                dt *= 1.5
+                first_10 = False
+
             self.play(MoveToTarget(box), MoveToTarget(alice_small), run_time=dt, rate_func=rate_func)
             alice_boxes.append(box)
+
+        eq_alice1 = Tex(r"\sf Alice's", r' score', r'${}$'.format(last_digit), color=RED, font_size=80).set_z_index(4)
+        eq_alice1.set_stroke(width=2)
+        eq_alice1[1].next_to(eq_alice1[0], DOWN, buff=0.3)
+        eq_alice1[2].next_to(eq_alice1[:2], DOWN).set_color(YELLOW)
+        eq_alice1.next_to(bob, UP).next_to(eq_digits, LEFT, buff=0.3, coor_mask=RIGHT)
+        eq_alice2 = eq_alice1[:2].copy().set_color(WHITE).set_stroke(width=4).set_z_index(3.9)
+
+        eq_bob1 = Tex(r"\sf Bob's", r' score', r'${}$'.format(last_digit), color=GREEN, font_size=80).set_z_index(4)
+        eq_bob1.set_stroke(width=2)
+        eq_bob1[1].next_to(eq_bob1[0], DOWN)
+        eq_bob1[2].next_to(eq_bob1[:2], DOWN).set_color(YELLOW)
+        eq_bob1.move_to(-eq_alice1.get_center())
+        eq_bob1[0].align_to(eq_alice1[0], DOWN)
+        eq_bob1[1].align_to(eq_alice1[1], DOWN)
+        eq_bob1[2].align_to(eq_alice1[2], DOWN)
+        eq_bob2 = eq_bob1[:2].copy().set_color(WHITE).set_stroke(width=4).set_z_index(3.9)
+
+        self.wait(0.1)
+        self.play(Succession(Wait(1), FadeIn(eq_alice1[:2], eq_alice2, run_time=1)),
+                  mh.rtransform(eq_digits[j].copy().set_z_index(4), eq_alice1[2][0]),
+                  run_time=2)
+        self.wait(0.1)
 
         # bob stepping
         j = bob_steps[0]
@@ -110,13 +140,20 @@ class DigitGame(Scene):
             box = box4.copy().move_to(eq_digits[j0])
             box.generate_target().move_to(eq_digits[j])
             bob_small.generate_target().next_to(box.target, UP, buff=0.1)
+            anims = [MoveToTarget(box)]
             if i == num_bob - 1:
-                bob_small.target.shift(alice_small.width*0.5*RIGHT)
-            anims = [MoveToTarget(box), MoveToTarget(bob_small)]
+                bob_small.target.shift(alice_small.width*0.2*RIGHT)
+                anims.append(alice_small.animate(rate_func=rush_into).shift(alice_small.width*0.2*LEFT))
+            anims.append(MoveToTarget(bob_small))
             if j in alice_steps:
                 k = alice_steps.index(j)
                 anims.append(alice_boxes[k].animate(rate_func=rush_into).set_stroke(color=PINK))
             dt = max(np.linalg.norm(box.target.get_center() - box.get_center())*0.3, 0.8)
             self.play(*anims, run_time=dt)
+
+        self.wait(0.1)
+        self.play(Succession(Wait(1), FadeIn(eq_bob1[:2], eq_bob2, run_time=1)),
+                  mh.rtransform(eq_digits[j].copy().set_z_index(4), eq_bob1[2][0]),
+                  run_time=2)
 
         self.wait()
