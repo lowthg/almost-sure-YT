@@ -205,7 +205,7 @@ class CHSH(Scene):
         eq15 = MathTex(r'\le', r'3')
         eq16 = MathTex(r'{\sf observation\ }', r'O_{ij}', r'=', r'\begin{cases} \{A_i=B_j\} '
                                                                 r'{\sf\ if\ }i=1{\sf\ or\ }j=1 \\ '
-                                                                r'\{A_i=-B_j\} {\sf\ if\ }i=j=1 \end{cases}',
+                                                                r'\{A_i=-B_j\} {\sf\ if\ }i=j=2 \end{cases}',
                        font_size=59)
         eq17 = MathTex(r'\frac14\left(', r'\mathbb P(O_{11})', r'+', r'\mathbb P(O_{12})', r'+', r'\mathbb P(O_{21})', r'+',
                        r'\mathbb P(O_{22})', r'\right)', r'\le', r'3')
@@ -641,6 +641,22 @@ class AliceBob5(AliceBob):
         self.wait(0.1)
         self.wait()
 
+class AliceBob6(AliceBob):
+    def construct(self):
+        self.add_machine()
+        self.add(self.filters)
+        self.wait(0.1)
+        self.set_filters((45 * DEGREES, -22.5 * DEGREES))
+        self.wait(0.1)
+        self.emit_photons(angle=None, passthru=(False, True))
+        self.wait(0.1)
+        self.set_filters((0 * DEGREES, 0 * DEGREES))
+        self.wait(0.1)
+        self.set_filters((45 * DEGREES, 22.5 * DEGREES))
+        self.wait(0.1)
+        self.emit_photons(angle=None, passthru=(True, True))
+        self.wait()
+
 class PhotonMeasure(Scene):
     def __init__(self, *args, **kwargs):
         if not config.transparent:
@@ -766,12 +782,9 @@ class Experiment(Scene):
             config.background_color = GREY
         Scene.__init__(self, *args, *kwargs)
 
-    def construct(self):
-        eqAB = MathTex(r'\mathbb P(A=B)=\frac14', stroke_width=1.5)
-        eqAC = MathTex(r'\mathbb P(A=C)=\frac14', stroke_width=1.5).next_to(eqAB, DOWN).align_to(eqAB, LEFT)
-        eqBC = MathTex(r'\mathbb P(B=C)=\frac14', stroke_width=1.5).next_to(eqAC, DOWN).align_to(eqAC, LEFT)
-        VGroup(eqAB, eqAC, eqBC).to_edge(UR)
+    draw_all = True
 
+    def construct(self):
         len=0.8
         left_buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER * 0.5
 
@@ -834,11 +847,14 @@ class Experiment(Scene):
                                     stroke_opacity=0, stroke_width=0, fill_color=BLACK,
                                     fill_opacity=0.6, corner_radius=0.2, buff=0.1)
         box2 = box1.copy().shift(box1.get_center()*2*LEFT)
+
+        if not self.draw_all:
+            VGroup(box1, box2, expA1, expA2, expB1, expB2).set_opacity(0)
+
         self.add(box1)
         self.wait(0.5)
         self.play(FadeIn(expA1), run_time=0.5)
         self.wait(0.5)
-
 
         p = expA2[1][:2]
         q = expA2[2]
@@ -879,10 +895,10 @@ class Experiment(Scene):
         lines_ = []
         lines = []
         for exp in [expA1, expB1, expB2, expA2]:
-            dot = exp[1][1].copy()
+            dot = exp[1][1].copy().set_opacity(1)
             p = dot.get_center()
             v = exp[1][0].get_end() - p
-            eq = exp[0].copy()
+            eq = exp[0].copy().set_opacity(1)
             lines_.append(VGroup(Arrow(p, p + v,
                    stroke_width=5, stroke_color=BLUE, buff=0).set_z_index(2), dot, eq))
             lines.append(VGroup(Arrow(ORIGIN, v*2.8, stroke_width=5, stroke_color=BLUE, buff=0).set_z_index(2),
@@ -890,6 +906,8 @@ class Experiment(Scene):
 
         box3 = SurroundingRectangle(VGroup(*lines), stroke_opacity=0, stroke_width=0,
                                    fill_opacity=0.6, fill_color=BLACK, corner_radius=0.2)
+        if not self.draw_all:
+            box3.set_opacity(0)
         VGroup(box3, *lines).to_edge(DOWN, buff=0.1)
 
         angles = [-1, 0, -2]
@@ -935,8 +953,260 @@ class Experiment(Scene):
         self.wait(0.1)
 
         self.play(FadeIn(arr1, arc1, eq1, rang, run_time=1))
+        self.wait(0.1)
+        self.play(FadeOut(arr1, arc1, eq1, rang, box4, lines[2], lines[3], *arcs, eq2))
 
         self.wait()
+
+class ExperimentArr(Experiment):
+    draw_all = False
+
+class Experiment2(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+            config.background_color = GREY
+        Scene.__init__(self, *args, *kwargs)
+
+    def construct(self):
+        len=0.8
+        left_buff = DEFAULT_MOBJECT_TO_EDGE_BUFFER * 0.5
+
+        dot = Dot(radius=0.15, z_index=3)
+        arr = DoubleArrow(dot.get_center()+DOWN * len, dot.get_center()+UP * len, color=BLUE, buff=0).set_z_index(2)
+        photon = VGroup(arr, dot)
+        filt = create_filter().next_to(photon, RIGHT, buff=0.7).set_z_index(1)
+
+        expA1 = VGroup(*[photon, filt]).to_edge(UP).to_edge(LEFT, buff=left_buff)
+
+        pA2 = photon.copy()
+        p = pA2[1].get_center()
+        arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=-45 * DEGREES, radius=len).set_z_index(1)
+        l1 = DashedLine(p, p + UP * len*0.95).set_z_index(1)
+        pA2.add(arc, l1)
+
+        expA2 = VGroup(pA2,
+                     filt.copy()).next_to(expA1, DOWN, coor_mask=UP)
+        expA2[0][:2].rotate(-45*DEGREES)
+        expA2[1].rotate(-45*DEGREES)
+        box1 = SurroundingRectangle(VGroup(expA1, expA2, expA2[1].copy().rotate(-45*DEGREES)),
+                                    stroke_opacity=0, stroke_width=0, fill_color=BLACK,
+                                    fill_opacity=0.6, corner_radius=0.2, buff=0.1)
+        VGroup(box1, expA1, expA2).to_edge(LEFT, buff=0.1)
+
+        pB1 = photon.copy()
+        p = pB1[1].get_center()
+        #arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=-22.5 * DEGREES, radius=len).set_z_index(1)
+        l1 = DashedLine(p, p + UP * len*0.95, z_index=1)
+        pB1.add(l1)
+
+        expB1 = VGroup(pB1,
+                     filt.copy())
+        expB1[0].shift(expB1[0][:2].get_center()*2*LEFT)
+        expB1[1].shift(expB1[1].get_center()*2*LEFT)
+
+        pB2 = expB1[0][:2].copy()
+        p = pB2[1].get_center()
+        arc = Arc(arc_center=p, start_angle=90 * DEGREES, angle=22.5 * DEGREES, radius=len).set_z_index(1)
+        pB2.add(arc, l1.copy())
+
+        expB2 = VGroup(pB2,
+                     expB1[1].copy())
+        mh.align_sub(expB2, expB2[0], expA2[0], coor_mask=UP)
+
+        box2 = box1.copy().shift(box1.get_center()*2*LEFT)
+        self.add(box1, expA1, expA2, box2)
+
+        t_val = ValueTracker(0.)
+        p0 = expA1[1].get_center()
+        p1 = expB1[1].get_center()
+        q0 = expA1[0][1].get_center()
+        q1 = expB1[0][1].get_center()
+        r0 = expA2[1].get_center()
+        r1 = expB2[1].get_center()
+        s0 = expA2[0][1].get_center()
+        s1 = expB2[0][1].get_center()
+
+        def f():
+            t = t_val.get_value()
+            p2 = p1 * t + p0 * (1-t)
+            q2 = q1 * t + q0 * (1-t)
+            mov = expB1[0].copy().move_to(q2)
+            mov[:2].rotate(-22.5*DEGREES*t)
+            arc1 = Arc(arc_center=mov[1].get_center(), start_angle=90 * DEGREES, angle=-22.5 * DEGREES*t, radius=len).set_z_index(1)
+
+            r2 = r1 * t + r0 * (1-t)
+            s2 = s1 * t + s0 * (1-t)
+            mov2 = expA2[0].copy().shift(s2-s0)
+            mov2[:2].rotate(67.5*DEGREES*t)
+            arc2 = Arc(arc_center=mov2[1].get_center(), start_angle=90 * DEGREES, angle=(67.5*t-45) * DEGREES, radius=len).set_z_index(1)
+            return VGroup(expA1[1].copy().rotate(-22.5*DEGREES*t).move_to(p2),
+                          mov, arc1,
+                          expA2[1].copy().rotate(67.5*DEGREES*t).move_to(r2),
+                          mov2[:2], mov2[3], arc2)
+
+        mov_b1 = always_redraw(f)
+
+        self.wait(0.1)
+        self.add(mov_b1)
+        self.play(t_val.animate.set_value(1),
+                  run_time=2)
+        mov_b1.clear_updaters()
+        self.wait()
+        return
+
+
+class ExperimentCalc(Experiment):
+    def construct(self):
+        MathTex.set_default(font_size=70)
+
+        eq0 = MathTex(r'{\sf if\ }', r'i=1', r'{\sf\ or\ }', r'j=1', font_size=60).set_z_index(1)
+        eq1 = MathTex(r'\mathbb P(A_i=B_j)', r'=', r'\cos^2(22.5^\circ)').set_z_index(1)
+        eq2 = MathTex(r'\mathbb P(A_i=B_j)', r'=', r'\left(1+\cos(45^\circ)\right)/2').set_z_index(1)
+        eq3 = MathTex(r'\left(1+1/\sqrt{2}\right)/2')[0].set_z_index(1)
+        eq4 = MathTex(r'=', r'0.85\ldots').set_z_index(1)
+        eq5 = MathTex(r'\mathbb P(A_2=B_2)', r'=', r'\cos^2(67.5^\circ)').set_z_index(1)
+        eq6 = MathTex(r'\mathbb P(A_2\not=B_2)', r'=', r'1-', r'\cos^2(67.5^\circ)').set_z_index(1)
+        eq7 = MathTex(r'=', r'\sin^2(67.5^\circ)').set_z_index(1)
+        eq8 = MathTex(r'=', r'\cos^2(22.5^\circ)').set_z_index(1)
+
+        colA = PURE_RED
+        colB = PURPLE
+        col1 = GREEN
+        VGroup(eq1[0][2], eq2[0][2], eq5[0][2], eq6[0][2]).set_color(colA)
+        VGroup(eq1[0][5], eq2[0][5], eq5[0][5], eq6[0][6]).set_color(colB)
+        VGroup(eq1[0][3], eq1[0][6], eq2[0][3], eq2[0][6], eq0[1][0], eq0[3][0],
+               eq5[0][3], eq5[0][6], eq6[0][3], eq6[0][7], eq7[1][3], eq8[1][3]).set_color(col1)
+        VGroup(eq1[2][:3], eq2[2][3:6], eq5[2][:3], eq6[3][:3], eq7[1][:3], eq8[1][:3]).set_color(ORANGE)
+        VGroup(eq1[0][0], eq2[0][0], eq0[0], eq0[2], eq5[0][0], eq6[0][0]).set_color(YELLOW)
+        VGroup(eq1[2][3], eq2[2][1], eq2[2][-1], eq3[1], eq3[3], eq3[-1], eq3[-4], eq4[1][0], eq4[1],
+               eq0[1][-1], eq0[3][-1], eq5[2][3], eq6[3][3], eq6[2][0]).set_color(BLUE)
+        VGroup(eq1[2][5:9], eq2[2][7:9], eq5[2][5:9], eq6[3][5:9], eq7[1][5:9], eq8[1][5:9]).set_color(GREEN_B)
+        VGroup(eq1[2][9], eq2[2][9], eq5[2][9], eq6[3][9], eq7[1][9], eq8[1][9]).set_color(RED)
+
+        eq9 = eq4.copy()
+
+        eq0.next_to(eq1[0], UP, buff=0.2).align_to(eq1, LEFT)
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.align_sub(eq3, eq3[2], eq2[2][2])
+        #mh.align_sub(eq3[-3:], eq3[-3], eq2[2][-3], coor_mask=RIGHT)
+        eq3[-3:].align_to(eq2[2], RIGHT)
+        eq3[3:-3].move_to(eq2[2][3:-3], coor_mask=RIGHT)
+        mh.align_sub(eq4, eq4[0], eq2[1])
+        eq5.next_to(eq1[0], DOWN, buff=0.3).align_to(eq1, LEFT)
+        mh.align_sub(eq6, eq6[1], eq5[1]).align_to(eq1, LEFT)
+        mh.align_sub(eq7, eq7[0], eq5[1])
+        mh.align_sub(eq8, eq8[0], eq5[1])
+        mh.align_sub(eq9, eq9[0], eq5[1])
+
+        gp = VGroup(eq0, eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9)
+        box_args = {'stroke_width': 0, 'stroke_opacity': 0, 'fill_color': BLACK, 'fill_opacity': 0.6, 'corner_radius': 0.2}
+        box5 = SurroundingRectangle(gp, **box_args)
+        VGroup(box5, gp).to_edge(DOWN, buff=0.1).to_edge(LEFT, buff=0.1)
+        box1 = SurroundingRectangle(VGroup(eq0, eq1, eq6[0]), **box_args)
+        box2 = SurroundingRectangle(VGroup(eq0, eq2, eq6[0]), **box_args)
+        box3 = SurroundingRectangle(VGroup(eq0, eq6), **box_args)
+        box4 = SurroundingRectangle(VGroup(eq0, eq5[0], eq9), **box_args)
+
+        self.add(box1, eq1, eq0)
+        self.wait(0.1)
+        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:3], eq2[2][3:6], eq1[2][4], eq2[2][6],
+                                eq1[2][-2:], eq2[2][-5:-3], box1, box2),
+                  mh.fade_replace(eq1[2][5:9], eq2[2][7:9]),
+                  FadeOut(eq1[2][3], shift=mh.diff(eq1[2][2], eq2[2][5])), run_time=1.2),
+                              FadeIn(eq2[2][:3], eq2[2][-3:], run_time=1.2), lag_ratio=0.4))
+        self.wait(0.1)
+        self.play(FadeOut(eq2[2][3:-3]), FadeIn(eq3[3:-3]),
+                  mh.rtransform(eq2[2][1:3], eq3[1:3], eq2[2][-2:], eq3[-2:]),
+                  mh.stretch_replace(eq2[2][0], eq3[0], eq2[2][-3], eq3[-3]))
+        self.wait(0.1)
+        self.play(FadeOut(eq3), FadeIn(eq4[1]), mh.rtransform(box2, box3, rate_func=rush_into), run_time=1.2)
+        self.wait(0.1)
+        self.play(FadeIn(eq5))
+        self.wait(0.1)
+        self.play(LaggedStart(AnimationGroup(mh.rtransform(eq5[0][:4], eq6[0][:4], eq5[0][-4:], eq6[0][-4:],
+                                eq5[1], eq6[1], eq5[2], eq6[3]),
+                  FadeIn(eq6[0][4]), run_time=1), FadeIn(eq6[2], run_time=1), lag_ratio=0.4))
+        self.wait(0.1)
+        self.play(LaggedStart(FadeOut(eq6[2], run_time=1), AnimationGroup(mh.rtransform(eq6[3][3:], eq7[1][3:]),
+                  mh.fade_replace(eq6[3][:3], eq7[1][:3]), run_time=1), lag_ratio=0.3))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7[1][3:5], eq8[1][3:5], eq7[1][-4:], eq8[1][-4:]),
+                  mh.fade_replace(eq7[1][:3], eq8[1][:3], coor_mask=RIGHT),
+                  mh.fade_replace(eq7[1][5:7], eq8[1][5:7], coor_mask=RIGHT))
+        self.wait(0.1)
+        self.play(FadeIn(eq9[1]), FadeOut(eq8[1]), mh.rtransform(box3, box4))
+        self.wait()
+
+class QuantumCollapse(ThreeDScene):
+    #def __init__(self, *args, **kwargs):
+    #    if config.transparent:
+    #        config.background_color = BLACK
+    #    ThreeDScene.__init__(self, *args, **kwargs)
+    def construct(self):
+        #self.set_camera_orientation(phi=PI/2, theta=-PI/2)
+        self.set_camera_orientation(phi=50 * DEGREES, theta=90 * DEGREES)
+
+        xmax = 3
+        xscale = 1.7
+        zscale = 1.5
+
+        t_start = 0.
+        t_end = 2*PI/8
+        run_time = .5
+
+        levels = [
+            (0, 0),
+            (0, 1),
+            (1, 0),
+            (0, 2),
+            (1, 1),
+            (2, 0),
+            (2, 1),
+        ]
+        coeffs0 = [1., 1., 0.6 + 0.8j, 1, 0.8 - 0.6j, 1j, 1]
+
+        levels = [(0, 0)]
+        coeffs0 = [1.]
+
+        nlevels = len(levels)
+        norm = math.sqrt(sum([_.imag * _.imag + _.real * _.real for _ in coeffs0]))
+        coeffs0 = [_/norm for _ in coeffs0]
+
+
+        energies = [l[0] + l[1] for l in levels]
+        polys = [[np.polynomial.Hermite([0] * n + [1]) for n in l] for l in levels]
+        coeffs = [0j] * nlevels
+
+        def f(x, y):
+            #psi = 0. + 0j
+            #for i in range(nlevels):
+            #    psi += coeffs[i] * polys[i][0](x) * polys[i][1](y)
+            #z = math.sqrt(psi.real * psi.real + psi.imag * psi.imag)
+            #z = psi.real
+            #z *= math.exp(-0.5 * (x*x+y*y))
+
+            z = math.exp(-8*(x*x+y*y))*2.8
+
+            return (x * RIGHT + y * UP) * xscale + z * OUT * zscale
+
+        gp = VGroup(VGroup())
+
+        tval = ValueTracker(t_start)
+
+        def redraw():
+            t = tval.get_value()
+            for i in range(nlevels):
+                coeffs[i] = np.exp(energies[i] * 1j * -t) * coeffs0[i]
+            surf2 = Surface(f, u_range=[-xmax, xmax], v_range=[-xmax, xmax], fill_opacity=0.7,
+                          stroke_opacity=1, stroke_color=RED, stroke_width=4, checkerboard_colors=[RED_D, RED_E])
+            surf2.shift(DOWN*0.3)
+            gp[0] = surf2
+            return surf2
+
+        surf1 = always_redraw(redraw)
+        self.add(surf1)
+
+        self.play(tval.animate.set_value(t_end), run_time=run_time, rate_func=linear)
 
 
 if __name__ == "__main__":
