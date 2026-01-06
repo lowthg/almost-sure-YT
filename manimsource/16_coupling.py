@@ -292,6 +292,173 @@ class AliceBobDraw(AliceBobEqual):
 
         self.wait()
 
+class CouplingEst(AliceBobDraw):
+    def construct(self):
+        MathTex.set_default(font_size=self.fs2, stroke_width=2)
+        eq1 = MathTex(r'\mathbb E[{\sf step\ size}]', r'=', r'\frac12(1+10)')
+        eq2 = MathTex(r'\mathbb E[{\sf step\ size}]', r'=', r'5.5')
+        eq3 = MathTex(r'\mathbb P({\sf Alice\ hits\ }k)', r'\approx', r'1/5.5')
+        eq4 = MathTex(r'\mathbb P({\sf Alice\ hits\ }k)', r'\approx', r'0.182')
+        eq5 = MathTex(r'{\sf num\ steps}', r'\approx', r'100/5.5')
+        eq6 = MathTex(r'{\sf num\ steps}', r'\approx', r'18.2')
+        eq7 = MathTex(r'\mathbb P({\sf no\ coupling})', r'\approx', r"\mathbb P({\sf Alice\ doesn't\ hit\ }k)",
+                      r'^{\sf num\ steps}', font_size=65)
+        eq8 = MathTex(r'\mathbb P({\sf no\ coupling})', r'\approx', r"(1-0.182)", r'^{\sf num\ steps}')
+        eq9 = MathTex(r'\mathbb P({\sf no\ coupling})', r'\approx', r"(1-0.182)", r'^{18.2}')
+        eq10 = MathTex(r'\mathbb P({\sf no\ coupling})', r'\approx', r'2.6\%')
+        eq11 = MathTex(r'\mathbb P({\sf coupling})', r'\approx', r'97.4\%')
+
+        VGroup(eq1[0][0], eq3[0][0], eq7[0][0], eq7[2][0], eq11[0][0]).set_color(YELLOW)
+        VGroup(eq3[0][2:7], eq7[2][2:7]).set_color(RED)
+        VGroup(eq1[2][0], eq1[2][2], eq1[2][4], eq1[2][6:8], eq2[2], eq5[2][:3], eq3[2][0], eq3[2][2:],
+               eq5[2][-3:], eq4[2], eq6[2], eq8[2][1], eq8[2][3:-1], eq9[3], eq10[2][:-1], eq11[2][:-1]).set_color(BLUE)
+        VGroup(eq3[0][-2], eq7[2][-2]).set_color(PURPLE)
+        VGroup(eq7[0][2:-1], eq11[0][2:-1]).set_color(ORANGE)
+        VGroup(eq5[0], eq6[0], eq1[0][2:-1], eq7[3], eq8[3]).set_color(TEAL)
+        copy_colors(eq2[0], eq1[0])
+        copy_colors(eq4[0], eq3[0])
+        copy_colors(eq8[0], eq7[0])
+        copy_colors(eq10[0], eq7[0])
+
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        eq3.next_to(eq2, DOWN, buff=0.5)
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(Succession(Wait(0.2), mh.rtransform(eq1[:2], eq2[:2])),
+                  mh.fade_replace(eq1[2], eq2[2], coor_mask=RIGHT))
+        self.wait(0.1)
+        VGroup(eq2.generate_target(), eq3).move_to(ORIGIN)
+        self.play(MoveToTarget(eq2), Succession(Wait(0.2), FadeIn(eq3)))
+        self.wait(0.1)
+
+        mh.align_sub(eq4, eq4[1], eq3[1])
+
+        self.play(mh.rtransform(eq3[:2], eq4[:2]),
+                  mh.fade_replace(eq3[2], eq4[2], coor_mask=RIGHT))
+        self.wait(0.1)
+        gp1 = VGroup(eq2, eq4)
+        eq5.next_to(eq4, DOWN, buff=0.5)
+        VGroup(gp1.generate_target(), eq5).move_to(ORIGIN)
+        self.play(MoveToTarget(gp1), FadeIn(eq5))
+        self.wait(0.1)
+        mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
+        self.play(mh.rtransform(eq5[:2], eq6[:2]),
+                  mh.fade_replace(eq5[2], eq6[2], coor_mask=RIGHT))
+        self.wait(0.1)
+        gp1 = VGroup(eq2, eq4, eq6)
+        eq7.next_to(eq6, DOWN, buff=0.5)
+        VGroup(gp1.generate_target(), eq7).move_to(ORIGIN)
+        self.play(MoveToTarget(gp1), FadeIn(eq7))
+        self.wait(0.1)
+
+        eq8.align_to(eq7, UP)
+        mh.align_sub(eq9, eq9[2][-1], eq8[2][-1])
+        mh.align_sub(eq10, eq10[1], eq9[1], coor_mask=UP)
+        mh.align_sub(eq11, eq11[1], eq9[1], coor_mask=UP)
+
+        self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][1], eq8[2][0], eq7[2][-1], eq8[2][-1],
+                                eq7[3], eq8[3], eq4[2][:].copy(), eq8[2][3:8]),
+                  FadeOut(eq7[2][0], shift=mh.diff(eq7[2][1], eq8[2][0])),
+                  FadeOut(eq7[2][2:-1], shift=mh.diff(eq7[2][2:-1], eq8[2][1:-1])),
+                  FadeIn(eq8[2][1:3], shift=mh.diff(eq7[2][1], eq8[2][0])),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(mh.stretch_replace(eq6[2][:].copy(), eq9[3][:]),
+                  FadeOut(eq8[3]),
+                  run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq8[:2], eq10[:2]),
+                  mh.fade_replace(eq8[2], eq10[2], coor_mask=RIGHT),
+                  FadeOut(eq9[3], shift=mh.diff(eq8[2], eq10[2])),
+                  run_time=1.2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq10[0][:2], eq11[0][:2], eq10[0][4:], eq11[0][2:],
+                                eq10[1], eq11[1], eq10[2][-1], eq11[2][-1]),
+                  FadeOut(eq10[0][2:4]),
+                  mh.fade_replace(eq10[2][:-1], eq11[2][:-1], coor_mask=RIGHT),
+                  run_time=1.6)
+        self.wait(0.1)
+        circ = mh.circle_eq(eq11, color=GREEN).set_z_index(2).scale(1.05)
+        self.play(Create(circ), run_time=0.8)
+
+        self.wait()
+
+class AliceBobBound(AliceBobDraw):
+    bg_color = GREY
+
+    def construct(self):
+        MathTex.set_default(font_size=self.fs2, stroke_width=2)
+        eq1 = MathTex(r"\lvert", r"\mathbb P({\sf Alice's\ score} = k)", r"-",
+                      r"\mathbb P({\sf Bob's\ score} = k)", r"\rvert",
+                      r'\le', r"\mathbb P({\sf Alice's\ score} \not={\sf Bob's\ score})").set_z_index(2)
+        eq2 = MathTex(r"\mathbb P({\sf not\ coupled})")[0].set_z_index(2)
+        eq3 = MathTex(r"\lvert", r"\mathbb P({\sf Alice\ hits\ } k)", r"-",
+                      r"\mathbb P({\sf Bob\ hits\ } k)", r"\rvert",
+                      r'\le', r"\mathbb P({\sf coupling\ time} > k)").set_z_index(2)
+
+
+        VGroup(eq1[1][0], eq1[3][0], eq1[6][0], eq2[0],
+               eq3[1][0], eq3[3][0], eq3[6][0]).set_color(YELLOW)
+        VGroup(eq1[1][2:14], eq1[6][2:14], eq3[1][2:7]).set_color(RED)
+        VGroup(eq2[2:-1], eq3[6][2:-3]).set_color(ORANGE)
+        VGroup(eq1[3][2:12], eq1[6][16:26], eq3[3][2:5]).set_color(GREEN)
+        VGroup(eq1[1][15], eq1[3][13], eq3[1][-2], eq3[3][-2], eq3[6][-2]).set_color(PURPLE)
+
+        eq1[5:].next_to(eq1[:5], DOWN, buff=0.2)
+        eq1[6:].next_to(eq1[5], DOWN, buff=0.2)
+        eq1[:5].move_to(ORIGIN, coor_mask=RIGHT)
+        eq1[5].move_to(ORIGIN, coor_mask=RIGHT)
+        eq1[6:].move_to(ORIGIN, coor_mask=RIGHT)
+        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK,
+                                    corner_radius=0.15, buff=0.2)
+        VGroup(box1, eq1).to_edge(DOWN, buff=0.2)
+
+        mh.align_sub(eq2, eq2[0], eq1[6][0], coor_mask=UP)
+        mh.align_sub(eq3[:5].move_to(ORIGIN), eq3[2], eq1[2], coor_mask=UP)
+        eq3[5].move_to(eq1[5])
+        mh.align_sub(eq3[6].move_to(ORIGIN), eq3[6][0], eq2[0], coor_mask=UP)
+
+        eq1_1 = eq1[:5].copy().move_to(eq1, coor_mask=UP)
+        VGroup(eq1_1[0], eq1_1[4]).set_opacity(0)
+        self.add(box1, eq1_1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1_1, eq1[:5]),
+                  FadeIn(eq1[5:]),
+                  run_time=1.2)
+        self.wait(0.1)
+        self.play(Succession(Wait(0.6), mh.rtransform(eq1[6][:2], eq2[:2], eq1[6][-1], eq2[-1])),
+                  mh.fade_replace(eq1[6][2:-1], eq2[2:-1], coor_mask=RIGHT, run_time=1.4),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[2], eq3[2], eq1[0], eq3[0], eq1[4:6], eq3[4:6],
+                                eq1[1][:7], eq3[1][:7], eq1[3][-2:], eq3[3][-2:],
+                                eq1[1][-2:], eq3[1][-2:], eq1[3][:5], eq3[3][:5]),
+                  mh.fade_replace(eq1[1][7:-2], eq3[1][7:-2], coor_mask=RIGHT),
+                  mh.fade_replace(eq1[3][5:-2], eq3[3][5:-2], coor_mask=RIGHT),
+                  run_time=1.4)
+        self.play(mh.rtransform(eq2[:2], eq3[6][:2], eq2[-1], eq3[6][-1]),
+                  mh.fade_replace(eq2[2:-1], eq3[6][2:-1], coor_mask=RIGHT))
+        self.wait()
+
+class AliceStationary(AliceBobDraw):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=self.fs2)
+        eq1 = MathTex(r'\mathbb P({\sf start}=k)', r'=', r'0.1').set_z_index(1)
+        eq2 = MathTex(r'=', r'(11-k)/55').set_z_index(1)
+
+        eq1[0][0].set_color(YELLOW)
+        VGroup(eq1[0][2:7]).set_color(RED)
+        VGroup(eq1[0][-2], eq2[1][4]).set_color(PURPLE)
+        VGroup(eq1[2], eq2[1][1:3], eq2[1][-2:]).set_color(BLUE)
+
+        mh.align_sub(eq2, eq2[0], eq1[1])
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(FadeOut(eq1[2]), FadeIn(eq2[1]))
+        self.wait()
+
 def get_box(ax, i, h):
     bl = ax.coords_to_point(i + 0.15, 0)
     ur = ax.coords_to_point(i + 1, h)
@@ -300,23 +467,22 @@ def get_box(ax, i, h):
     box.next_to(bl, UR, buff=0)
     return box
 
-
 class ProbFinal(Scene):
+    xlen = 8.
     ylen = 4
     height = 10/55
 
     def get_axes(self, x_str, x_max=11):
-        xlen = 8.
-        ax = Axes(x_range=[0, x_max], y_range=[0, self.height * 1.2], x_length=xlen, y_length=self.ylen,
+        ax = Axes(x_range=[0, x_max], y_range=[0, self.height * 1.2], x_length=self.xlen, y_length=self.ylen,
                   axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                },
                   #                  shade_in_3d=True,
                   ).set_z_index(1)
-        labely = Tex(r'\sf probability', color=YELLOW, font_size=40).set_z_index(2)
+        labely = Tex(r'\sf probability', color=YELLOW, font_size=40).set_z_index(3)
         labely.next_to(ax.y_axis.get_end(), RIGHT)
-        labelx = Tex(*x_str, color=YELLOW, font_size=40).set_z_index(2)
+        labelx = Tex(*x_str, color=YELLOW, font_size=40).set_z_index(3)
         labelx[1].next_to(labelx[0], DOWN, buff=0.2)
         labelx.next_to(ax.x_axis.get_end(), LEFT, buff=-0.1)#.shift(RIGHT*0.2)
 
@@ -354,7 +520,11 @@ class ProbFinal(Scene):
         self.wait()
 
 class StationaryPlot(ProbFinal):
-    num_steps = 3
+    xlen = 12.
+    ylen = 6.
+    fade_line2 = True
+
+    num_steps = 10
     heights1 = [_/55 for _ in range(10, 0, -1)]
 
     def plot_extra(self, ax):
@@ -364,8 +534,10 @@ class StationaryPlot(ProbFinal):
         heights0 = [0.1] * 10
         heights1 = self.heights1
 
-        ax, labely, labelx = self.get_axes([r'\sf first', r'place'], x_max=12)
+        ax, labely, labelx = self.get_axes([r'\sf next', r'position'], x_max=12)
         ax.set_z_index(10)
+        labels = [self.get_label(ax, i, i + 1) for i in range(10)]
+        VGroup(ax, labelx, labely, *labels).move_to(ORIGIN)
 
         boxes0 = [get_box(ax, i, h) for i, h in enumerate(heights0)]
         boxes1 = [get_box(ax, i, h) for i, h in enumerate(heights1)]
@@ -375,16 +547,23 @@ class StationaryPlot(ProbFinal):
         p0 = ax.coords_to_point(0, 0.1818)
         line2 = DashedLine(p0, ax.coords_to_point(11, 0.1818), stroke_width=3, stroke_color=YELLOW).set_z_index(6)
         label2 = MathTex(r'0.18', font_size=40, color=YELLOW).next_to(line2.get_end(), UL, buff=0.1).shift(LEFT*0.2)
-        labels = [self.get_label(ax, i, i + 1) for i in range(10)]
+
         label3 = labels[-1]
         VGroup(label3[0][0], label3[1][0]).shift(RIGHT * 0.02)
         VGroup(label3[0][1], label3[1][1]).shift(LEFT * 0.02)
 
-        self.add(ax, labely, labelx, *boxes0, line1, label1, *labels)
+        add1 = [ax, labely, labelx, *boxes0, line1, label1, *labels]
+        anims1 = [ReplacementTransform(b1, b2) for b1, b2 in zip(boxes0, boxes1)]
+
+        if self.fade_line2:
+            anims1.append(FadeIn(line2, label2))
+        else:
+            add1 += [line2, label2]
+
+        self.add(*add1)
         self.wait(0.1)
         self.plot_extra(ax)
-        self.play(*[ReplacementTransform(b1, b2) for b1, b2 in zip(boxes0, boxes1)],
-                  FadeIn(line2, label2), run_time=1.6)
+        self.play(*anims1, run_time=1.6)
 
         for _ in range(self.num_steps):
             self.play(boxes1[0].animate.set_fill(color=RED), run_time=0.6)
@@ -424,11 +603,11 @@ class StationaryPlot(ProbFinal):
         self.wait()
 
 class StationaryConv(StationaryPlot):
-    height = 10/55 * 1.13
-    ylen = 4 * 1.13
+#    height = 10/55 * 1.13 * 0.9
+#    ylen = 6 * 1.13 * 0.9
     num_steps = 20
     heights1 = [0.1] * 10
-
+    fade_line2 = False
     def plot_extra(self, ax):
         lines = []
         for i in range(10):
