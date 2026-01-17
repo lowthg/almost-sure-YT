@@ -20,18 +20,24 @@ dist = 15.366
 def mnpos(x, y, z=0.):
     return x * mn.RIGHT + y * mn.UP + z * mn.IN
 
-def fade_dist(grid_dots, grid_lines, z_dir, z0, fade_rate=0.25, line_op=1.):
+def fade_dist(grid_dots, grid_desc, col, z_dir, z0, fade_rate=0.25, line_op=1.):
     for dot in grid_dots:
         h = torch.inner(dot.get_center(), z_dir).item()
         op = max(1. - max(h - z0, 0.) * fade_rate, 0.)
         dot.set_opacity(op)
-    for i, line in enumerate(grid_lines):
-        loc = line.get_center()
-        op = (1 + z0*fade_rate - torch.inner(loc, z_dir) * fade_rate).clamp(0, 1) * line_op
-        line.set_opacity(op)
+    h0 = torch.inner(grid_desc.location, z_dir[0])
+    op = ((1+z0*fade_rate) - h0 * 0.25).clamp(0,1) * line_op
+    col2 = col.clone()
+    col2[:, :, 4] *= op[:,:,0]
+    grid_desc.set_non_recursive(color=col2)
+
+    # for i, line in enumerate(grid_lines):
+    #     loc = line.get_center()
+    #     op = (1 + z0*fade_rate - torch.inner(loc, z_dir) * fade_rate).clamp(0, 1) * line_op
+    #     line.set_opacity(op)
 
 
-def create_mesh(line_col=mn.GREY, dot_col=mn.RED, line_op=0.6, x_range=(-15,14), y_range=(-11, 14)):
+def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=(-11, 14)):
     h = 0.6
     nx = 1 + x_range[1] - x_range[0]
     ny = 1 + y_range[1] - y_range[0]
@@ -48,32 +54,38 @@ def create_mesh(line_col=mn.GREY, dot_col=mn.RED, line_op=0.6, x_range=(-15,14),
         for y in y_points:
             grid_dots.append(dot1.clone().move_to(x*RIGHT+y*UP))
             grid_indices.append((int(round(x/h)), int(round(y/h))))
-    for x in x_points:
-        y0 = y_points[0]
-        for i in range(1, ny):
-            y1 = y_points[i]
-            grid_lines.append(ManimMob(mn.Line(mnpos(x,y0, -0.01), mnpos(x, y1, -0.01), stroke_width=line_width,
-                                      stroke_color=line_col, stroke_opacity=line_op)))
-            y0 = y1
-    for y in y_points:
-        x0 = x_points[0]
-        for i in range(1, nx):
-            x1 = x_points[i]
-            grid_lines2.append(ManimMob(mn.Line(mnpos(x0,y, -0.01), mnpos(x1, y, -0.01), stroke_width=line_width,
-                                      stroke_color=line_col, stroke_opacity=line_op)))
-            x0 = x1
+    # for x in x_points:
+    #     y0 = y_points[0]
+    #     for i in range(1, ny):
+    #         y1 = y_points[i]
+    #         grid_lines.append(ManimMob(mn.Line(mnpos(x,y0, -0.01), mnpos(x, y1, -0.01), stroke_width=line_width,
+    #                                   stroke_color=line_col, stroke_opacity=line_op)))
+    #         y0 = y1
+    # for y in y_points:
+    #     x0 = x_points[0]
+    #     for i in range(1, nx):
+    #         x1 = x_points[i]
+    #         grid_lines2.append(ManimMob(mn.Line(mnpos(x0,y, -0.01), mnpos(x1, y, -0.01), stroke_width=line_width,
+    #                                   stroke_color=line_col, stroke_opacity=line_op)))
+    #         x0 = x1
+    if mesh_col is None:
+        mesh_col = GREY.clone()
+        mesh_col[4] = 0.6
+    fill_col = BLUE.clone()
+    fill_col[4] = 0.2
+
+    surf = surface_func(nx=nx-1, ny=ny-1, mesh_m=32, mesh_n=32, mesh_col=mesh_col, fill_color=fill_col)
+    surf.scale(np.array([(nx-1)*h/2, (ny-1)*h/2, 1]))
+    surf.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
 
     grid_dots = Group(*grid_dots)
-    grid_lines = Group(*grid_lines, *grid_lines2)
+    #grid_lines = Group(*grid_lines, *grid_lines2)
 
-    return grid_dots, grid_lines, grid_indices
+    return grid_dots, surf, grid_indices
 
 def mesh_points(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True):
-    line_col=mn.GREY
     dot_col = mn.ManimColor(mn.RED)
-    line_op=0.6
-    grid_dots, _, grid_indices = create_mesh(line_col=line_col, dot_col=dot_col, line_op=line_op,
-                                                      y_range=(-9, 14))
+    grid_dots, _, grid_indices = create_mesh(dot_col=dot_col, y_range=(-9, 14))
 
     with Off():
         cam = Scene.get_camera()
@@ -155,11 +167,10 @@ def mesh_points(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 def mesh_points2(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, part=0):
-    line_col=mn.GREY
     dot_col = mn.ManimColor(mn.RED)
     line_op=0.6
-    grid_dots, grid_lines, grid_indices = create_mesh(line_col=line_col, dot_col=dot_col, line_op=line_op,
-                                                      y_range=(-9, 14), x_range=(-13, 14))
+    grid_dots, grid_lines, grid_indices = create_mesh(dot_col=dot_col,
+                                                      y_range=(-9, 14), x_range=(-15, 14))
 
     i0 = grid_indices.index((0, 0))
     i1 = grid_indices.index((1, 0))
@@ -218,8 +229,15 @@ def mesh_points2(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, part=0)
     N = ah.rotation_matrix(RIGHT, -120*DEGREES_TO_RADIANS)
     pt = IN + np.dot(M, (OUT*2+DOWN).numpy()) - np.dot(N, cam_shift[0])
 
+
     with Off():
-        grid_lines.spawn().set_opacity(0)
+        grid_lines.spawn()
+        p = grid_lines.get_descendants()[1]
+        col = p.color.clone()
+        p.color[:,:,4] = 0
+    #    col0 = col.clone()
+    #    col0[:,:,4] = 0
+
 
     run_time=1.
     with Sync(run_time=run_time):
@@ -235,27 +253,20 @@ def mesh_points2(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, part=0)
                 fps = quality.frames_per_second
                 t = run_time
                 n = round(fps * t)
+                n0 = 0
+                n1 = n
                 dt = 1. / fps
                 print('n =', n)
                 if part == 1:
                     n1 = int(n * 0.35) + 1
-                    n0 = 0
                 elif part == 2:
                     n0 = int(n * 0.35)
                     n1 = int(n * 0.7) + 1
                 elif part == 3:
-                    n1 = n
                     n0 = int(n * 0.7)
                 if n0 > 0:
                     with Sync(run_time=n0 * dt):
                         Scene.wait(n0 * dt)
-                    #u0 = mn.smooth(n0 / n)
-                    #Scene.wait(u0 * t)
-                    #with Sync(run_time=t*u0):
-                    #    cam.orbit_around_point(pt, 60 * u0, RIGHT).move(cam_shift * LEFT.numpy() * u0)
-                    #    z_dir = cam.get_forward_direction()
-                    #    z0 = torch.inner(cam.get_center(), z_dir).item() + 14.366 + 1
-                    #    fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op * u0)
 
                 u0 = 0.
                 for i in range(n0, n1):
@@ -266,7 +277,7 @@ def mesh_points2(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, part=0)
                         cam.orbit_around_point(pt, 60 * du, RIGHT).move(cam_shift*LEFT.numpy()*du)
                         z_dir = cam.get_forward_direction()
                         z0 = torch.inner(cam.get_center(), z_dir).item() + dist
-                        fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op * u)
+                        fade_dist(grid_dots, p, col, z_dir, z0, line_op=line_op * u)
                     u0 = u
 
         #cam.move_to(p_cam)
@@ -336,7 +347,7 @@ def setup_mesh(x_range=(-17, 14), y_range=(-11, 14)):
     line_col=mn.GREY
     dot_col = mn.ManimColor(mn.RED)
     line_op=0.6
-    grid_dots, grid_lines, grid_indices = create_mesh(line_col=line_col, dot_col=dot_col, line_op=line_op,
+    grid_dots, grid_lines, grid_indices = create_mesh(dot_col=dot_col,
                                                       y_range=y_range, x_range=x_range)
 
     M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
@@ -350,7 +361,10 @@ def setup_mesh(x_range=(-17, 14), y_range=(-11, 14)):
         z0 = torch.inner(cam.get_center(), z_dir).item() + dist
         grid_lines.spawn()
         grid_dots.spawn()
-        fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
+        #fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
+        p = grid_lines.get_descendants()[1]
+        col = p.color
+        fade_dist(grid_dots, p, col, z_dir, z0, line_op=line_op)
 
     return grid_dots, grid_lines, grid_indices
 
@@ -359,10 +373,14 @@ def mesh_points4(quality=LD, bgcol=BLACK):
 
     render_to_file('mesh_points4', render_settings=quality, background_color=bgcol)
 
+_fill_color = GREEN.clone()
+_fill_color[4] = 0.3
+
 def surface_func(mesh_col=DARK_BROWN,
                  nx=11, ny=11,
                  mesh_m=32,
                  mesh_n=32,
+                 fill_color=_fill_color
 ):
     m = mesh_m * ny - 1
     n = mesh_n * nx - 1
@@ -370,8 +388,7 @@ def surface_func(mesh_col=DARK_BROWN,
     for i1 in range(m):
         mesh_on1 = (i1+1) % mesh_m == 0
         for j1 in range(n):
-            t[i1, j1, :] =  GREEN
-            t[i1,j1,4] = 0.3
+            t[i1, j1, :] =  fill_color
             mesh_on = mesh_on1 or (j1+1) % mesh_n == 0
             if mesh_on:
                 t[i1, j1, :] = mesh_col
@@ -413,7 +430,7 @@ def mesh_func1(quality=LD, bgcol=BLACK):
     #surf0.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
     with Off():
         grid_dots.despawn()
-        grid_lines.despawn()
+        #grid_lines.despawn()
 
     p = surf.get_descendants()[1]
     loc = p.location.clone()
@@ -424,7 +441,7 @@ def mesh_func1(quality=LD, bgcol=BLACK):
     fade_rate=0.25
     h0 = torch.inner(loc, z_dir[0])
 
-    op = ((1+z0*fade_rate) - h0 * fade_rate).clamp(0,1)
+    op = ((1+z0*fade_rate) - h0 * 0.25).clamp(0,1)
     col[:, :, 4] *= op[:,:,0]
     xvals = loc[:, :, 0] / h
     yvals = loc[:, :, 1] / h
@@ -448,81 +465,19 @@ def mesh_func1(quality=LD, bgcol=BLACK):
         loc[:, :, 2] = -zvals
         p.set_non_recursive(location=loc)
         for index, dot in zip(grid_indices, func_dots):
-            dot.move(-f(*index)*IN)
+            dot.move(-2*f(*index)*IN)
 
     print('4')
 
     render_to_file('mesh_func1', render_settings=quality, background_color=bgcol)
 
 
-def mesh2d(quality=LD, bgcol=BLACK):
-    line_col=mn.GREY
-    dot_col = mn.ManimColor(mn.RED)
-    line_op=0.6
-    grid_dots, grid_lines, _ = create_mesh(line_col=line_col, dot_col=dot_col, line_op=line_op)
-
-    with Off():
-        cam = Scene.get_camera()
-        cam.set_distance_to_screen(10)
-
-    with Off():
-        grid_dots.spawn()
-
-    Scene.wait(0.5)
-    grid_lines.spawn()
-    Scene.wait(0.5)
-
-    fps = quality.frames_per_second
-    t = 1.
-    n = round(fps * t)
-    dt = 1. / fps
-
-    M = ah.rotation_matrix(RIGHT, -60*DEGREES_TO_RADIANS)
-    pt = IN + np.dot(M, (OUT*2+DOWN).numpy())
-
-    for i in range(n):
-        print('rot1', i)
-        u = mn.smooth((i+1)/n)
-        u0 = mn.smooth(i/n)
-        du = u - u0
-        with Sync(rate_func=rate_funcs.identity, run_time=dt):
-            cam.orbit_around_point(pt, 60*du, RIGHT)
-            z_dir = cam.get_forward_direction()
-            z0 = torch.inner(cam.get_center(), z_dir).item() + dist
-            fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
-    for i in range(n):
-        print('rot2', i)
-        u = mn.smooth((i+1)/n)
-        u0 = mn.smooth(i/n)
-        du = u - u0
-        with Sync(rate_func=rate_funcs.identity, run_time=dt):
-            cam.orbit_around_point(ORIGIN, 30*du, IN)
-            z_dir = cam.get_forward_direction()
-            z0 = torch.inner(cam.get_center(), z_dir).item() + dist
-            fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
-
-    #with Sync():
-    #    cam.orbit_around_point(pt, 60, RIGHT)
-        #cam.move(OUT*2 + DOWN)
-    # with Sync():
-    #     cam.orbit_around_point(ORIGIN, 30, IN)
-    #     #cam.set_euler_angles(0, 0, 30)
-
-    with Seq():
-        Scene.wait(4)
-
-    render_to_file('mesh2d', render_settings=quality, background_color=bgcol)
-
-def mesh_plot1(quality=LD, bgcol=BLACK):
-    pass
-
-
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
-    COMPUTING_DEFAULTS.max_cpu_memory_used *= 10
-    #COMPUTING_DEFAULTS.max_animate_batch_size = 2
+    COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
+    COMPUTING_DEFAULTS.max_animate_batch_size = 8
     bgcol = Color('#202020')
-    #mesh_points(quality=HD, bgcol=bgcol, show_eqs=True)
+    #mesh_points(quality=LD, bgcol=bgcol, show_eqs=True)
     #mesh_points2(quality=HD, bgcol=bgcol, part=1)
     #mesh_points2(quality=HD, bgcol=bgcol, part=2)
     #mesh_points2(quality=HD, bgcol=bgcol, part=3)
@@ -530,5 +485,5 @@ if __name__ == "__main__":
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=10, frame1=21)
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=20, frame1=30)
     #mesh_points4(quality=HD, bgcol=bgcol)
-    mesh_func1(quality=LD, bgcol=bgcol)
+    mesh_func1(quality=HD, bgcol=bgcol)
     #mesh2d(quality=LD, bgcol=bgcol)
