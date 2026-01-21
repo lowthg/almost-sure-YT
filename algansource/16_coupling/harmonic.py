@@ -9,6 +9,8 @@ import scipy as sp
 import colorsys
 
 from manim import VGroup
+from sympy.physics.vector.printing import params
+
 sys.path.append('../')
 import alganhelper as ah
 
@@ -30,12 +32,6 @@ def fade_dist(grid_dots, grid_desc, col, z_dir, z0, fade_rate=0.25, line_op=1.):
     col2 = col.clone()
     col2[:, :, 4] *= op[:,:,0]
     grid_desc.set_non_recursive(color=col2)
-
-    # for i, line in enumerate(grid_lines):
-    #     loc = line.get_center()
-    #     op = (1 + z0*fade_rate - torch.inner(loc, z_dir) * fade_rate).clamp(0, 1) * line_op
-    #     line.set_opacity(op)
-
 
 def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=(-11, 14)):
     h = 0.6
@@ -298,10 +294,9 @@ def mesh_points2(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, part=0)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 def mesh_points3(quality=LD, bgcol=BLACK, frame0 = 0, frame1=30):
-    line_col=mn.GREY
     dot_col = mn.ManimColor(mn.RED)
     line_op=0.6
-    grid_dots, grid_lines, grid_indices = create_mesh(line_col=line_col, dot_col=dot_col, line_op=line_op,
+    grid_dots, grid_lines, grid_indices = create_mesh(dot_col=dot_col,
                                                       y_range=(-11, 14), x_range=(-17, 14))
 
     M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
@@ -314,7 +309,9 @@ def mesh_points3(quality=LD, bgcol=BLACK, frame0 = 0, frame1=30):
         z0 = torch.inner(cam.get_center(), z_dir).item() + dist
         grid_dots.spawn()
         grid_lines.spawn()
-        fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
+        p = grid_lines.get_descendants()[1]
+        col = p.color.clone()
+        fade_dist(grid_dots, p, col, z_dir, z0, line_op=line_op)
 
     #cam.orbit_around_point(ORIGIN, -30, IN)
     #cam.orbit_around_point(ORIGIN, 30, IN)
@@ -334,7 +331,7 @@ def mesh_points3(quality=LD, bgcol=BLACK, frame0 = 0, frame1=30):
             cam.orbit_around_point(ORIGIN, -30*du, IN)
             z_dir = cam.get_forward_direction()
             z0 = torch.inner(cam.get_center(), z_dir).item() + dist
-            fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
+            fade_dist(grid_dots, p, col, z_dir, z0, line_op=line_op)
         u0 = u
 
     Scene.wait(0.5)
@@ -344,7 +341,6 @@ def mesh_points3(quality=LD, bgcol=BLACK, frame0 = 0, frame1=30):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 def setup_mesh(x_range=(-17, 14), y_range=(-11, 14)):
-    line_col=mn.GREY
     dot_col = mn.ManimColor(mn.RED)
     line_op=0.6
     grid_dots, grid_lines, grid_indices = create_mesh(dot_col=dot_col,
@@ -363,13 +359,14 @@ def setup_mesh(x_range=(-17, 14), y_range=(-11, 14)):
         grid_dots.spawn()
         #fade_dist(grid_dots, grid_lines, z_dir, z0, line_op=line_op)
         p = grid_lines.get_descendants()[1]
-        col = p.color
-        fade_dist(grid_dots, p, col, z_dir, z0, line_op=line_op)
+        col = p.color.clone()
+        col[:,:,4] *= line_op
+        fade_dist(grid_dots, p, col, z_dir, z0)
 
-    return grid_dots, grid_lines, grid_indices
+    return grid_dots, grid_lines, grid_indices, col
 
 def mesh_points4(quality=LD, bgcol=BLACK):
-    _, _, _ = setup_mesh()
+    _, _, _, _ = setup_mesh()
 
     render_to_file('mesh_points4', render_settings=quality, background_color=bgcol)
 
@@ -396,41 +393,123 @@ def surface_func(mesh_col=DARK_BROWN,
     mob = ImageMob(t)
     return mob
 
-def mesh_func1(quality=LD, bgcol=BLACK):
+def mesh_func2(quality=LD, bgcol=BLACK, anim=1, frame0=0, frame1=30):
     h = 0.6
     x_range = (-17, 14)
     y_range = (-11, 14)
-    grid_dots, grid_lines, grid_indices = setup_mesh()#x_range=(-2,2), y_range=(-2,2))
+    if anim==2:
+        y_range = (-14, 14)
+    if anim==3:
+        y_range = (-14, 11)
+    grid_dots, grid_lines, grid_indices, colg = setup_mesh(x_range=x_range, y_range=y_range)
     zscale = 0.04
 
     def f(x, y):
         return (x*x-y*y)*zscale
 
-    func_dots0 = []
-
     print('1')
-    with Off():
-        for index, dot in zip(grid_indices, grid_dots):
-            func_dots0.append(dot.clone())
-        print('2')
-        func_dots = Group(*func_dots0)
-        print('3')
+    func_dots = grid_dots
 
-    x_range = (-17, 14)
-    y_range = (-11, 14)
     nx = x_range[1] - x_range[0]
     ny = y_range[1] - y_range[0]
     surf = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1]-y_range[0],
                         mesh_m=32, mesh_n=32)
-    #surf0 = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1]-y_range[0],
-    #                    mesh_m=32, mesh_n=32)
     surf.scale(np.array([nx*h/2, ny*h/2, 1]))
-    #surf0.scale(np.array([nx*h/2, ny*h/2, 1]))
     surf.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
-    #surf0.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
     with Off():
-        grid_dots.despawn()
-        #grid_lines.despawn()
+        surf.spawn()
+
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    col0 = p.color.clone()
+    col = col0.clone()
+    cam = Scene.get_camera()
+    z_dir = cam.get_forward_direction()
+    z0 = torch.inner(cam.get_center(), z_dir).item() + dist
+    z_dir[:,:,2] = 0
+    fade_rate=0.25
+    h0 = torch.inner(loc, z_dir[0])
+
+    op = ((1+z0*fade_rate) - h0 * 0.25).clamp(0,1)
+    col[:, :, 4] *= op[:,:,0]
+
+    with Off():
+        p.set_non_recursive(color=col)
+        #func_dots.spawn()
+
+    xvals = loc[:, :, 0] / h
+    yvals = loc[:, :, 1] / h
+    zvals = (xvals * xvals - yvals * yvals) * zscale
+
+    #Scene.wait(0.5)
+
+    print('4')
+    with Off():
+        loc[:, :, 2] = zvals
+        p.set_non_recursive(location=loc)
+        for index, dot in zip(grid_indices, func_dots):
+            dot.move(f(*index)*IN)
+
+    print('5')
+    q = grid_lines.get_descendants()[1]
+    colq = q.color.clone()
+    run_time = 1.
+    fps = quality.frames_per_second
+    t = run_time
+    n = round(fps * t)
+    dt = 1. / fps
+    u0 = 0.
+    Scene.wait(dt)
+    # with Sync():
+    #     cam.orbit_around_point(ORIGIN, 180, OUT)
+    for i in range(frame0, frame1):
+        u = mn.linear((i + 1) / n)
+        du = u - u0
+        print('rot', i)
+        with Sync(run_time=dt):
+            func_dots.orbit_around_point(ORIGIN, 180*du, IN)
+            grid_lines.orbit_around_point(ORIGIN, 180*du, IN)
+            surf.orbit_around_point(ORIGIN, 180*du, IN)
+            h0 = torch.inner(p.location, z_dir[0])
+            op = ((1 + z0 * fade_rate) - h0 * fade_rate).clamp(0, 1)
+            col = col0.clone()
+            col[:, :, 4] *= op[:, :, 0]
+            p.set_non_recursive(color=col)
+            fade_dist(func_dots, q, colg, z_dir, z0)
+        u0 = u
+
+    Scene.wait(0.5)
+    render_to_file('mesh_func2_{}_{}_{}'.format(anim, frame0, frame1), render_settings=quality, background_color=bgcol)
+
+def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
+    h = 0.6
+    x_range = (-17, 14)
+    y_range = (-11, 14)
+    grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range)
+    zscale = 0.04
+
+    def f(x, y):
+        return (x * x - y * y) * zscale
+
+    func_dots0 = []
+
+    print('1')
+    # with Off():
+    #     for index, dot in zip(grid_indices, grid_dots):
+    #         func_dots0.append(dot.clone())
+    #     print('2')
+    #     func_dots = Group(*func_dots0)
+    #     print('3')
+    func_dots = grid_dots
+
+    nx = x_range[1] - x_range[0]
+    ny = y_range[1] - y_range[0]
+    surf = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1] - y_range[0],
+                        mesh_m=32, mesh_n=32)
+    surf.scale(np.array([nx * h / 2, ny * h / 2, 1]))
+    surf.move((x_range[0] + x_range[1]) * h / 2 * RIGHT + (y_range[0] + y_range[1]) * h / 2 * UP)
+    with Off():
+        surf.spawn()
 
     p = surf.get_descendants()[1]
     loc = p.location.clone()
@@ -438,44 +517,112 @@ def mesh_func1(quality=LD, bgcol=BLACK):
     cam = Scene.get_camera()
     z_dir = cam.get_forward_direction()
     z0 = torch.inner(cam.get_center(), z_dir).item() + dist
-    fade_rate=0.25
+    fade_rate = 0.25
     h0 = torch.inner(loc, z_dir[0])
 
-    op = ((1+z0*fade_rate) - h0 * 0.25).clamp(0,1)
-    col[:, :, 4] *= op[:,:,0]
+    op = ((1 + z0 * fade_rate) - h0 * 0.25).clamp(0, 1)
+    col[:, :, 4] *= op[:, :, 0]
+
+    with Off():
+        p.set_non_recursive(color=col)
+        # func_dots.spawn()
+
     xvals = loc[:, :, 0] / h
     yvals = loc[:, :, 1] / h
     zvals = (xvals * xvals - yvals * yvals) * zscale
-    with Off():
-        p.set_non_recursive(color=col)
-        func_dots.spawn()
-        surf.spawn()
 
-    Scene.wait(0.5)
-
-    with Sync():
-        loc[:, :, 2] = zvals
-        p.set_non_recursive(location=loc)
-        for index, dot in zip(grid_indices, func_dots):
-            dot.move(f(*index)*IN)
-
-    Scene.wait(0.5)
-
-    with Sync():
-        loc[:, :, 2] = -zvals
-        p.set_non_recursive(location=loc)
-        for index, dot in zip(grid_indices, func_dots):
-            dot.move(-2*f(*index)*IN)
+    # Scene.wait(0.5)
 
     print('4')
+    if 4 > anim:
+        with Sync() if anim == 1 else Off():
+            loc[:, :, 2] = zvals
+            p.set_non_recursive(location=loc)
+            for index, dot in zip(grid_indices, func_dots):
+                dot.move(f(*index) * IN)
 
-    render_to_file('mesh_func1', render_settings=quality, background_color=bgcol)
+    print('5')
+    if 4 > anim >= 2:
+        with Sync() if anim == 2 else Off():
+            loc[:, :, 2] = -zvals
+            p.set_non_recursive(location=loc)
+            for index, dot in zip(grid_indices, func_dots):
+                dot.move(2 * f(*index) * OUT)
+
+    th1 = 20 * DEGREES_TO_RADIANS
+    params = [
+        (.8 + 0j, .5),
+        (.8 + .2j, .5),
+        (1 + .32j, 0.5),
+        (1 + .32j, 0.),
+        #(math.cos(th1) + math.sin(th1) * 1j, .1)
+    ]
+    if anim >= 3:
+        a, c = params[max(anim - 4,0)]
+        u = (a + 1. / a)/2
+        b = 2-u+np.sqrt(u*u-4*u+3)
+        c = 0.5
+        print(a, b)
+        with Sync() if anim == 3 else Off():
+            zvals_c = np.pow(a, xvals) * np.pow(b, yvals) * c
+            zvals = zvals_c.real
+            loc[:,:,2] = -zvals
+            p.set_non_recursive(location=loc)
+            for dot, index in zip(func_dots, grid_indices):
+                z = np.pow(a, index[0]) * np.pow(b, index[1]) * c
+                dot.move_to(dot.get_center() * (UP+RIGHT) + z.real * OUT)
+
+    if anim >= 4:
+        #(a1, c1) = (1+.22j, 0.5)
+        a1, c1 = params[anim-3]
+        run_time = 1.
+        fps = quality.frames_per_second
+        t = run_time
+        n = round(fps * t)
+        dt = 1. / fps
+        #u0 = 0.
+        Scene.wait(dt)
+        ilist = list(range(2, n, 4))
+        if ilist[-1] < n-1:
+            ilist.append(n-1)
+        #ilist = [n-1]
+        i0 = -1
+        l1, l2 = (-10., 10.)
+        for i in ilist:
+            u = mn.smooth((i + 1) / n)
+            #du = u - u0
+            a2 = a1 * u + a * (1-u)
+            c2 = c1 * u + c * (1-u)
+            d2 = (a2 + 1. / a2) / 2
+            b2 = 2 - d2 + np.sqrt(d2 * d2 - 4 * d2 + 3)
+            print(a2, b2, c2)
+            zvals_c = np.pow(a2, xvals) * np.pow(b2, yvals) * c2
+            print(zvals_c.real.min().item(), zvals_c.real.max().item())
+            loc[:, :, 2] = -zvals_c.real.clip(l1, l2)
+            with Sync(run_time=dt*(i-i0), rate_func=rate_funcs.identity):
+                p.set_non_recursive(location=loc)
+                for dot, index in zip(func_dots, grid_indices):
+                    z = (np.pow(a2, index[0]) * np.pow(b2, index[1]) * c2).clip(l1, l2)
+                    dot.move_to(dot.get_center() * (UP+RIGHT) + z.real * OUT)
+            i0 = i
+
+            #u0 = 0
+
+    print('7')
+    # a+1/a+b+1/b=4
+    # with c = (a+1/a)/2
+    # 2c + b + 1/b = 4
+    # b^2 + 2(c-2)b+1=0
+    # b = 2-c + sqrt((c-2)^2-1)
+    Scene.wait(0.5)
+
+    render_to_file('mesh_func1_{}'.format(anim), render_settings=quality, background_color=bgcol)
 
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
-    COMPUTING_DEFAULTS.max_animate_batch_size = 8
+    COMPUTING_DEFAULTS.max_animate_batch_size = 4
     bgcol = Color('#202020')
     #mesh_points(quality=LD, bgcol=bgcol, show_eqs=True)
     #mesh_points2(quality=HD, bgcol=bgcol, part=1)
@@ -485,5 +632,11 @@ if __name__ == "__main__":
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=10, frame1=21)
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=20, frame1=30)
     #mesh_points4(quality=HD, bgcol=bgcol)
-    mesh_func1(quality=HD, bgcol=bgcol)
-    #mesh2d(quality=LD, bgcol=bgcol)
+    #mesh_func1(quality=LD, bgcol=bgcol, anim=1)
+    #mesh_func1(quality=LD, bgcol=bgcol, anim=2)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=10, frame1=21)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=20, frame1=31)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=1, frame0=20, frame1=31)
+    #mesh_func1(quality=HD, bgcol=bgcol, anim=3)
+
+    #mesh_func1(quality=HD, bgcol=bgcol, anim=5)
