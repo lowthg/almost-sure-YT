@@ -8,8 +8,6 @@ import functorch
 import scipy as sp
 import colorsys
 
-from manim import VGroup
-from sympy.physics.vector.printing import params
 
 sys.path.append('../')
 import alganhelper as ah
@@ -50,20 +48,6 @@ def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=
         for y in y_points:
             grid_dots.append(dot1.clone().move_to(x*RIGHT+y*UP))
             grid_indices.append((int(round(x/h)), int(round(y/h))))
-    # for x in x_points:
-    #     y0 = y_points[0]
-    #     for i in range(1, ny):
-    #         y1 = y_points[i]
-    #         grid_lines.append(ManimMob(mn.Line(mnpos(x,y0, -0.01), mnpos(x, y1, -0.01), stroke_width=line_width,
-    #                                   stroke_color=line_col, stroke_opacity=line_op)))
-    #         y0 = y1
-    # for y in y_points:
-    #     x0 = x_points[0]
-    #     for i in range(1, nx):
-    #         x1 = x_points[i]
-    #         grid_lines2.append(ManimMob(mn.Line(mnpos(x0,y, -0.01), mnpos(x1, y, -0.01), stroke_width=line_width,
-    #                                   stroke_color=line_col, stroke_opacity=line_op)))
-    #         x0 = x1
     if mesh_col is None:
         mesh_col = GREY.clone()
         mesh_col[4] = 0.6
@@ -79,7 +63,7 @@ def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=
 
     return grid_dots, surf, grid_indices
 
-def mesh_points(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True):
+def mesh_points(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True, dots_only=False):
     dot_col = mn.ManimColor(mn.RED)
     grid_dots, _, grid_indices = create_mesh(dot_col=dot_col, y_range=(-9, 14))
 
@@ -90,6 +74,10 @@ def mesh_points(quality=LD, bgcol=BLACK, show_dots=True, show_eqs=True):
     if show_dots:
         with Off():
             grid_dots.spawn()
+
+    if dots_only:
+        render_to_file('dots_only', render_settings=quality, background_color=bgcol)
+        return
 
     Scene.wait(0.5)
     i0 = grid_indices.index((0, 0))
@@ -529,17 +517,25 @@ def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
 
     xvals = loc[:, :, 0] / h
     yvals = loc[:, :, 1] / h
-    zvals = (xvals * xvals - yvals * yvals) * zscale
 
     # Scene.wait(0.5)
 
     print('4')
-    if 4 > anim:
+    if 2 > anim >= 0:
+        zvals = xvals * -0.3 + yvals * 0.
+        with Sync() if anim == 0 else Off():
+            loc[:, :, 2] = -zvals
+            p.set_non_recursive(location=loc)
+            for index, dot in zip(grid_indices, func_dots):
+                dot.move((index[0] * -0.3 + index[1] * 0.) * OUT)
+
+    zvals = (xvals * xvals - yvals * yvals) * zscale
+    if 4 > anim >= 1:
         with Sync() if anim == 1 else Off():
             loc[:, :, 2] = zvals
             p.set_non_recursive(location=loc)
             for index, dot in zip(grid_indices, func_dots):
-                dot.move(f(*index) * IN)
+                dot.move_to(dot.get_center()*(UP+RIGHT) + f(*index) * IN)
 
     print('5')
     if 4 > anim >= 2:
@@ -618,6 +614,87 @@ def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file('mesh_func1_{}'.format(anim), render_settings=quality, background_color=bgcol)
 
+def mesh_func3(quality=LD, bgcol=BLACK):
+    h = 0.6
+    x_range = (-17, 14)
+    y_range = (-11, 14)
+    grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range)
+
+    cam = Scene.get_camera()
+    M = ah.rotation_matrix(RIGHT, 60 * DEGREES_TO_RADIANS)
+    pt = IN + np.dot(M, (OUT * 2 + DOWN + IN*8).numpy())
+
+    nx = x_range[1] - x_range[0]
+    ny = y_range[1] - y_range[0]
+    surf1 = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1]-y_range[0],
+                        mesh_m=32, mesh_n=32)
+    surf1.scale(np.array([nx*h/2, ny*h/2, 1]))
+    surf1.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
+    with Off():
+        surf1.spawn()
+    p = surf1.get_descendants()[1]
+    loc = p.location.clone()
+    col = p.color.clone()
+    cam = Scene.get_camera()
+    z_dir = cam.get_forward_direction()
+    z0 = torch.inner(cam.get_center(), z_dir).item() + dist
+    fade_rate = 0.25
+    h0 = torch.inner(loc, z_dir[0])
+
+    op = ((1 + z0 * fade_rate) - h0 * 0.25).clamp(0, 1)
+    col[:, :, 4] *= op[:, :, 0]
+
+    with Off():
+        p.set_non_recursive(color=col)
+
+    nodes = [(3,2), (-1, -2), (-4, 1)]
+
+    with Sync(run_time=1):
+        cam.orbit_around_point(ORIGIN, 30, IN)
+        cam.orbit_around_point(pt, -60, RIGHT)
+        grid_lines.despawn()
+        surf1.despawn()
+
+    fill_col = BLACK.clone()
+    fill_col[4] = 0
+
+    nx = x_range[1] - x_range[0]
+    ny = y_range[1] - y_range[0]
+    surf = surface_func(mesh_col=GREY,
+                         nx=nx, ny=ny,
+                         mesh_m=32,
+                         mesh_n=32,
+                         fill_color=fill_col
+                         )
+    p = surf.get_descendants()[1]
+    col = p.color.clone()
+    col[:, :, 4] *= 0.6
+    p.set_non_recursive(color=col)
+    surf.scale(np.array([nx*h/2, ny*h/2, 1]))
+    surf.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
+
+    Scene.wait(0.1)
+    with Sync(run_time=1):
+        surf.spawn()
+
+    Scene.wait(0.1)
+
+    with Sync(run_time=1):
+        for node in nodes:
+            i = grid_indices.index(node)
+            grid_dots[i].set(color=YELLOW)
+
+    Scene.wait(0.2)
+
+    # with Sync(run_time=1):
+    #     #grid_lines.spawn()
+    #     cam.orbit_around_point(pt, -60, LEFT)
+    #     cam.orbit_around_point(ORIGIN, 30, OUT)
+    #
+    # Scene.wait(0.1)
+
+    render_to_file('mesh_func3', render_settings=quality, background_color=bgcol)
+
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
@@ -625,6 +702,7 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_animate_batch_size = 4
     bgcol = Color('#202020')
     #mesh_points(quality=LD, bgcol=bgcol, show_eqs=True)
+    #mesh_points(quality=HD, bgcol=TRANSPARENT, dots_only=True)
     #mesh_points2(quality=HD, bgcol=bgcol, part=1)
     #mesh_points2(quality=HD, bgcol=bgcol, part=2)
     #mesh_points2(quality=HD, bgcol=bgcol, part=3)
@@ -632,11 +710,13 @@ if __name__ == "__main__":
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=10, frame1=21)
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=20, frame1=30)
     #mesh_points4(quality=HD, bgcol=bgcol)
-    #mesh_func1(quality=LD, bgcol=bgcol, anim=1)
+    #mesh_func1(quality=HD, bgcol=bgcol, anim=0)
+    #mesh_func1(quality=HD, bgcol=bgcol, anim=1)
     #mesh_func1(quality=LD, bgcol=bgcol, anim=2)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=10, frame1=21)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=20, frame1=31)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=1, frame0=20, frame1=31)
     #mesh_func1(quality=HD, bgcol=bgcol, anim=3)
-
     #mesh_func1(quality=HD, bgcol=bgcol, anim=5)
+
+    mesh_func3(quality=HD, bgcol=bgcol)
