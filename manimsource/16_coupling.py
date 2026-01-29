@@ -1,3 +1,4 @@
+from fontTools.unicodedata import block
 from manim import *
 import numpy as np
 import math
@@ -5,9 +6,187 @@ import sys
 import scipy as sp
 from matplotlib.font_manager import font_scalings
 from numpy.random.mtrand import Sequence
+from pygments.styles.gh_dark import ORANGE_3
+from sorcery import switch
 
 sys.path.append('../')
 import manimhelper as mh
+
+class Percolation(Scene):
+    def construct(self):
+        h = config.frame_y_radius * 2
+        nx = 24
+        ny = 40
+        side=h / ny
+        np.random.seed(3)
+        vals = []
+        rows = []
+        for i in range(ny):
+            vals.append(np.random.uniform(0., 1., size=nx))
+            sq = []
+            for j in range(nx):
+                sq.append(Square(side_length=side, stroke_width=0.8, stroke_color=GREY,
+                            fill_color=ORANGE, fill_opacity=0))
+            rows.append(VGroup(*sq).arrange(RIGHT, buff=0))
+        grid = VGroup(*rows).arrange(DOWN, buff=0).to_edge(LEFT, buff=0)
+
+
+        self.add(grid)
+
+        lim_p = 0.436
+        blocked = [[vals[i][j] < lim_p for j in range(nx)] for i in range(ny)]
+
+        run_time=1.2
+        def update_grid(grid, dt):
+            t = self.time/run_time
+            for i in range(ny):
+                for j in range(nx):
+                    if blocked[i][j]:
+                        val = vals[i][j] / lim_p
+                        op = min(max(2. * t / val - 1, 0.), 1.)
+                        grid[i][j].set_fill(opacity=op)
+
+        grid.add_updater(update_grid)
+        self.wait(run_time)
+        grid.remove_updater(update_grid)
+
+        fill_max = 1000
+        filled = [[fill_max] * nx for _ in range(ny)]
+        for i in range(nx):
+            if not blocked[0][i]:
+                filled[0][i] = 1
+        #filled[0][9] = 1
+
+        extends = True
+        count = 0
+        max_fill=1
+        while extends:
+            count += 1
+            print('iters: ', count)
+            extends = False
+            for i in range(1, ny):
+                for j in range(nx):
+                    if (not blocked[i][j]) and filled[i][j] >= fill_max:
+                        val = filled[i-1][j]
+                        if i < ny - 2:
+                            val = min(filled[i + 1][j], val)
+                        if j > 0:
+                            val = min(filled[i][j-1], val)
+                        if j < nx-1:
+                            val = min(filled[i][j+1], val)
+                        val += 1
+                        if val < fill_max:
+                            filled[i][j] = val
+                            max_fill = max(max_fill, val)
+                            extends = True
+
+        print('max fill:', max_fill)
+        col = ManimColor((BLUE_E.to_rgb()+BLUE_D.to_rgb())/2)
+        for i in range(ny):
+            for j in range(nx):
+                if not blocked[i][j]:
+                    grid[i][j].set_fill(color=col)
+
+        run_time=1.5
+        t0 = self.time
+        def update_grid2(grid, dt):
+            t = (self.time - t0)/run_time
+            for i in range(ny):
+                for j in range(nx):
+                    if not blocked[i][j]:
+                        val = filled[i][j] / max_fill
+                        op = min(max(5. * t / val - 4, 0.), 1.)
+                        grid[i][j].set_fill(opacity=op)
+
+        grid.add_updater(update_grid2)
+        self.wait(run_time)
+        grid.remove_updater(update_grid2)
+
+        self.wait()
+
+def arc_center(start, end, angle):
+    dir1 = (end - start) / 2
+    pt = (start + end) / 2 + np.array([dir1[1], -dir1[0], 0.]) / math.tan(angle / 2)
+    return pt
+
+
+def arc_arrow(start, end, angle, buff=0., center=None, **kwargs):
+    end_buff = kwargs.pop('end_buff') if 'end_buff' in kwargs else buff
+    pt = arc_center(start, end, angle) if center is None else center
+
+    radius = float(np.linalg.norm(start - pt))
+    angle_buff = 2 * np.arcsin(buff / radius / 2)
+    angle_end = 2 * np.arcsin(end_buff / radius / 2)
+    angle -= angle_buff + angle_end
+    arc = Arc(radius=radius, start_angle=PI / 2, angle=-angle, arc_center=pt, **kwargs)
+    rot = angle_of_vector(start - pt) - angle_of_vector(arc.get_start() - pt)
+    return arc.rotate(rot - angle_buff, about_point=pt).add_tip()
+
+
+class Markov(Scene):
+    def __init__(self, *args, **kwargs):
+        config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        dot = Dot(radius=0.5, fill_opacity=0, stroke_color=PURPLE, stroke_width=10).set_z_index(4)
+        # x^2=1/4+(1-x)^2 -> 0=1/4+1-2x -> x=5/8
+        shift1 = UP*math.sqrt(1/3) * 2
+        shift2 = (RIGHT * 1/2 + DOWN * math.sqrt(1/12)) * 2
+        shift3 = shift2 * UL
+        dots = VGroup(
+            dot.copy().shift(shift1).set_stroke(color=BLUE),
+            dot.copy().shift(shift2).set_stroke(color=PURPLE),
+            #dot.copy().shift(shift3).set_stroke(color=TEAL),
+        )
+        ndots = len(dots)
+        pos = [_.get_center() for _ in dots[:]]
+
+        kwargs = {'stroke_color': RED, 'buff': 0.5, 'end_buff': 0.6, 'stroke_width': 14, 'tip_length': 0.45}
+        arr_angle = PI*0.8
+        arrs = [arc_arrow(start, end, arr_angle, **kwargs)
+                for start, end in [(pos[0], pos[1]), (pos[1], pos[0])]]
+        center_stay = [pos[0]+UP*0.48, pos[1]-UP*0.48]
+        arrs.append(arc_arrow(pos[0], pos[0], angle=PI*1.999, center=center_stay[0], **kwargs))
+        arrs.append(arc_arrow(pos[1], pos[1], angle=PI*1.999, center=center_stay[1], **kwargs))
+        kwargs = {'stroke_color': BLACK, 'buff': 0.5, 'end_buff': 0.5, 'stroke_width': 22, 'tip_length': 0.55}
+        arrs2 = [arc_arrow(start, end, PI*0.8, **kwargs)
+                for start, end in [(pos[0], pos[1]), (pos[1], pos[0])]]
+        arrs2.append(arc_arrow(pos[0], pos[0], angle=PI*1.999, center=center_stay[0], **kwargs))
+        arrs2.append(arc_arrow(pos[1], pos[1], angle=PI*1.999, center=center_stay[1], **kwargs))
+
+        #arrs2 = [_.copy().remove_tip().set_stroke(width=18, color=BLACK).add_tip() for _ in arrs]
+        for _ in arrs:
+            _.set_z_index(0.5)
+
+        dots_stay = VGroup(*[Dot().move_to(center_stay[i]) for i in [0,1]])
+        VGroup(*arrs, *arrs2, dots, dots_stay).rotate(51*DEGREES)
+        pos = [_.get_center() for _ in dots[:]]
+        center_stay = [_.get_center() for _ in dots_stay[:]]
+
+        txt = MathTex(r'A', r'B', font_size=60, stroke_width=4, color=YELLOW).set_z_index(3)
+        txt[0].move_to(pos[0]).shift(UL*0.03)
+        txt[1].move_to(pos[1])
+
+        fill_col = ManimColor((0.4, 0., 0.))
+        place = Dot(radius=0.5, fill_opacity=1, fill_color=fill_col, stroke_opacity=0, stroke_width=0).set_z_index(1)
+        place.move_to(pos[0])
+
+        self.add(dots, *arrs, txt, place)
+        self.wait(0.1)
+        state = 0
+        center_move = [arc_center(pos[0], pos[1], arr_angle), arc_center(pos[1], pos[0], arr_angle)]
+        switches = [True, False, True, False, True, True, True, False, False, True, True, True]
+        for switch in switches:
+            self.wait(0.2)
+            if switch:
+                self.play(Rotate(place, -arr_angle, about_point=center_move[state]))
+                state = 1 - state
+            else:
+                self.play(Rotate(place, -2*PI, about_point=center_stay[state]))
+            self.wait(0.2)
+
+        self.wait()
 
 class DigitGame(Scene):
     def __init__(self, *args, **kwargs):
@@ -620,4 +799,4 @@ class StationaryConv(StationaryPlot):
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
-        AliceBobDraw().render()
+        Percolation().render()
