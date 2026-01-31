@@ -381,7 +381,7 @@ def surface_func(mesh_col=DARK_BROWN,
     mob = ImageMob(t)
     return mob
 
-def mesh_func2(quality=LD, bgcol=BLACK, anim=1, frame0=0, frame1=30):
+def mesh_func2(quality=LD, bgcol=BLACK, anim=1, frame0=0, frame1=30, tscale=1):
     h = 0.6
     x_range = (-17, 14)
     y_range = (-11, 14)
@@ -454,7 +454,7 @@ def mesh_func2(quality=LD, bgcol=BLACK, anim=1, frame0=0, frame1=30):
         u = mn.linear((i + 1) / n)
         du = u - u0
         print('rot', i)
-        with Sync(run_time=dt):
+        with Sync(run_time=dt * tscale, rate_func=rate_funcs.identity):
             func_dots.orbit_around_point(ORIGIN, 180*du, IN)
             grid_lines.orbit_around_point(ORIGIN, 180*du, IN)
             surf.orbit_around_point(ORIGIN, 180*du, IN)
@@ -467,7 +467,7 @@ def mesh_func2(quality=LD, bgcol=BLACK, anim=1, frame0=0, frame1=30):
         u0 = u
 
     Scene.wait(0.5)
-    render_to_file('mesh_func2_{}_{}_{}'.format(anim, frame0, frame1), render_settings=quality, background_color=bgcol)
+    render_to_file('mesh_func2_{}_{}_{}_{}'.format(anim, frame0, frame1, tscale), render_settings=quality, background_color=bgcol)
 
 def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
     h = 0.6
@@ -530,8 +530,8 @@ def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
                 dot.move((index[0] * -0.3 + index[1] * 0.) * OUT)
 
     zvals = (xvals * xvals - yvals * yvals) * zscale
-    if 4 > anim >= 1:
-        with Sync() if anim == 1 else Off():
+    if 4 > anim >= 1 or anim == -1:
+        with Sync() if anim == 1 or anim == -1 else Off():
             loc[:, :, 2] = zvals
             p.set_non_recursive(location=loc)
             for index, dot in zip(grid_indices, func_dots):
@@ -614,13 +614,12 @@ def mesh_func1(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file('mesh_func1_{}'.format(anim), render_settings=quality, background_color=bgcol)
 
-def mesh_func3(quality=LD, bgcol=BLACK):
+def mesh_func3(quality=LD, bgcol=BLACK, anim=1):
     h = 0.6
     x_range = (-17, 14)
     y_range = (-11, 14)
     grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range)
 
-    cam = Scene.get_camera()
     M = ah.rotation_matrix(RIGHT, 60 * DEGREES_TO_RADIANS)
     pt = IN + np.dot(M, (OUT * 2 + DOWN + IN*8).numpy())
 
@@ -649,31 +648,68 @@ def mesh_func3(quality=LD, bgcol=BLACK):
 
     nodes = [(3,2), (-1, -2), (-4, 1)]
 
-    with Sync(run_time=1):
+    with Sync(run_time=1) if anim == 1 else Off():
         cam.orbit_around_point(ORIGIN, 30, IN)
         cam.orbit_around_point(pt, -60, RIGHT)
         grid_lines.despawn()
         surf1.despawn()
 
-    fill_col = BLACK.clone()
-    fill_col[4] = 0
 
-    nx = x_range[1] - x_range[0]
-    ny = y_range[1] - y_range[0]
-    surf = surface_func(mesh_col=GREY,
-                         nx=nx, ny=ny,
-                         mesh_m=32,
-                         mesh_n=32,
-                         fill_color=fill_col
-                         )
-    p = surf.get_descendants()[1]
-    col = p.color.clone()
-    col[:, :, 4] *= 0.6
-    p.set_non_recursive(color=col)
-    surf.scale(np.array([nx*h/2, ny*h/2, 1]))
-    surf.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
+    surfs = []
+    fill_col = BLUE.clone()
+    fill_ops = [0.]
+    if anim == 2:
+        fill_ops.append(0.2)
+    for fill_op in fill_ops:
+        fill_col[4] = fill_op
+        nx = x_range[1] - x_range[0]
+        ny = y_range[1] - y_range[0]
+        surf = surface_func(mesh_col=GREY,
+                             nx=nx, ny=ny,
+                             mesh_m=32,
+                             mesh_n=32,
+                             fill_color=fill_col
+                             )
+        p = surf.get_descendants()[1]
+        col = p.color.clone()
+        col[:, :, 4] *= 0.6
+        p.set_non_recursive(color=col)
+        surf.scale(np.array([nx*h/2, ny*h/2, 1]))
+        surf.move((x_range[0] + x_range[1])*h/2*RIGHT + (y_range[0] + y_range[1])*h/2*UP)
+        surfs.append(surf)
+    surf = surfs[0]
+
+    if anim > 1:
+        with Off():
+            if anim == 2:
+                surf.spawn()
+                p = surf.get_descendants()[1]
+                col = p.color.clone()
+                fade_dist(grid_dots, p, col=col, z_dir=z_dir, z0=z0)
+                p = surfs[1].get_descendants()[1]
+                col = p.color.clone()
+                fade_dist(grid_dots, p, col=col, z_dir=z_dir, z0=z0)
+                for node in nodes:
+                    i = grid_indices.index(node)
+                    grid_dots[i].set(color=YELLOW)
+            else:
+                grid_dots.despawn()
+        Scene.wait(0.1)
+        with Sync(run_time=1):
+            cam.orbit_around_point(pt, 60, RIGHT)
+            cam.orbit_around_point(ORIGIN, -30, IN)
+            if anim == 2:
+                surf.despawn()
+                surfs[1].spawn()
+            if anim == 3:
+                surf1.spawn()
+        Scene.wait(0.1)
+        name = 'mesh_func4' if anim == 2 else 'mesh_func5'
+        render_to_file(name, render_settings=quality, background_color=bgcol)
+        return
 
     Scene.wait(0.1)
+
     with Sync(run_time=1):
         surf.spawn()
 
@@ -710,13 +746,21 @@ if __name__ == "__main__":
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=10, frame1=21)
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=20, frame1=30)
     #mesh_points4(quality=HD, bgcol=bgcol)
-    #mesh_func1(quality=HD, bgcol=bgcol, anim=0)
+    mesh_func1(quality=HD, bgcol=bgcol, anim=-1)
+    #mesh_func1(quality=LD, bgcol=bgcol, anim=0)
     #mesh_func1(quality=HD, bgcol=bgcol, anim=1)
     #mesh_func1(quality=LD, bgcol=bgcol, anim=2)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=1, frame0=0, frame1=11, tscale=4)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=2, frame0=0, frame1=11, tscale=4)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=2, frame0=10, frame1=21, tscale=4)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=2, frame0=20, frame1=31, tscale=4)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=10, frame1=21, tscale=4)
+    #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=20, frame1=31, tscale=4)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=10, frame1=21)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=3, frame0=20, frame1=31)
     #mesh_func2(quality=HD, bgcol=bgcol, anim=1, frame0=20, frame1=31)
     #mesh_func1(quality=HD, bgcol=bgcol, anim=3)
     #mesh_func1(quality=HD, bgcol=bgcol, anim=5)
 
-    mesh_func3(quality=HD, bgcol=bgcol)
+    #mesh_func3(quality=HD, bgcol=bgcol)
+    #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
