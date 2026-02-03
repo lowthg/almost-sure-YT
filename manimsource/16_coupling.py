@@ -30,8 +30,11 @@ class Percolation(Scene):
             rows.append(VGroup(*sq).arrange(RIGHT, buff=0))
         grid = VGroup(*rows).arrange(DOWN, buff=0).to_edge(LEFT, buff=0)
 
+        txt1 = (Tex('\sf percolation', color=RED, stroke_width=2, font_size=80)
+                .move_to(grid).align_to(grid, DOWN).shift(UP*0.1).set_z_index(4))
+        txt2 = txt1.copy().set_color(BLACK).set_stroke(width=16).set_z_index(3)
 
-        self.add(grid)
+        self.add(grid, txt1, txt2)
 
         lim_p = 0.436
         blocked = [[vals[i][j] < lim_p for j in range(nx)] for i in range(ny)]
@@ -185,6 +188,67 @@ class Markov(Scene):
             else:
                 self.play(Rotate(place, -2*PI, about_point=center_stay[state]))
             self.wait(0.2)
+
+        self.wait()
+
+class RenewalProc(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+            config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        height = 3.
+        ax = Axes(x_range=[0, 1.1], y_range=[0, height * 1.2], x_length=4.8, y_length=3.6,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  #                  shade_in_3d=True,
+                  ).set_z_index(1)
+        box = SurroundingRectangle(ax, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                   fill_opacity=0.6, corner_radius=0.15)
+        VGroup(ax, box).to_corner(UR, buff=0.1)
+
+        txt1 = Tex('\sf renewal', 'process', color=RED, stroke_width=2, font_size=80).set_z_index(0.5)
+        txt1[1].next_to(txt1[0], DOWN, buff=0.5)
+        txt1.move_to(ax).shift(UP*0.35+LEFT*0.8).set_z_index(0.5).set_opacity(0.8)
+
+        self.add(ax, box, txt1)
+
+        times = [0., 0.4, 0.7, 0.9, 1.14]
+        lines = VGroup()
+        dashed = VGroup()
+        pts = []
+        pts0 = []
+        for i in range(1, len(times)):
+            pt0 = ax.coords_to_point(times[i-1], i-1)
+            pt1 = ax.coords_to_point(times[i], i-1)
+            lines.add(Line(pt0, pt1+LEFT*0.07, stroke_width=6, stroke_color=BLUE).set_z_index(2))
+            if i > 1:
+                dashed.add(DashedLine(pts[i-2]+UP*0.07, pt0, stroke_width=4, stroke_color=BLUE).set_z_index(2))
+            pts.append(pt1)
+            pts0.append(pt0)
+
+        speed = 0.5
+        dot = Dot(radius=0.1, color=YELLOW).move_to(pts0[0]).set_z_index(4).set_opacity(0)
+        dot1 = Dot(radius=0.1, color=BLUE).set_z_index(3)
+        dot2 = Dot(radius=0.08, color=BLUE, fill_opacity=0, stroke_opacity=1, stroke_width=5).set_z_index(3)
+        for i in range(len(lines)):
+            dt = times[i+1] - times[i]
+            op = 3.
+            if i > 0:
+                self.add(dot1.copy().move_to(pts0[i]))
+            if i >= len(lines)-1:
+                op = 0.
+            self.play(Create(lines[i], rate_func=linear),
+                      dot.animate(rate_func=linear).move_to(pts[i]).set_opacity(op),
+                      run_time= dt /speed)
+            if i < len(lines)-1:
+                self.add(dot2.copy().move_to(pts[i]))
+                self.play(Create(dashed[i], rate_func=linear),
+                          dot.animate(rate_func=linear).move_to(pts0[i+1]),
+                          run_time=0.1 / speed)
 
         self.wait()
 
@@ -589,7 +653,7 @@ class AliceBobBound(AliceBobDraw):
         eq1[:5].move_to(ORIGIN, coor_mask=RIGHT)
         eq1[5].move_to(ORIGIN, coor_mask=RIGHT)
         eq1[6:].move_to(ORIGIN, coor_mask=RIGHT)
-        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_opacity=0.7, fill_color=BLACK,
+        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_opacity=0.65, fill_color=BLACK,
                                     corner_radius=0.15, buff=0.2)
         VGroup(box1, eq1).to_edge(DOWN, buff=0.2)
 
@@ -636,6 +700,24 @@ class AliceStationary(AliceBobDraw):
         self.add(eq1)
         self.wait(0.1)
         self.play(FadeOut(eq1[2]), FadeIn(eq2[1]))
+        self.wait()
+
+class AliceHit(AliceBobDraw):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=self.fs2)
+        eq1 = MathTex(r'\mathbb P({\sf Alice\ hits\ }k)', r'=', r'10/55').set_z_index(1)
+        eq2 = MathTex(r'\approx', r'18.2\%').set_z_index(1)
+
+        eq1[0][0].set_color(YELLOW)
+        VGroup(eq1[0][2:11]).set_color(RED)
+        VGroup(eq1[0][-2]).set_color(PURPLE)
+        VGroup(eq1[2][:2], eq1[2][3:], eq2[1][:4]).set_color(BLUE)
+
+        mh.align_sub(eq2, eq2[0], eq1[1])
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(FadeOut(eq1[1:]), FadeIn(eq2))
         self.wait()
 
 def get_box(ax, i, h):
@@ -703,7 +785,7 @@ class StationaryPlot(ProbFinal):
     ylen = 6.
     fade_line2 = True
 
-    num_steps = 10
+    num_steps = 11
     heights1 = [_/55 for _ in range(10, 0, -1)]
 
     def plot_extra(self, ax):
@@ -796,6 +878,172 @@ class StationaryConv(StationaryPlot):
             lines.append(*line1)
         self.play(FadeIn(*lines))
 
+
+class Vervaat(AliceBobEqual):
+    def get_axes(self, scale=1., xlen = 0.9, ylen=0.95, scale_neg=1.):
+        ymax = 1.5 / scale
+        xlen *= 2 * config.frame_x_radius
+        ylen *= 2 * config.frame_y_radius
+        ax = Axes(x_range=[0, 1.05], y_range=[-ymax*scale_neg, ymax], x_length=xlen, y_length=ylen,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(1.9)
+        eqt = MathTex(r't').next_to(ax.x_axis.get_right(), UP, buff=0.2)
+        mark1 = ax.x_axis.get_tick(1, size=0.1).set_stroke(width=6).set_z_index(11)
+        line1 = DashedLine(ax.coords_to_point(1, -ymax*scale_neg), ax.coords_to_point(1, ymax), color=GREY).set_z_index(10).set_opacity(0.6)
+        eq2 = MathTex(r'T', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
+        eq6 = MathTex(r'1', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
+
+        return ax, eqt, xlen, ylen, ymax, mark1, line1, eq2, eq6
+
+    def construct(self):
+        seeds = [170, 180, 174, 169]
+        npts = 1920
+        ndt = npts - 1
+        np.random.seed(seeds[0])
+
+        ax, eqt, xlen, ylen, ymax, mark1, _, _, _ = self.get_axes(1.3, xlen=0.45, ylen=0.475, scale_neg=0.6)
+        eqt.set_z_index(0.5)
+        ymax2 = 0.9375
+        print(ymax)
+        ax.y_axis.set_z_index(10)
+        gp = VGroup(ax, eqt, mark1).to_corner(DL, buff=0.2)
+        gp2 = gp.copy().to_corner(DR, buff=0.2)
+        ax2: Axes = gp2[0]
+
+        box0 = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.15).set_z_index(0.1)
+        box0_1 = SurroundingRectangle(gp2, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.15)
+        self.add(gp, gp2, box0, box0_1)
+        self.wait(0.1)
+        t_vals = np.linspace(0, 1., npts)
+        s = np.sqrt(t_vals[1])
+        while True:
+            b_vals = np.concatenate(([0.], np.random.normal(scale=s, size=ndt).cumsum()))
+            b_vals -= b_vals[-1] * t_vals
+            if ndt * 0.4 < np.argmin(b_vals) < ndt * 0.6 and 0.5 * ymax2 < -min(b_vals)\
+                    and max(b_vals) - min(b_vals) < ymax2 * 1.05 and max(b_vals) > 0.2 * ymax2:
+                break
+
+        path1 = ax.plot_line_graph(t_vals, b_vals, add_vertex_dots=False, stroke_color=YELLOW,
+                                   stroke_width=3).set_z_index(2)
+
+        i0 = np.argmin(b_vals)
+        y0 = b_vals[i0]
+
+        path4 = ax2.plot_line_graph(t_vals, np.concatenate((b_vals[i0:], b_vals[1:i0+1])) - y0, add_vertex_dots=False,
+                                    stroke_color=YELLOW, stroke_width=3).set_z_index(2)
+
+        path2 = ax.plot_line_graph(t_vals[:i0+1], b_vals[:i0+1], add_vertex_dots=False, stroke_color=RED,
+                                   stroke_width=4).set_z_index(2.2)
+        path3 = ax.plot_line_graph(t_vals[i0:], b_vals[i0:], add_vertex_dots=False, stroke_color=BLUE,
+                                   stroke_width=4).set_z_index(2.1)
+
+        p0 = ax.coords_to_point(0, y0)
+        y1 = max(b_vals)
+        p1 = ax.coords_to_point(1, y1)
+        box1 = Rectangle(width=(p1-p0)[0], height=(p1-p0)[1], stroke_width=0, stroke_opacity=0,
+                  fill_color=GREY_D, fill_opacity=0.8).set_z_index(1)
+        box1.next_to(p0, UR, buff=0)
+        t1 = 0.75
+        arr1 = Arrow(ax.coords_to_point(t1, y0), ax.coords_to_point(t1, y1), color=WHITE, buff=0).set_z_index(10)
+        eqv = MathTex(r'V', stroke_width=2).next_to(arr1, RIGHT, buff=0).set_z_index(5).shift(DOWN*0.2)
+
+        shift2 = path4['line_graph'].get_start() - path3['line_graph'].get_start()
+        shift1 = path4['line_graph'].get_end() - path2['line_graph'].get_end()
+        shift3 = ax2.coords_to_point(0, 0) - box1.get_corner(DL)
+
+        gp3 = VGroup(box1, arr1, eqv).copy()
+        gp3.generate_target().shift(shift3)
+        gp3[0].set_opacity(0)
+
+        txt1 = Tex(r'\sf Brownian bridge', color=YELLOW, font_size=60).set_z_index(4)
+        txt2 = Tex(r'\sf excursion', font_size=60, color=YELLOW).set_z_index(4)
+        txt2.move_to(ax2.coords_to_point(0.5, 0.8 * ymax)).next_to(gp3.target[0], UP, coor_mask=UP, buff=0.15)
+        txt1.move_to(ax.coords_to_point(0.5, 0.6*ymax))
+
+        self.play(Create(path1, rate_func=linear, run_time=1), FadeIn(txt1, run_time=1))
+        self.play(Create(path4, rate_func=linear, run_time=1), FadeIn(txt2, run_time=1))
+        self.wait(0.1)
+        self.play(FadeIn(box1, arr1, eqv))
+        self.play(FadeIn(path2, path3))
+        self.wait(0.1)
+        self.remove(path1)
+        self.add(VGroup(path2, path3).copy())
+
+        self.play(path2.animate.shift(shift1), path3.animate.shift(shift2),
+                  MoveToTarget(gp3),
+                  run_time=3)
+        self.remove(path4)
+
+        self.wait(1)
+
+class TwoVars(AliceBobEqual):
+    def construct(self):
+        MathTex.set_default(font_size=80)
+        eq1 = MathTex(r'X')[0].set_z_index(2)
+        eq2 = MathTex(r'Y')[0].set_z_index(2)
+        eq3 = MathTex(r'(X,Y)')[0].set_z_index(2)
+        eq2.next_to(eq1, DOWN, buff=0.4)
+        gp1 = VGroup(eq1, eq2)
+        eq3.next_to(gp1, RIGHT, buff=2).shift((UP*0.3))
+
+        VGroup(eq1, eq3[1]).set_color(RED)
+        VGroup(eq2, eq3[3]).set_color(GREEN)
+        #VGroup(eq3[0], eq3[4]).set_color(YELLOW)
+
+        Tex.set_default(color=BLUE, font_size=60, stroke_width=2)
+        txt1 = Tex(r'two ', 'distributions').set_z_index(1)
+        txt2 = Tex(r'joint ', 'distribution').set_z_index(1)
+        txt1[1].next_to(txt1[0], DOWN)
+        txt1.next_to(gp1, LEFT, buff=0.5)
+        txt2[1].next_to(txt2[0], DOWN, buff=0.05)
+        txt2.next_to(eq3, DOWN, buff=0.2)
+        VGroup(txt2, eq3).move_to(gp1, coor_mask=UP)
+
+        box2 = SurroundingRectangle(VGroup(eq3, txt2), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.65, corner_radius=0.15, buff=0.4)
+        box1_1 = SurroundingRectangle(VGroup(eq1, eq2, txt1), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.65, corner_radius=0.15, buff=0.4)
+
+        box1 = RoundedRectangle(width=box1_1.width, height=box2.height, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.65, corner_radius=0.15).move_to(box1_1)
+
+        VGroup(box1, box2, eq1, eq2, eq3, txt1, txt2).move_to(ORIGIN).to_edge(DOWN, buff=0.2)
+
+        self.add(eq1, eq2, box1, txt1)
+
+
+        self.play(mh.rtransform(eq1[0].copy(), eq3[1], eq2[0].copy(), eq3[3], run_time=2.),
+                  Succession(Wait(1.), FadeIn(eq3[0], eq3[2], eq3[4], run_time=1.)),
+                  FadeIn(box2, run_time=2))
+        self.play(FadeIn(txt2))
+        self.wait()
+
+class Orders(AliceBobEqual):
+    def construct(self):
+        txt1 = Tex(r'\sf e.g.,', r' stochastic order: ', '$X\le Y$', font_size=80, stroke_width=1.5).set_z_index(2)
+        txt2 = Tex(r'\sf e.g.,', r' convex order: ', '$X=\mathbb E[ Y]$', font_size=80, stroke_width=1.5).set_z_index(2)
+        box1 = SurroundingRectangle(txt1, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.65, corner_radius=0.15, buff=0.2)
+        txt1[0][:-1].set_color(BLUE)
+        VGroup(txt1[1], txt2[1]).set_color(TEAL)
+        VGroup(txt1[2][0], txt2[2][0]).set_color(RED)
+        VGroup(txt1[2][2], txt2[2][-2]).set_color(GREEN)
+        txt2[2][2].set_color(YELLOW)
+        self.add(txt1, box1)
+        self.wait(0.1)
+        shift = mh.diff(txt1[2][-1], txt2[2][-2])
+        gp = VGroup(txt2[2][2:4], txt2[2][-1]).set_opacity(-1).shift(-shift)
+        self.play(mh.fade_replace(txt1[1][:-6], txt2[1][:-6], coor_mask=RIGHT),
+                  mh.rtransform(txt1[1][-6:], txt2[1][-6:], txt1[2][0], txt2[2][0],
+                                txt1[2][2], txt2[2][-2]),
+                  mh.fade_replace(txt1[2][1], txt2[2][1]),
+                  Succession(gp.animate.shift(shift).set_opacity(1)))
+        self.wait()
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
