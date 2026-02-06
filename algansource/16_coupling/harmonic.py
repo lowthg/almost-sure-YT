@@ -694,6 +694,13 @@ def mesh_func3(quality=LD, bgcol=BLACK, anim=1):
                     grid_dots[i].set(color=YELLOW)
             else:
                 grid_dots.despawn()
+        if anim == 4:
+            img = ImageMob('../../media/resistors.png')
+            a = 1.94
+            img.move(UP * 0.04)
+            img.scale(np.array([16 / 9 * a, a, 1.]))
+            with Off():
+                img.spawn()
         Scene.wait(0.1)
         with Sync(run_time=1):
             cam.orbit_around_point(pt, 60, RIGHT)
@@ -704,7 +711,7 @@ def mesh_func3(quality=LD, bgcol=BLACK, anim=1):
             if anim == 3:
                 surf1.spawn()
         Scene.wait(0.1)
-        name = 'mesh_func4' if anim == 2 else 'mesh_func5'
+        name = 'mesh_func{}'.format(anim + 2)
         render_to_file(name, render_settings=quality, background_color=bgcol)
         return
 
@@ -731,11 +738,44 @@ def mesh_func3(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file('mesh_func3', render_settings=quality, background_color=bgcol)
 
+def resistors(quality=LD, bgcol=BLACK):
+    M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
+    pt = IN + np.dot(M, (OUT * 2 + DOWN).numpy())
+    cam = Scene.get_camera()
+    img = ImageMob('../../media/resistors.png')
+    with Off():
+        cam.set_distance_to_screen(10)
+        cam.orbit_around_point(pt, 60, RIGHT)
+        cam.orbit_around_point(ORIGIN, -30, IN)
+    M = ah.rotation_matrix(RIGHT, 60 * DEGREES_TO_RADIANS)
+    pt = IN + np.dot(M, (OUT * 2 + DOWN + IN*8).numpy())
+    print(pt)
+    with Off():
+        cam.orbit_around_point(ORIGIN, 30, IN)
+        cam.orbit_around_point(pt, -60, RIGHT)
+    with Off():
+        img.spawn()
+        a = 4.
+        img.move(UP*6.9)
+        img.scale(np.array([16/9*a, a, 1.]))
+    #render_to_file('resistors', render_settings=quality, background_color=bgcol)
+
+    Scene.wait(0.1)
+
+    with Sync(run_time=1):
+        cam.orbit_around_point(pt, 60, RIGHT)
+        cam.orbit_around_point(ORIGIN, -30, IN)
+
+    render_to_file('resistors', render_settings=quality, background_color=bgcol)
+
+
+
+
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
-    COMPUTING_DEFAULTS.max_animate_batch_size = 4
+    #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     bgcol = Color('#202020')
     #mesh_points(quality=LD, bgcol=bgcol, show_eqs=True)
     #mesh_points(quality=HD, bgcol=TRANSPARENT, dots_only=True)
@@ -746,7 +786,7 @@ if __name__ == "__main__":
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=10, frame1=21)
     #mesh_points3(quality=HD, bgcol=bgcol, frame0=20, frame1=30)
     #mesh_points4(quality=HD, bgcol=bgcol)
-    mesh_func1(quality=HD, bgcol=bgcol, anim=-1)
+    #mesh_func1(quality=HD, bgcol=bgcol, anim=-1)
     #mesh_func1(quality=LD, bgcol=bgcol, anim=0)
     #mesh_func1(quality=HD, bgcol=bgcol, anim=1)
     #mesh_func1(quality=LD, bgcol=bgcol, anim=2)
@@ -764,3 +804,6 @@ if __name__ == "__main__":
 
     #mesh_func3(quality=HD, bgcol=bgcol)
     #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
+    mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
+    #resistors(quality=LD, bgcol=BLACK)
+    #resistors(quality=HD, bgcol=BLACK)
