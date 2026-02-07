@@ -8,7 +8,6 @@ import functorch
 import scipy as sp
 import colorsys
 
-
 sys.path.append('../')
 import alganhelper as ah
 
@@ -738,36 +737,133 @@ def mesh_func3(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file('mesh_func3', render_settings=quality, background_color=bgcol)
 
-def resistors(quality=LD, bgcol=BLACK):
-    M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
-    pt = IN + np.dot(M, (OUT * 2 + DOWN).numpy())
+def solve_harmonic(nx, ny, nodes, values, tol = 0.0001):
+    res = np.zeros(shape=(nx, ny))
+    res2 = np.zeros(shape=(nx, ny))
+    p = 0.5/4
+    for (i, j), val in zip(nodes, values):
+        res[i, j] = val
+
+    count = 0
+    while True:
+        res2[:,:] = (1-4*p) * res[:,:]
+        res2[:-1, :] += p * res[1:, :]
+        res2[-1, :] += p * res[-1, :]
+        res2[1:, :] += p * res[:-1, :]
+        res2[0, :] += p * res[0, :]
+        res2[:, :-1] += p * res[:, 1:]
+        res2[:, -1] += p * res[:, -1]
+        res2[:, 1:] += p * res[:, :-1]
+        res2[:, 0] += p * res[:, 0]
+        for (i, j), val in zip(nodes, values):
+            res2[i, j] = val
+
+        (res2, res) = (res, res2)
+        res2 -= res
+        maxdiff = res2.max()
+        #print(count, ':', maxdiff)
+        count += 1
+        if maxdiff <= tol:
+            break
+
+    print('iters:', count)
+    return res
+
+
+def harmonic_func(quality=LD, bgcol=BLACK, anim=1):
+    h = 0.6
+    x_range = (-17, 14)
+    y_range = (-11, 14)
+    print('0')
+    grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range)
+    nodes = [(3,2), (-1, -2), (-4, 1)]
+    nx = x_range[1] - x_range[0]
+    ny = y_range[1] - y_range[0]
+    surf = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1] - y_range[0],
+                        mesh_m=32, mesh_n=32)
+    surf.scale(np.array([nx * h / 2, ny * h / 2, 1]))
+    surf.move((x_range[0] + x_range[1]) * h / 2 * RIGHT + (y_range[0] + y_range[1]) * h / 2 * UP)
+    print('1')
+
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    col = p.color.clone()
     cam = Scene.get_camera()
-    img = ImageMob('../../media/resistors.png')
+    z_dir = cam.get_forward_direction()
+    z0 = torch.inner(cam.get_center(), z_dir).item() + dist
+    fade_rate = 0.25
+    h0 = torch.inner(loc, z_dir[0])
+    op = ((1 + z0 * fade_rate) - h0 * 0.25).clamp(0, 1)
+    col[:, :, 4] *= op[:, :, 0]
+
+    nodes0 = [(i - x_range[0], j - y_range[0]) for i, j in nodes]
+    vals_arr = [
+        [-4., 2.5, 3.2],
+        [-4., -1., 3.2],
+        [2.8, -2., 2.5],
+    ]
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    if anim > 1:
+        node_vals = vals_arr[anim - 2]
+        surf_vals = solve_harmonic(nx+1, ny+1, nodes0, node_vals)
+        with Off():
+            for dot, (i, j) in zip(grid_dots, grid_indices):
+                dot.move_to(dot.get_center() + surf_vals[i - x_range[0], j - y_range[0]] * OUT)
+        f = sp.interpolate.RegularGridInterpolator((np.linspace(x_range[0]*h, x_range[1]*h, nx+1),
+                                                np.linspace(y_range[0]*h, y_range[1]*h,ny+1)),
+                                               surf_vals, bounds_error=False, fill_value=0.)
+        fvals = f(loc[0,:,:2].numpy())
+        loc[0,:,2] = torch.from_numpy(-fvals)
+        p.set_non_recursive(location=loc)
+
     with Off():
-        cam.set_distance_to_screen(10)
-        cam.orbit_around_point(pt, 60, RIGHT)
-        cam.orbit_around_point(ORIGIN, -30, IN)
-    M = ah.rotation_matrix(RIGHT, 60 * DEGREES_TO_RADIANS)
-    pt = IN + np.dot(M, (OUT * 2 + DOWN + IN*8).numpy())
-    print(pt)
-    with Off():
-        cam.orbit_around_point(ORIGIN, 30, IN)
-        cam.orbit_around_point(pt, -60, RIGHT)
-    with Off():
-        img.spawn()
-        a = 4.
-        img.move(UP*6.9)
-        img.scale(np.array([16/9*a, a, 1.]))
-    #render_to_file('resistors', render_settings=quality, background_color=bgcol)
+        for node in nodes:
+            i = grid_indices.index(node)
+            grid_dots[i].set(color=YELLOW)
+        p.set_non_recursive(color=col)
+        surf.spawn()
+
+    print(3)
+
+    Scene.wait(0.1)
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    (x_vals, y_vals) = (np.linspace(x_range[0]*h, x_range[1]*h, nx+1),
+                                                np.linspace(y_range[0]*h, y_range[1]*h,ny+1))
+    if anim <= len(vals_arr):
+        node_vals = vals_arr[anim-1]
+        surf_vals = solve_harmonic(nx+1, ny+1, nodes0, node_vals)
+        f = sp.interpolate.RegularGridInterpolator((x_vals, y_vals),
+                                               surf_vals, bounds_error=False, fill_value=0.)
+        fvals = f(loc[0,:,:2].numpy())
+        loc[0,:,2] = torch.from_numpy(-fvals)
+    else:
+        zscale = 0.04/h/h
+        def f(x, y):
+            return (x * x - y * y) * zscale
+        surf_vals = np.zeros(shape=(nx+1, ny+1))
+        for i in range(nx+1):
+            for j in range(ny+1):
+                x, y = (x_vals[i], y_vals[j])
+                surf_vals[i, j] = f(x, y)
+        loc[0,:,2] = (loc[0,:,1] * loc[0,:,1] - loc[0,:,0] * loc[0,:,0]) * zscale
+
+    with Sync(run_time=1.): #Sync(run_time=1.):
+        for dot, (i, j) in zip(grid_dots, grid_indices):
+            dot.move_to(dot.get_center() * (UP+RIGHT) + surf_vals[i - x_range[0], j - y_range[0]] * OUT)
+        if anim > len(vals_arr):
+            for dot, (i, j) in zip(grid_dots, grid_indices):
+                if (i, j) in nodes:
+                    dot.set(color=RED)
+
+        p.set_non_recursive(location=loc)
 
     Scene.wait(0.1)
 
-    with Sync(run_time=1):
-        cam.orbit_around_point(pt, 60, RIGHT)
-        cam.orbit_around_point(ORIGIN, -30, IN)
 
-    render_to_file('resistors', render_settings=quality, background_color=bgcol)
 
+    render_to_file('harmonic_func{}'.format(anim), render_settings=quality, background_color=bgcol)
 
 
 
@@ -804,6 +900,5 @@ if __name__ == "__main__":
 
     #mesh_func3(quality=HD, bgcol=bgcol)
     #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
-    mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
-    #resistors(quality=LD, bgcol=BLACK)
-    #resistors(quality=HD, bgcol=BLACK)
+    #mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
+    harmonic_func(quality=HD, bgcol=bgcol, anim=4)
