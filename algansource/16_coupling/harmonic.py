@@ -7,6 +7,8 @@ import math
 import functorch
 import scipy as sp
 import colorsys
+from algan.rendering.post_processing.bloom import bloom_filter, bloom_filter_premultiply
+from functools import partial
 
 sys.path.append('../')
 import alganhelper as ah
@@ -865,6 +867,55 @@ def harmonic_func(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file('harmonic_func{}'.format(anim), render_settings=quality, background_color=bgcol)
 
+def random_walk(quality=LD, bgcol=BLACK, anim=1, steps=10, p=1.):
+    h = 0.6
+    x_range = (-17, 14)
+    y_range = (-11, 14)
+    nx = x_range[1] - x_range[0] + 1
+    ny = y_range[1] - y_range[0] + 1
+    #grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range)
+    M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
+    pt = IN + np.dot(M, (OUT * 2 + DOWN).numpy())
+    cam = Scene.get_camera()
+    with Off():
+        cam.set_distance_to_screen(10)
+        cam.orbit_around_point(pt, 60, RIGHT)
+        cam.orbit_around_point(ORIGIN, -30, IN)
+
+    i, j = (17, 11)
+    (x_vals, y_vals) = (np.linspace(x_range[0]*h, x_range[1]*h, nx),
+                                                np.linspace(y_range[0]*h, y_range[1]*h,ny))
+    dot1 = ManimMob(mn.Dot3D(radius=0.12, color=mn.YELLOW, resolution=(10, 10), stroke_opacity=0, stroke_width=0))
+    dot1.move_to(x_vals[i] * RIGHT + y_vals[j] * UP)
+    dot1.glow = 1.
+    with Off():
+        dot1.spawn()
+    Scene.wait(0.1)
+    np.random.seed(1)
+    for _ in range(steps):
+        u = np.random.uniform(0., 1.)
+        if u > p:
+            Scene.wait(1.)
+        else:
+            if u < 0.25 * p:
+                shift = RIGHT * h
+            elif u < 0.5 * p:
+                shift = LEFT * h
+            elif u < 0.75 * p:
+                shift = UP * h
+            else:
+                shift = DOWN * h
+            with Sync(run_time=1.):
+                dot1.move(shift)
+
+    kernel_size = 63
+    strength = 8
+    scale_factor=4
+    num_iterations=7
+    bf = bloom_filter_premultiply if bgcol == TRANSPARENT else bloom_filter
+    bloom_new = partial(bf, num_iterations=num_iterations, kernel_size=kernel_size, strength=strength, scale_factor=scale_factor)
+    render_to_file('random_walk{}'.format(anim), render_settings=quality, background_color=bgcol,  post_processes = [bloom_new])
+
 
 
 
@@ -901,4 +952,5 @@ if __name__ == "__main__":
     #mesh_func3(quality=HD, bgcol=bgcol)
     #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
     #mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
-    harmonic_func(quality=HD, bgcol=bgcol, anim=4)
+    #harmonic_func(quality=HD, bgcol=bgcol, anim=2)
+    random_walk(quality=HD, bgcol=TRANSPARENT, anim=2, steps=120, p=1.)
