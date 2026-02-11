@@ -6,7 +6,6 @@ import sys
 import scipy as sp
 from matplotlib.font_manager import font_scalings
 from numpy.random.mtrand import Sequence
-from pygments.styles.gh_dark import ORANGE_3
 from sorcery import switch
 from torch.utils.jit.log_extract import run_test
 
@@ -1768,6 +1767,7 @@ class PoincareBM(Scene):
         self.add(circ, dot)
         self.play(Create(path, rate_func=f), run_time=run_time, rate_func=f)
         #self.play(MoveAlongPath(dot, path, run_time=run_time, rate_func=f))
+
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
