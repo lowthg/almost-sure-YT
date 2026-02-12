@@ -646,8 +646,8 @@ class BMTimes(BMDef):
         equ3[1].scale(0.8, about_edge=LEFT)
         mh.align_sub(equ2, equ2[0], pu2, DOWN, buff=0.15)
         mh.align_sub(equ3, equ3[0], pu3, DOWN, buff=0.15)
-        equn = MathTex(r'u_n', r'=', r't_1+t_2+\cdots+t_n', font_size=80).set_z_index(10)
-        equn.next_to(VGroup(eqsim2, eqsim3), UP, buff=0.5)
+        equnsum = MathTex(r'u_n', r'=', r't_1+t_2+\cdots+t_n', font_size=80).set_z_index(10)
+        equnsum.next_to(VGroup(eqsim2, eqsim3), UP, buff=0.5)
         eqsimn = MathTex(r'B_{t_n}^{(n)}', r'=', r'X_n', font_size=80).set_z_index(10)
         eqbdiff = MathTex(r'B_{u_n} - B_{u_{n-1}}', r'=', r'X_n', font_size=80)
         mh.align_sub(eqsimn, eqsimn[1], eqsim2[1])
@@ -680,8 +680,8 @@ class BMTimes(BMDef):
                equ3[1][1], equ3[1][4], equ3[1][7]).set_color(self.tCol)
         VGroup(equ2[0][1], equ3[0][1], equ2[1][2], equ2[1][5],
                equ3[1][2], equ3[1][5], equ3[1][8],
-               equn[2][1], equn[2][-1], equn[2][4], equn[0][1]).set_color(self.indexCol)
-        VGroup(equn[0][0], equn[2][0], equn[2][-2], equn[2][3]).set_color(self.tCol)
+               equnsum[2][1], equnsum[2][-1], equnsum[2][4], equnsum[0][1]).set_color(self.indexCol)
+        VGroup(equnsum[0][0], equnsum[2][0], equnsum[2][-2], equnsum[2][3]).set_color(self.tCol)
         VGroup(eqbdiff[0][-1]).set_color(self.numCol)
         copy_colors(*eqsim2[:], *eqsimn[:])
         copy_colors(eqsim1[0], eqsim1[0], eqsim2[2], eqbdiff[0][:3], eqbdiff[0][4:7], eqbdiff[2])
@@ -705,12 +705,12 @@ class BMTimes(BMDef):
                   Succession(Wait(0.25), FadeIn(equ3)))
         self.wait(0.1)
 
-        self.play(mh.rtransform(equ3[0][0].copy(), equn[0][0], equ3[1][0], equn[1],
-                                equ3[1][1:7], equn[2][:6], equ3[1][-3].copy(), equn[2][-3],
-                                equ3[1][-2], equn[2][-2]),
-                  mh.stretch_replace(equ3[0][1].copy(), equn[0][1]),
-                  mh.stretch_replace(equ3[1][-1], equn[2][-1]),
-                  FadeIn(equn[2][6:9], target_position=equ3[1][6]),
+        self.play(mh.rtransform(equ3[0][0].copy(), equnsum[0][0], equ3[1][0], equnsum[1],
+                                equ3[1][1:7], equnsum[2][:6], equ3[1][-3].copy(), equnsum[2][-3],
+                                equ3[1][-2], equnsum[2][-2]),
+                  mh.stretch_replace(equ3[0][1].copy(), equnsum[0][1]),
+                  mh.stretch_replace(equ3[1][-1], equnsum[2][-1]),
+                  FadeIn(equnsum[2][6:9], target_position=equ3[1][6]),
                   FadeOut(equ2[1:]))
         self.wait(0.1)
 
@@ -736,7 +736,7 @@ class BMTimes(BMDef):
         eq_2 = eqbdiff.copy()
         eq_3 = eqbdiff.copy()
         self.play(
-            equn.animate(run_time=1.4).scale(0.6).move_to(mh.pos(LEFT*0.5+UP*0.75)),
+            equnsum.animate(run_time=1.4).scale(0.6).move_to(mh.pos(LEFT*0.5+UP*0.75)),
             Succession(Wait(0.4), AnimationGroup(
             mh.rtransform(eqbdiff, eqbdiffn),
             mh.rtransform(eq_1[0][:2], eqbdiff3[0][:2], eq_1[0][3:6], eqbdiff3[0][3:6], eq_1[1], eqbdiff3[1],
@@ -856,6 +856,102 @@ class BMTimes(BMDef):
                   FadeIn(eqbn2[0][-2:], eqbn2b[0][-2:], shift=mh.diff(eqbn[0][2], eqbn2[0][3])),
                   run_time=3.)
         self.remove(mask)
+        self.wait(0.1)
+
+        # final rearrangement
+        eqbtilde2 = MathTex(r'B_t', r'/\sqrt{n}', r'=', r'\tilde B_{\frac tn}', font_size=80).set_z_index(12)
+        mh.align_sub(eqbtilde2, eqbtilde2[2], eqbtilde[1]).move_to(eqbtilde, coor_mask=RIGHT)
+        eqssum2 = MathTex(r'S_n', r'/\sqrt{n}', r'=', r'B_{u_n}', r'/\sqrt{n}', font_size=80).set_z_index(12)
+        mh.align_sub(eqssum2, eqssum2[2], eqssum[1]).move_to(eqbtilde2, coor_mask=RIGHT)
+        eqssum3 = MathTex(r'S_n', r'/\sqrt{n}', r'=', r'\tilde B_{\frac{u_n}n}', font_size=80).set_z_index(12)
+        mh.align_sub(eqssum3, eqssum3[2], eqssum2[2])
+        eqssum4 = MathTex(r'\frac{S_n}{\sqrt{n} }', r'=', r'\tilde B_{\frac{u_n}n}', font_size=100).set_z_index(12)
+        eqssum4.move_to(mh.pos(DOWN*0.5+RIGHT*0.05))
+
+        VGroup(eqbtilde2[0][0], eqbtilde2[3][:2], eqssum3[3][:2]).set_color(self.BCol)
+        VGroup(eqbtilde2[0][1], eqbtilde2[3][-3], eqssum3[3][2]).set_color(self.tCol)
+        VGroup(eqbtilde2[1][-1], eqbtilde2[3][-1], eqssum3[3][3], eqssum3[3][5]).set_color(self.indexCol)
+        copy_colors(eqssum[2], eqssum[0], eqbtilde2[1], eqbtilde2[1],
+                    eqssum2[0], eqssum2[3], eqssum2[1], eqssum2[-1])
+        copy_colors(*eqssum2[:2], *eqssum3[:2])
+        copy_colors(eqssum3[0], eqssum3[1], eqssum3[3], eqssum4[0][:2], eqssum4[0][2:], eqssum4[2])
+
+        self.play(mh.rtransform(eqbtilde[1], eqbtilde2[2], eqbtilde[0][:], eqbtilde2[3][:3],
+                                eqbtilde[2][0], eqbtilde2[0][0], eqbtilde[2][2], eqbtilde2[0][1],
+                                eqbtilde[2][1], eqbtilde2[3][-1], eqbtilde[2][3:], eqbtilde2[1][:]),
+                  FadeIn(eqbtilde2[3][-2], shift=mh.diff(eqbtilde[0][2], eqbtilde2[3][2])),
+                  run_time=1.7)
+        self.wait(0.1)
+        self.play(mh.rtransform(eqssum[0], eqssum2[3], eqssum[1], eqssum2[2], eqssum[2], eqssum2[0],
+                                run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eqssum2[1], eqssum2[-1])))
+        self.wait(0.1)
+        eqtmp = eqssum3[3][2].copy()
+        self.play(mh.rtransform(eqssum2[:3], eqssum3[:3],
+                                eqbtilde2[3][:2], eqssum3[3][:2],
+                                eqssum2[3][1:3], eqssum3[3][2:4],
+                                eqbtilde2[3][3:], eqssum3[3][4:]),
+                  mh.fade_replace(eqbtilde2[3][2], eqtmp),
+                  FadeOut(eqbtilde2[:3], eqssum2[4]),
+                  run_time=1.4)
+        self.remove(eqssum2[3][0], eqtmp)
+        self.wait(0.1)
+        source, target = (eqssum3[1][0], eqssum4[0][2])
+        target2 = Line(target.get_left(), target.get_right(), stroke_width=5, stroke_color=WHITE).set_z_index(12)
+        source2 = Line(source.get_corner(DL), source.get_corner(UR), stroke_width=5, stroke_color=WHITE).set_z_index(12)
+        self.remove(source)
+        self.play(mh.rtransform(eqssum3[0][:], eqssum4[0][:2], eqssum3[1][1:], eqssum4[0][3:],
+                                eqssum3[2], eqssum4[1], eqssum3[3], eqssum4[2], source2, target2),
+                  run_time=1.4)
+        self.remove(target2)
+        self.add(target)
+        self.wait(0.1)
+
+        # LLN
+
+        self.play(equnsum.animate.scale(1/.6, about_point=equnsum.get_corner(UL)))
+        self.wait(0.1)
+
+        eqtmean = MathTex(r'\mathbb E[t_k]', r'=', r'\sigma^2', font_size=80).set_z_index(12)
+        eqtmean.next_to(equnsum, DR, buff=0.3).shift(LEFT*1)
+        eqlln = MathTex(r'\frac{u_n}{n}', r'\to', r'\sigma^2', font_size=80).set_z_index(12)
+        mh.align_sub(eqlln, eqlln[1], equnsum[1]).align_to(equnsum, LEFT).shift(RIGHT)
+        eqlln[0][-1].shift(UP*0.2)
+        eqlln[0][:2].shift(DOWN*0.1)
+        eqslim = MathTex(r'\frac{S_n}{\sqrt{n} }', r'=', r'\tilde B_{\frac{u_n}{n} }', r'\to', r'\tilde B_{\sigma^2}',
+                         font_size=100).set_z_index(12)
+        mh.align_sub(eqslim, eqslim[1], eqssum4[1]).shift(DOWN*0.5+LEFT*2)
+        eqslim2 = MathTex(r'\frac{S_n}{\sqrt{n} }', r'\to', r'\tilde B_{\sigma^2}',
+                          r'\sim', r'N(0,\sigma^2)',
+                         font_size=100).set_z_index(12)
+        mh.align_sub(eqslim2, eqslim2[0], eqslim[0])
+
+        VGroup(eqtmean[0][0], eqslim2[4][0]).set_color(self.opCol)
+        VGroup(eqtmean[0][2], eqlln[0][0]).set_color(self.tCol)
+        VGroup(eqtmean[0][3], eqlln[0][1], eqlln[0][3]).set_color(self.indexCol)
+        VGroup(eqtmean[2][0], eqlln[2][0], eqslim[4][2], eqslim2[4][4]).set_color(self.paramCol)
+        VGroup(eqtmean[2][1], eqlln[2][1], eqslim[4][-1], eqslim2[4][5]).set_color(self.exponentCol)
+        eqslim[4][:2].set_color(self.BCol)
+        eqslim2[4][2].set_color(self.numCol)
+        copy_colors(*eqssum4, *eqslim[:3])
+        copy_colors(eqslim[0], eqslim[4], eqslim2[0], eqslim2[2])
+
+        self.play(FadeIn(eqtmean))
+        self.wait(0.1)
+        self.play(mh.rtransform(equnsum[0][:], eqlln[0][:2]),
+                  mh.fade_replace(equnsum[1], eqlln[1]),
+                  FadeIn(eqlln[0][2:], shift=mh.diff(equnsum[0][:], eqlln[0][:2])*RIGHT),
+                  FadeOut(equnsum[2]),
+                  FadeIn(eqlln[2]),
+                  run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.rtransform(eqssum4[:], eqslim[:3]),
+                  Succession(Wait(0.5), FadeIn(eqslim[3:], run_time=1.4)))
+        self.wait(0.1)
+        self.play(mh.rtransform(eqslim[0], eqslim2[0], eqslim[3:5], eqslim2[1:3], run_time=1.6),
+                  FadeOut(eqslim[1:3]),
+                  Succession(Wait(0.6), FadeIn(eqslim2[3:])))
+
 
         self.wait()
 
