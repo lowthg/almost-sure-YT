@@ -10,9 +10,17 @@ sys.path.append('../')
 import manimhelper as mh
 
 class CLT2(Scene):
+    XCol = BLUE
+    indexCol = GREEN
+    opCol = YELLOW
+    paramCol = ORANGE
+    exponentCol = TEAL
+    numCol = TEAL
+    bgCol = GREY
+
     def __init__(self, *args, **kwargs):
         if not config.transparent:
-            config.background_color = GREY
+            config.background_color = self.bgCol
         Scene.__init__(self, *args, **kwargs)
 
     def construct(self):
@@ -26,13 +34,13 @@ class CLT2(Scene):
 
         VGroup(eq1[0][0], eq1[1][1], eq1[2][1], eq2[0][2], eq2[4][2],
                eq3[0][0], eq3[2][0], eq3[2][3], eq3[2][-2],
-               eq4[0][0]).set_color(BLUE) # X
+               eq4[0][0]).set_color(self.XCol)
         VGroup(eq1[0][1], eq1[1][2], eq1[2][2], eq2[0][3], eq2[4][4],
                eq3[0][1], eq3[2][1], eq3[2][4], eq3[2][-1],
-               eq4[0][1], eq4[0][-1]).set_color(GREEN) # indices
-        VGroup(eq2[0][0], eq2[4][0], eq4[2][0]).set_color(YELLOW)
-        VGroup(eq2[-1][-2], eq4[2][-3]).set_color(ORANGE)
-        VGroup(eq2[4][-3], eq2[6][-1], eq4[2][-2]).set_color(TEAL) # exponent
+               eq4[0][1], eq4[0][-1]).set_color(self.indexCol)
+        VGroup(eq2[0][0], eq2[4][0], eq4[2][0]).set_color(self.opCol)
+        VGroup(eq2[-1][-2], eq4[2][-3]).set_color(self.paramCol)
+        VGroup(eq2[4][-3], eq2[6][-1], eq4[2][-2]).set_color(self.exponentCol) # exponent
         VGroup(eq3[0][1], eq4[2][2]).set_color(TEAL) # numbers
 
         eq2.next_to(eq1, DOWN, buff=0.4)
@@ -275,7 +283,14 @@ class Bridge(Scene):
 
         self.wait()
 
-class BMDef(Scene):
+class BMDef(CLT2):
+    bgCol = BLACK
+    tCol = RED
+    BCol = YELLOW
+    textCol = BLUE
+
+    #def get_plot(self):
+
     def get_axes(self, scale=1., xlen = 0.9, ylen=0.95, scale_neg=1.):
         ymax = 1.5 / scale
         xlen *= 2 * config.frame_x_radius
@@ -288,20 +303,46 @@ class BMDef(Scene):
                   ).set_z_index(1.9)
         eqt = MathTex(r't').next_to(ax.x_axis.get_right(), UP, buff=0.2)
         mark1 = ax.x_axis.get_tick(1, size=0.1).set_stroke(width=6).set_z_index(11)
-        line1 = DashedLine(ax.coords_to_point(1, -ymax*scale_neg), ax.coords_to_point(1, ymax), color=GREY).set_z_index(10).set_opacity(0.6)
-        eq2 = MathTex(r'T', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
-        eq6 = MathTex(r'1', font_size=60).set_z_index(3).next_to(mark1, DR, buff=0.05)
 
-        return ax, eqt, xlen, ylen, ymax, mark1, line1, eq2, eq6
+        return ax, eqt, xlen, ylen, ymax
+
+    def get_plot(self):
+        ax, eqt, xlen, ylen, ymax, mark1 = self.get_axes()
+
+        return VGroup(ax, eqt, mark1)
+
+    def stopping_time(self, eq1):
+        eq2 = Tex(r'$t_1$', r'\sf\ is a stopping time', font_size=80)
+        eq3 = MathTex(r'\mathbb E[t_1]', r'<', r'\infty', font_size=80)
+        eq2[1].set_color(self.textCol)
+        VGroup(eq2[0][0], eq3[0][2]).set_color(self.tCol)
+        VGroup(eq2[0][1], eq3[0][3]).set_color(self.indexCol)
+        eq3[0][0].set_color(self.opCol)
+        eq3[-1].set_color(self.numCol)
+
+        eq2.move_to(mh.pos(RIGHT*0.35)).move_to(eq1, coor_mask=UP)
+        eq3.next_to(eq2, DOWN)
+
+        self.play(eq1.animate(run_time=1.6).shift(LEFT*4),
+                  Succession(Wait(0.6), FadeIn(eq2)))
+        self.wait(0.1)
+        gp1 = VGroup(eq2.copy(), eq3).move_to(eq2, coor_mask=UP)
+        self.play(mh.transform(eq2, gp1[0]), Succession(Wait(0.5), FadeIn(eq3)))
 
     def construct(self):
+        self.do_anim()
+
+    def do_anim(self, just_plot=False):
+        MathTex.set_default(stroke_width=1.5)
         seeds = [3, 4, 18]
         npts = 1920
         ndt = npts - 1
 
         np.random.seed(seeds[0])
 
-        ax, eqt, xlen, ylen, ymax, mark1, line1, eq2, eq6 = self.get_axes()
+        ax, eqt, xlen, ylen, ymax = self.get_axes()
+
+        eqt.set_color(self.tCol)
 
         t_vals = np.linspace(0, 1., npts)
         s = np.sqrt(t_vals[1])
@@ -312,6 +353,9 @@ class BMDef(Scene):
         tarr = np.linspace(0.1, 0.95, 4)
         marks = [ax.x_axis.get_tick(t, size=0.1).set_stroke(width=6) for t in tarr]
         eq_marks = [MathTex(r't_{}'.format(i), font_size=60).set_z_index(3).next_to(marks[i], DOWN, buff=0.05) for i in range(4)]
+        for _ in eq_marks:
+            _[0][0].set_color(self.tCol)
+            _[0][1].set_color(self.indexCol)
         anims = []
         eqargs = []
         eqs = []
@@ -322,20 +366,49 @@ class BMDef(Scene):
                 eqstr = r'B_{{t_{} }} - B_{{ t_{} }}'.format(i, i-1)
                 tmp.append(MathTex(eqstr, font_size=60).set_z_index(3)
                            .next_to(pos, DOWN, buff=0.85))
+                VGroup(tmp[-1][0][0], tmp[-1][0][4]).set_color(self.BCol)
+                VGroup(tmp[-1][0][1], tmp[-1][0][5]).set_color(self.tCol)
+                VGroup(tmp[-1][0][2], tmp[-1][0][6]).set_color(self.indexCol)
                 eqs.append(tmp[-1])
                 if i > 1:
                     eqargs.append(r',')
                 eqargs.append(eqstr)
             anims.append(FadeIn(*tmp, rate_func=linear, run_time=0.5))
-        eq1 = MathTex(*eqargs, font_size=60).next_to(VGroup(*eqs), DOWN)
+        eq1 = MathTex(*eqargs, font_size=60).next_to(VGroup(*eqs), DOWN)[:]
+        for i in range(3):
+            eq1[2*i] = eqs[i][0].copy().move_to(eq1[2*i])
         br1 = BraceLabel(eq1, r'\sf independent', label_constructor=mh.mathlabel_ctr2, font_size=80,
                          brace_config={'color': RED}).set_z_index(2)
 
         eq3 = MathTex(r'B_t', r'\sim', r'N(0,t)', font_size=80).set_z_index(3)
         eq3.move_to(eq1, coor_mask=UP).shift(DOWN*0.5)
+        eq3[0][0].set_color(self.BCol)
+        eq3[0][1].set_color(self.tCol)
+        eq3[2][0].set_color(self.opCol)
+        eq3[2][2].set_color(self.numCol)
+        eq3[2][4].set_color(self.tCol)
 
         eqB1 = MathTex(r'B', color=YELLOW, font_size=80, stroke_width=2)
         eqB1.move_to(ax.coords_to_point(0.6, 0.5))
+
+        i1 = int(npts * 0.75)
+        t1 = t_vals[i1]
+        b1 = b_vals[i1]
+        p1 = ax.coords_to_point(t1, 0)
+        p2 = ax.coords_to_point(t1, b1)
+        eq7 = MathTex(r't_1', font_size=60).set_z_index(3).next_to(p1, DOWN, buff=0.15)
+        eq8 = MathTex(r'B_{t_1}', font_size=60).set_z_index(3).next_to(p2, UP, buff=0.4)
+        line2 = DashedLine(p1, p2, color=YELLOW, stroke_width=5)
+        eq9 = MathTex(r'B_{t_1}', r'\sim', r'X_1', font_size=80).set_z_index(3)
+        eq9.move_to(eq1, coor_mask=UP).shift(DOWN*0.5)
+
+        VGroup(eq7[0], eq8[0][1], eq9[0][1]).set_color(self.tCol)
+        VGroup(eq8[0][0], eq9[0][0]).set_color(self.BCol)
+        VGroup(eq7[0][1], eq8[0][2], eq9[0][2], eq9[2][1]).set_color(self.indexCol)
+        VGroup(eq9[2][0]).set_color(self.XCol)
+
+        if just_plot:
+            return VGroup(ax, eqt, path1, eq7, eq8, eq9, line2, eqB1), t_vals, b_vals, i1
 
         self.add(ax, eqt)
         self.wait(0.1)
@@ -352,16 +425,6 @@ class BMDef(Scene):
 
         # t1
 
-        i1 = int(npts * 0.75)
-        t1 = t_vals[i1]
-        b1 = b_vals[i1]
-        p1 = ax.coords_to_point(t1, 0)
-        p2 = ax.coords_to_point(t1, b1)
-        eq7 = MathTex(r't_1', font_size=60).set_z_index(3).next_to(p1, DOWN, buff=0.15)
-        eq8 = MathTex(r'B_{t_1}', font_size=60).set_z_index(3).next_to(p2, UP, buff=0.4)
-        line2 = DashedLine(p1, p2, color=YELLOW, stroke_width=5)
-        eq9 = MathTex(r'B_{t_1}', r'\sim', r'X_1', font_size=80).set_z_index(3)
-        eq9.move_to(eq1, coor_mask=UP).shift(DOWN*0.5)
 
         self.wait(0.1)
         self.play(FadeIn(eq7), Create(line2),
@@ -370,4 +433,123 @@ class BMDef(Scene):
         self.play(mh.rtransform(eq8[0].copy(), eq9[0], run_time=1.8),
                   Succession(Wait(1.2), FadeIn(eq9[1:])))
 
+        self.stopping_time(eq9)
+
         self.wait()
+
+class BMTimes(BMDef):
+    def construct(self):
+        gp1, t_vals, b_vals, i_t1 = self.do_anim(just_plot=True)
+        ax = gp1[0]
+        #gp1 = gp1[:-1]
+        eqsim1 = gp1[5]
+
+        npts = len(t_vals)
+        i_t2 = int(0.3 * npts)
+        i_t3 = int(0.5 * npts)
+
+        t1 = t_vals[i_t1]
+        b1 = b_vals[i_t1]
+        t2 = t_vals[i_t2]
+        t3 = t_vals[i_t3]
+
+        eqB1 = gp1[7]
+        origin = ax.coords_to_point(0, 0)
+        p1 = ax.coords_to_point(t1, b1)
+        s = np.sqrt(t_vals[1])
+        np.random.seed(107)
+        b2_vals = np.concatenate((b_vals[i_t1:], np.random.normal(scale=s, size=i_t1).cumsum() + b_vals[-1])) - b_vals[i_t1]
+        b2 = b2_vals[i_t2]
+        p2 = ax.coords_to_point(t2, b2)
+
+        np.random.seed(200)
+        b3_vals = np.concatenate((b2_vals[i_t2:], np.random.normal(scale=s, size=i_t2).cumsum() + b2_vals[-1])) - b2_vals[i_t2]
+        b3 = b3_vals[i_t3]
+        p3 = ax.coords_to_point(t3, b3)
+
+        gp2 = VGroup(gp1[3], gp1[4], gp1[6])
+        path1 = gp1[2]
+        path2 = ax.plot_line_graph(t_vals, b2_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(5)
+        path3 = ax.plot_line_graph(t_vals, b3_vals, add_vertex_dots=False, stroke_color=YELLOW, stroke_width=4).set_z_index(8)
+
+        pt2 = ax.coords_to_point(t2, 0)
+        pb2 = ax.coords_to_point(t2, b2)
+        eqb2diff = MathTex(r'B^{(2)}_t', '=', r'B_{t_1+t}-B_{t_1}', font_size=80)
+        eqt2 = MathTex(r't_2', font_size=60).set_z_index(6).next_to(pt2, DOWN, buff=0.15)
+        eqb2 = MathTex(r'B^{(2)}_{t_2}', font_size=60).set_z_index(6).next_to(pb2, UP, buff=0.4)
+        line2 = DashedLine(pt2, pb2, color=YELLOW, stroke_width=5)
+        eqsim2 = MathTex(r'B^{(2)}_{t_2}', r'\sim', r'X_2', font_size=80).set_z_index(3)
+        eqsim2.next_to(eqsim1, RIGHT, buff=0.5)
+        eqb2diff.move_to(mh.pos(UP*0.62+RIGHT*0.3))
+        VGroup(eqt2[0], eqb2[0][-2], eqsim2[0][-2],
+               eqb2diff[0][-1], eqb2diff[2][1], eqb2diff[2][4], eqb2diff[2][7]).set_color(self.tCol)
+        VGroup(eqb2[0][0], eqsim2[0][0],
+               eqb2diff[0][0], eqb2diff[2][0], eqb2diff[2][6]).set_color(self.BCol)
+        VGroup(eqt2[0][1], eqb2[0][-1], eqsim2[0][-1], eqsim2[2][1], eqb2[0][1:4], eqsim2[0][1:4],
+               eqb2diff[0][1:4], eqb2diff[2][2], eqb2diff[2][8]).set_color(self.indexCol)
+        VGroup(eqsim2[2][0]).set_color(self.XCol)
+
+        pt3 = ax.coords_to_point(t3, 0)
+        pb3 = ax.coords_to_point(t3, b3)
+        eqb3diff = MathTex(r'B^{(3)}_t', '=', r'B^{(2)}_{t_2+t}-B^{(2)}_{t_2}', font_size=80).set_z_index(9)
+        eqt3 = MathTex(r't_3', font_size=60).set_z_index(9).next_to(pt3, UP, buff=0.15)
+        eqb3 = MathTex(r'B^{(3)}_{t_3}', font_size=60).set_z_index(9).next_to(pb3, UR, buff=0)
+        line3 = DashedLine(pt3, pb3, color=YELLOW, stroke_width=5)
+        eqsim3 = MathTex(r'B^{(3)}_{t_3}', r'\sim', r'X_3', font_size=80).set_z_index(3)
+        eqb3diff.move_to(mh.pos(UP*0.31+LEFT*0.23))
+        VGroup(eqt3[0], eqb3[0][-2], eqsim3[0][-2],
+               eqb3diff[0][-1], eqb3diff[2][4], eqb3diff[2][7], eqb3diff[2][13]).set_color(self.tCol)
+        VGroup(eqb3[0][0], eqsim3[0][0],
+               eqb3diff[0][0], eqb3diff[2][0], eqb3diff[2][9]).set_color(self.BCol)
+        VGroup(eqt3[0][1], eqb3[0][-1], eqsim3[0][-1], eqsim3[2][1], eqsim3[0][1:4], eqb3[0][1:4],
+               eqb3diff[0][1:4], eqb3diff[2][5], eqb3diff[2][14],
+               eqb3diff[2][1:4], eqb3diff[2][10:14]).set_color(self.indexCol)
+        VGroup(eqsim3[2][0]).set_color(self.XCol)
+
+
+        self.add(gp1)
+        self.wait()
+        shift = p1 - origin
+        self.play(path2.shift(shift).animate(run_time=2).shift(-shift),
+                  path1.animate().set_stroke(opacity=0.3, color=BLUE),
+                  gp2.animate().set_opacity(0.1),
+                  Succession(Wait(1.3), FadeIn(eqb2diff)),
+                  FadeOut(eqB1))
+        self.wait(0.1)
+
+        gp = VGroup(eqsim1.copy(), eqsim2).move_to(eqsim1, coor_mask=RIGHT)
+        eqsim1_1 = gp[0]
+        self.play(FadeIn(eqt2, run_time=0.5, rate_func=linear), Create(line2, run_time=0.5),
+                  Succession(Wait(0.4), FadeIn(eqb2)),
+                  )
+        self.play(mh.rtransform(eqb2[0].copy(), eqsim2[0], run_time=1.8),
+                  mh.transform(eqsim1, eqsim1_1),
+                  Succession(Wait(1.2), FadeIn(eqsim2[1:])))
+        self.wait(0.1)
+
+        shift = p2 - origin
+        gp3 = VGroup(eqt2, line2, eqb2)
+        eq_tmp = eqb3diff.copy().set_color(BLACK).set_stroke(width=16).set_z_index(8.5)
+        self.play(path3.shift(shift).animate(run_time=2).shift(-shift),
+                  path2.animate().set_stroke(opacity=0.3, color=GREEN),
+                  gp3.animate().set_opacity(0.1),
+                  Succession(Wait(1.3), FadeIn(eqb3diff, eq_tmp)),
+                  FadeOut(eqb2diff))
+        self.wait(0.1)
+
+        eqb3_1 = eqb3.copy().set_stroke(width=14).set_color(BLACK).set_z_index(8.5)
+        self.play(FadeIn(eqt3, run_time=0.5, rate_func=linear), Create(line3, run_time=0.7),
+                  Succession(Wait(0.5), FadeIn(eqb3, eqb3_1)),
+                  )
+        eqsim3.next_to(eqsim2, RIGHT, buff=0.5)
+        gp_1 = VGroup(eqsim1, eqsim2)
+        gp = VGroup(gp_1.copy(), eqsim3).move_to(gp_1, coor_mask=RIGHT).shift(DOWN*0.4)
+        gp_2 = gp[0]
+        self.play(mh.rtransform(eqb3[0].copy(), eqsim3[0], run_time=1.4),
+                  mh.transform(gp_1, gp_2),
+                  Succession(Wait(1), FadeIn(eqsim3[1:])))
+        self.wait(0.1)
+
+
+        self.wait()
+
