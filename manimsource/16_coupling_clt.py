@@ -9,6 +9,16 @@ from torch.utils.jit.log_extract import run_test
 sys.path.append('../')
 import manimhelper as mh
 
+def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
+    res = VGroup()
+    for eq1 in eq:
+        elem = VGroup()
+        for eq2 in eq1:
+            elem.add(VGroup(eq2.set_z_index(fg_z_index),
+                            eq2.copy().set_z_index(bg_z_index).set_color(bg_color).set_stroke(width=bg_stroke_width)))
+        res.add(elem)
+    return res
+
 class CLT2(Scene):
     XCol = BLUE
     indexCol = GREEN
@@ -16,6 +26,9 @@ class CLT2(Scene):
     paramCol = ORANGE
     exponentCol = TEAL
     numCol = TEAL
+    tCol = RED
+    BCol = YELLOW
+    textCol = BLUE
     bgCol = GREY
 
     def __init__(self, *args, **kwargs):
@@ -31,6 +44,10 @@ class CLT2(Scene):
                       r'\mathbb E[X_n^2]', r'=', r'\sigma^2').set_z_index(4)
         eq3 = MathTex(r'S_n', r'=', r'X_1+X_2+\cdots+X_n').set_z_index(4)
         eq4 = MathTex(r'\frac{S_n}{\sqrt{n}}', r'\to', r'N(0,\sigma^2)').set_z_index(4)
+        eq5 = MathTex(r'\mathbb P\Big(', r'\frac{S_n}{\sqrt{n}}', r' > x\Big)', r'\to', r'\mathbb P(', r'N(0,\sigma^2)', r' > x\right)').set_z_index(4)
+        ht = eq5[1].height
+        eq5[0][1].stretch_to_fit_height(ht)
+        eq5[2][-1].stretch_to_fit_height(ht)
 
         VGroup(eq1[0][0], eq1[1][1], eq1[2][1], eq2[0][2], eq2[4][2],
                eq3[0][0], eq3[2][0], eq3[2][3], eq3[2][-2],
@@ -38,10 +55,11 @@ class CLT2(Scene):
         VGroup(eq1[0][1], eq1[1][2], eq1[2][2], eq2[0][3], eq2[4][4],
                eq3[0][1], eq3[2][1], eq3[2][4], eq3[2][-1],
                eq4[0][1], eq4[0][-1]).set_color(self.indexCol)
-        VGroup(eq2[0][0], eq2[4][0], eq4[2][0]).set_color(self.opCol)
+        VGroup(eq2[0][0], eq2[4][0], eq4[2][0], eq5[0][0], eq5[4][0]).set_color(self.opCol)
         VGroup(eq2[-1][-2], eq4[2][-3]).set_color(self.paramCol)
         VGroup(eq2[4][-3], eq2[6][-1], eq4[2][-2]).set_color(self.exponentCol) # exponent
-        VGroup(eq3[0][1], eq4[2][2]).set_color(TEAL) # numbers
+        VGroup(eq3[0][1], eq4[2][2], eq5[2][1], eq5[6][1], eq2[2]).set_color(self.numCol) # numbers
+        copy_colors(eq4[0], eq4[2], eq5[1], eq5[5])
 
         eq2.next_to(eq1, DOWN, buff=0.4)
         mh.align_sub(eq3, eq3[2][0], eq1[0][0], coor_mask=UP)
@@ -73,6 +91,14 @@ class CLT2(Scene):
                   FadeIn(eq3[2][-3:], shift=mh.diff(eq1[3][1:], eq3[2][6:9])*RIGHT))
         self.wait(0.1)
         self.play(FadeIn(eq4, box2))
+
+        mh.align_sub(eq5, eq5[3], eq4[1], coor_mask=UP)
+        box3 = SurroundingRectangle(eq5, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                   fill_opacity=0.6, corner_radius=0.2, buff=0.1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0], eq5[1], eq4[1], eq5[3], eq4[2], eq5[5]),
+                  mh.rtransform(box2, box3),
+                  Succession(Wait(0.5), FadeIn(eq5[0], eq5[2], eq5[4], eq5[6])))
         self.wait()
 
 
@@ -285,9 +311,6 @@ class Bridge(Scene):
 
 class BMDef(CLT2):
     bgCol = BLACK
-    tCol = RED
-    BCol = YELLOW
-    textCol = BLUE
 
     #def get_plot(self):
 
@@ -381,7 +404,7 @@ class BMDef(CLT2):
                          brace_config={'color': RED}).set_z_index(2)
 
         eq3 = MathTex(r'B_t', r'\sim', r'N(0,t)', font_size=80).set_z_index(3)
-        eq3.move_to(eq1, coor_mask=UP).shift(DOWN*0.5)
+        eq3.move_to(eq1, coor_mask=UP).shift(DOWN*1)
         eq3[0][0].set_color(self.BCol)
         eq3[0][1].set_color(self.tCol)
         eq3[2][0].set_color(self.opCol)
@@ -955,3 +978,198 @@ class BMTimes(BMDef):
 
         self.wait()
 
+class BrownianScaled(BMDef):
+    bgCol = GREY
+    def construct(self):
+        MathTex.set_default(font_size=100, stroke_width=2)
+        eq1 = MathTex(r'\tilde B_t', r'=', r'B_{nt}', r'/\sqrt{n}').set_z_index(2)
+
+        eq2 = MathTex(r'B_t', r'=', r'\sqrt{n}', r'\tilde B_{\frac tn}').set_z_index(2)
+        eq3 = MathTex(r'S_n/\sqrt{n}', r'\to', r'\tilde B_{\sigma^2}').set_z_index(2)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+
+        gp = VGroup(eq1, eq2)
+        box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
+                                   corner_radius=0.2, buff=0.2)
+        VGroup(box, eq1, eq2).to_edge(DOWN, buff=0.15)
+
+        eq3.next_to(eq2, UP, buff=0.3)
+        box2 = SurroundingRectangle(VGroup(gp, eq3), stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
+                                   corner_radius=0.2, buff=0.2)
+
+        VGroup(eq1[0][:2], eq1[2][0], eq2[0][0], eq2[3][:2], eq3[2][:2]).set_color(self.BCol)
+        VGroup(eq1[0][2], eq1[2][2], eq2[0][1], eq2[3][2]).set_color(self.tCol)
+        VGroup(eq1[2][1], eq1[3][-1], eq2[2][-1], eq2[3][-1], eq3[0][1], eq3[0][-1], eq3[2][-1]).set_color(self.indexCol)
+        VGroup(eq3[0][0]).set_color(self.XCol)
+        eq3[2][2].set_color(self.paramCol)
+
+        self.add(box, eq1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[2][0], eq2[0][0], eq1[2][2], eq2[0][1],
+                                eq1[1], eq2[1], eq1[3][1:], eq2[2][:],
+                                eq1[0][:], eq2[3][:3], eq1[2][1], eq2[3][-1]),
+                  FadeOut(eq1[3][0], target_position=eq2[2][0]),
+                  FadeIn(eq2[3][-2], shift=mh.diff(eq1[0][2], eq2[3][-3])),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(mh.rtransform(box, box2),
+                  Succession(Wait(0.5), FadeIn(eq3)))
+
+
+        self.wait()
+
+class Skorokhod(CLT2):
+    bgCol = BLACK
+    def write(self, *txt, run_time=2.):
+        txts = []
+        for elem in txt:
+            txts += list(elem)
+        txt1 = VGroup(*txts)
+        tval = ValueTracker(.0)
+        n = len(txt1)
+        def txt_write():
+            t = tval.get_value()
+            i = min(math.ceil(t*n), n)
+            res = txt1[:i].copy()
+            if i > 0:
+                res[-1].set_opacity(t*n-i+1)
+            return res
+
+        txt2 = always_redraw(txt_write)
+        self.add(txt2)
+        self.play(tval.animate.set_value(1.), rate_func=linear, run_time=run_time)
+        self.remove(txt2)
+        self.add(*txt)
+
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        col = ManimColor('#ffac2b')
+        txt1 = Tex(r'\sf Skorokhod stopping problem', font_size=90, color=col, stroke_width=3)[0]
+        txt1.to_edge(UP, buff=0.6)
+
+        MathTex.set_default(font_size=70, stroke_width=1.5, color=self.textCol)
+        txt2 = Tex(r'\sf For a random variable ', r'$X$', r' and standard ')
+        txt3 = Tex(r'\sf Brownian motion ', r'$B$', r', find a stopping time ', r'$t$')
+        txt4 = Tex(r'\sf with finite mean such that ', r'$B_t$', r' has the same')
+        txt5 = Tex(r'\sf distribution as ', r'$X$', r'.')
+        VGroup(txt2[1], txt5[1]).set_color(GREEN)
+        VGroup(txt3[1], txt4[1][0]).set_color(self.BCol)
+        VGroup(txt3[-1], txt4[1][1]).set_color(self.tCol)
+        gp = VGroup(txt2, txt3, txt4, txt5).arrange_in_grid(cols=1, buff=0.5, cell_alignment=LEFT).next_to(txt1, DOWN, buff=0.6).to_edge(LEFT, buff=0.4)
+        txt2.shift(RIGHT)
+
+        self.write(txt1, run_time=2)
+        self.wait(0.1)
+        self.write(*txt2, *txt3, *txt4, *txt5, run_time=4)
+
+        MathTex.set_default(font_size=80, stroke_width=1.5, color=WHITE)
+        eq1 = MathTex(r'\mathbb E[X]', r'=', r'0')
+        eq2 = MathTex(r'\mathbb E[X^2]', r'<', r'\infty')
+        eq3 = MathTex(r'\mathbb E[t]', r'=', r'\mathbb E[X^2]', r'=', r'\sigma^2')
+        eq4 = MathTex(r'\mathbb E[B_t^2-t]', r'=', r'0')
+        eq5 = MathTex(r'\mathbb E[t]', r'=', r'\mathbb E[B_t^2]')
+        eq6 = MathTex(r'=', r'\mathbb E[X^2]')
+        eq7 = MathTex(r'=', r'\sigma^2')
+
+        VGroup(eq1[0][0], eq2[0][0], eq3[0][0], eq3[2][0], eq4[0][0],
+               eq5[0][0], eq5[2][0], eq6[1][0]).set_color(self.opCol)
+        VGroup(eq1[2], eq2[2], eq4[2]).set_color(self.numCol)
+        VGroup(eq1[0][2], eq2[0][2], eq3[2][2], eq6[1][2]).set_color(GREEN)
+        VGroup(eq2[0][3], eq3[2][3], eq3[4][1], eq4[0][3], eq5[2][3], eq6[1][3], eq7[1][1]).set_color(self.exponentCol)
+        VGroup(eq3[0][2], eq4[0][4], eq4[0][6], eq5[0][2], eq5[2][4]).set_color(self.tCol)
+        VGroup(eq3[4][0], eq7[1][0]).set_color(self.paramCol)
+        VGroup(eq4[0][2], eq5[2][2]).set_color(self.BCol)
+
+        eq1.move_to((gp.get_bottom()+mh.pos(DOWN))/2, coor_mask=UP)
+        mh.align_sub(eq2, eq2[0][0], eq1[0][0])
+        eq2.next_to(eq1, RIGHT, buff=1)
+        gp2 = VGroup(eq1, eq2).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq3, eq3[1], eq1[1], coor_mask=UP)
+        mh.align_sub(eq4, eq4[1], eq1[1], coor_mask=UP)
+        mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
+        mh.align_sub(eq6, eq6[0], eq5[1])
+        mh.align_sub(eq7, eq7[0], eq5[1])
+
+        self.play(FadeIn(eq1, eq2))
+        circ = mh.circle_eq(gp2).set_z_index(4)
+        txt6 = Tex(r'\sf\emph{necessary and sufficient}', color=RED, font_size=80)
+        txt6.move_to(circ.get_corner(UR)).shift(LEFT*1.5+UP*0.15)
+        txt6 = eq_shadow(txt6, fg_z_index=6, bg_z_index=5)
+        self.play(Create(circ))
+        self.play(FadeIn(txt6))
+        self.wait(0.1)
+        self.play(FadeOut(circ, eq1, eq2, txt6))
+        self.play(FadeIn(eq3[:3]))
+        self.play(FadeIn(eq3[3:]))
+        self.wait(0.1)
+        self.play(FadeOut(eq3), FadeIn(eq4[0][2:-1]))
+        self.wait(0.1)
+        self.play(FadeIn(eq4[0][:2], eq4[0][-1], eq4[1:]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0][:5], eq5[2][:5], eq4[0][-1], eq5[2][-1],
+                                eq4[1], eq5[1], eq4[0][6], eq5[0][2]),
+                  mh.rtransform(eq4[0][:2].copy(), eq5[0][:2], eq4[0][-1].copy(), eq5[0][-1]),
+                  FadeOut(eq4[2]),
+                  FadeOut(eq4[0][5]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[2][:2], eq6[1][:2], eq5[2][3], eq6[1][3],
+                                eq5[2][-1], eq6[1][-1]),
+                  mh.fade_replace(eq5[2][2], eq6[1][2]),
+                  FadeOut(eq5[2][4], shift=mh.diff(eq5[2][2], eq6[1][2])))
+        self.wait(0.1)
+        eq7_1 = eq7[1].copy().move_to(eq6[1][2:4], coor_mask=RIGHT)
+        eq7_2 = VGroup(*eq5[:2].copy(), eq7[1]).move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(mh.rtransform(eq6[1][3], eq7_1[1]),
+                  mh.fade_replace(eq6[1][2], eq7_1[0], coor_mask=RIGHT),
+                  FadeOut(eq6[1][:2]),
+                  FadeOut(eq6[1][-1]))
+        self.play(mh.rtransform(eq5[:2], eq7_2[:2], eq7_1, eq7_2[2]))
+
+        self.wait()
+
+class NormDensity(CLT2):
+    bgCol = BLACK
+
+    def construct(self):
+        xmax = 2.
+        xlen = 6
+        ylen = 2
+        ax = Axes(x_range=[-xmax, xmax * 1.1], y_range=[0., 1.2], x_length=xlen, y_length=ylen,
+                  axis_config={'color': WHITE, 'stroke_width': 5, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+        eq1 = MathTex(r'p_{B_t}(x)', r'=', r'\frac{1}{\sqrt{2\pi t} }', r'\,e^{-\frac{x^2}{2t}}', stroke_width=1.5, font_size=50).set_z_index(6)
+        eq1[0][1].set_color(self.BCol)
+        VGroup(eq1[0][2], eq1[3][6], eq1[2][-1]).set_color(self.tCol)
+        VGroup(eq1[0][-2], eq1[3][2]).set_color(ManimColor(self.XCol.to_rgb()*1.5))
+        eq1[3][3].set_color(self.exponentCol)
+        VGroup(eq1[3][5], eq1[2][-3:-1], eq1[2][0]).set_color(self.numCol)
+        VGroup(eq1[0][0], eq1[3][0]).set_color(self.opCol)
+
+
+        self.add(ax)
+        self.wait(0.1)
+        def f(x):
+            return math.exp(-x*x/2)
+
+        path = ax.plot(f, (-xmax, xmax), stroke_color=BLUE, stroke_width=6).set_z_index(3)
+        area = ax.get_area(path, color=ManimColor(BLUE.to_rgb()*0.5), opacity=1, x_range=(-xmax, xmax),
+                           stroke_width=0, stroke_opacity=0).set_z_index(1)
+
+        p = ax.coords_to_point(0, 0.5)
+        mh.align_sub(eq1, eq1[1], p)
+        eq1.move_to(p)
+        eq1 = eq_shadow(eq1, bg_z_index=5, fg_z_index=6)
+
+        self.play(Create(path, rate_func=linear),
+                  Succession(Wait(0.5), FadeIn(area, rate_func=linear)),
+                  Succession(Wait(0.7), FadeIn(eq1)),
+                  )
+        self.wait()
+
+if __name__ == "__main__":
+    with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
+        Skorokhod().render()

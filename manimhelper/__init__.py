@@ -68,7 +68,7 @@ def rtransform(*args, **kwargs):
     return ReplacementTransform(VGroup(*args[0::2]), VGroup(*args[1::2]), **kwargs)
 
 
-def circle_eq(eq) -> ParametricFunction:
+def circle_eq(eq, color=RED, stroke_width=10) -> ParametricFunction:
     """
     create red curve around eq
     """
@@ -90,7 +90,7 @@ def circle_eq(eq) -> ParametricFunction:
         (eq.get_corner(UR) + eq.get_top()) * 0.5 + UP * 0.3,
     ]
     bez = bezier(points)
-    plot = ParametricFunction(bez, color=RED, stroke_width=10).set_z_index(2)
+    plot = ParametricFunction(bez, color=color, stroke_width=stroke_width).set_z_index(2)
     return plot
 
 
