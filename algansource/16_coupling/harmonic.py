@@ -32,15 +32,15 @@ def fade_dist(grid_dots, grid_desc, col, z_dir, z0, fade_rate=0.25, line_op=1.):
     col2[:, :, 4] *= op[:,:,0]
     grid_desc.set_non_recursive(color=col2)
 
-def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=(-11, 14)):
-    h = 0.6
+def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=(-11, 14), h=0.6,
+                fill_col: Color=None, resolution=(2,2)):
     nx = 1 + x_range[1] - x_range[0]
     ny = 1 + y_range[1] - y_range[0]
     x_points = np.linspace(x_range[0] * h, x_range[1] * h, nx)
     y_points = np.linspace(y_range[0] * h, y_range[1] * h, ny)
 
     line_width=4
-    dot1 = ManimMob(mn.Dot3D(radius=0.07, color=dot_col, resolution=(2, 2), stroke_opacity=0, stroke_width=0))
+    dot1 = ManimMob(mn.Dot3D(radius=0.07, color=dot_col, resolution=resolution, stroke_opacity=0, stroke_width=0))
     grid_dots = []
     grid_lines = []
     grid_lines2 = []
@@ -52,8 +52,9 @@ def create_mesh(mesh_col: Color=GREY, dot_col=mn.RED, x_range=(-15,14), y_range=
     if mesh_col is None:
         mesh_col = GREY.clone()
         mesh_col[4] = 0.6
-    fill_col = BLUE.clone()
-    fill_col[4] = 0.2
+    if fill_col is None:
+        fill_col = BLUE.clone()
+        fill_col[4] = 0.2
 
     surf = surface_func(nx=nx-1, ny=ny-1, mesh_m=32, mesh_n=32, mesh_col=mesh_col, fill_color=fill_col)
     surf.scale(np.array([(nx-1)*h/2, (ny-1)*h/2, 1]))
@@ -329,11 +330,12 @@ def mesh_points3(quality=LD, bgcol=BLACK, frame0 = 0, frame1=30):
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
-def setup_mesh(x_range=(-17, 14), y_range=(-11, 14)):
+def setup_mesh(x_range=(-17, 14), y_range=(-11, 14), h=0.6, resolution=(2, 2)):
     dot_col = mn.ManimColor(mn.RED)
     line_op=0.6
     grid_dots, grid_lines, grid_indices = create_mesh(dot_col=dot_col,
-                                                      y_range=y_range, x_range=x_range)
+                                                      y_range=y_range, x_range=x_range, h=h,
+                                                      resolution=resolution)
 
     M = ah.rotation_matrix(RIGHT, -60 * DEGREES_TO_RADIANS)
     pt = IN + np.dot(M, (OUT * 2 + DOWN).numpy())
@@ -883,19 +885,37 @@ def random_walk(quality=LD, bgcol=BLACK, anim=1, steps=10, p=1.):
         cam.orbit_around_point(ORIGIN, -30, IN)
 
     i, j = (17, 11)
+    col = mn.YELLOW
+    np.random.seed(1)
+    if anim == 3:
+        i += 3
+        j += -1
+        col = mn.WHITE
+        np.random.seed(2)
     (x_vals, y_vals) = (np.linspace(x_range[0]*h, x_range[1]*h, nx),
                                                 np.linspace(y_range[0]*h, y_range[1]*h,ny))
-    dot1 = ManimMob(mn.Dot3D(radius=0.12, color=mn.YELLOW, resolution=(10, 10), stroke_opacity=0, stroke_width=0))
+    dot1 = ManimMob(mn.Dot3D(radius=0.12, color=col, resolution=(10, 10), stroke_opacity=0, stroke_width=0))
     dot1.move_to(x_vals[i] * RIGHT + y_vals[j] * UP)
     dot1.glow = 1.
     with Off():
         dot1.spawn()
     Scene.wait(0.1)
-    np.random.seed(1)
-    for _ in range(steps):
+    det_steps = r''
+    if anim == 4:
+        det_steps = r'rruuluddrrrdrlduuludrdduld'
+        steps = len(det_steps)
+    for i in range(steps):
         u = np.random.uniform(0., 1.)
-        if u > p:
-            Scene.wait(1.)
+        if i < len(det_steps):
+            dir = det_steps[i]
+            if dir==r'u':
+                shift=UP*h
+            elif dir==r'd':
+                shift=DOWN*h
+            elif dir==r'l':
+                shift=LEFT*h
+            elif dir==r'r':
+                shift = RIGHT * h
         else:
             if u < 0.25 * p:
                 shift = RIGHT * h
@@ -905,9 +925,10 @@ def random_walk(quality=LD, bgcol=BLACK, anim=1, steps=10, p=1.):
                 shift = UP * h
             else:
                 shift = DOWN * h
-            with Sync(run_time=1.):
-                dot1.move(shift)
+        with Sync(run_time=0.5):
+            dot1.move(shift)
 
+    Scene.wait(0.1)
     kernel_size = 63
     strength = 8
     scale_factor=4
@@ -916,6 +937,65 @@ def random_walk(quality=LD, bgcol=BLACK, anim=1, steps=10, p=1.):
     bloom_new = partial(bf, num_iterations=num_iterations, kernel_size=kernel_size, strength=strength, scale_factor=scale_factor)
     render_to_file('random_walk{}'.format(anim), render_settings=quality, background_color=bgcol,  post_processes = [bloom_new])
 
+
+def surf_thumb(quality=LD, bgcol=BLACK):
+    h = 0.6
+    x_range = (-5, 5)
+    y_range = (-5, 5)
+    zscale = 0.08
+    grid_dots, grid_lines, grid_indices, _ = setup_mesh(x_range=x_range, y_range=y_range, h=h, resolution=(4, 4))
+
+    func_dots = grid_dots
+
+    nx = x_range[1] - x_range[0]
+    ny = y_range[1] - y_range[0]
+    a = 0.4
+    fill_color = (PURE_BLUE * a + BLUE * (1-a))
+    fill_color = GREEN.clone()
+    fill_color[:3] *= 0.5
+    fill_color[4] = 0.9
+    mesh_col=GREEN_D.clone()
+    mesh_col[:3] *= 0.2
+    mesh_col=GREY.clone()
+
+    surf = surface_func(nx=x_range[1] - x_range[0], ny=y_range[1] - y_range[0],
+                        mesh_m=32, mesh_n=32, fill_color=fill_color, mesh_col=mesh_col)
+    surf.scale(np.array([nx * h / 2, ny * h / 2, 1]))
+    surf.move((x_range[0] + x_range[1]) * h / 2 * RIGHT + (y_range[0] + y_range[1]) * h / 2 * UP)
+    with Off():
+        grid_lines.despawn()
+        surf.spawn()
+        for dot, index in zip(grid_dots, grid_indices):
+            if index[0] == x_range[0] or index[0] == x_range[1] or index[1] == y_range[0] or index[1] == y_range[1]:
+                dot.despawn()
+            else:
+                dot.scale(0.8)
+
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    col = p.color.clone()
+    cam = Scene.get_camera()
+
+    with Off():
+        cam.move(IN)
+        #cam.move_to(cam.get_center()*2)
+        p.set_non_recursive(color=col)
+
+    xvals = loc[:, :, 0] / h
+    yvals = loc[:, :, 1] / h
+
+    def f(x, y):
+        return (x * x - y * y) * zscale
+
+    zvals = (xvals * xvals - yvals * yvals) * zscale
+
+    with Off():
+        loc[:, :, 2] = -zvals
+        p.set_non_recursive(location=loc)
+        for index, dot in zip(grid_indices, func_dots):
+            dot.move(f(*index) * OUT)
+
+    render_to_file('surf_thumb', render_settings=quality, background_color=bgcol)
 
 
 
@@ -953,4 +1033,5 @@ if __name__ == "__main__":
     #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
     #mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
     #harmonic_func(quality=HD, bgcol=bgcol, anim=2)
-    random_walk(quality=HD, bgcol=TRANSPARENT, anim=2, steps=120, p=1.)
+    #random_walk(quality=HD, bgcol=TRANSPARENT, anim=4, steps=120, p=1.)
+    surf_thumb(quality=HD, bgcol=TRANSPARENT)
