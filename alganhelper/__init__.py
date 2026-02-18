@@ -31,7 +31,7 @@ def rotation_matrix(axis, theta):
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, stroke_opacity=0.8,
-                 num_recs=32, rec_size=10):
+                 num_recs=32, rec_size=10, **kwargs):
     col1 = col1.clone()
     col2 = col2.clone()
     n = num_recs
@@ -48,5 +48,44 @@ def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, s
                     pixel = col if i2 < m-1 and j2 < m-1 else sc
                     t[i1*m+i2, j1*m+j2, :] = pixel
 
-    mob = ImageMob(t)
+    mob = ImageMob(t, **kwargs)
     return mob
+
+class FrameStepper:
+    def __init__(self, fps = 30., run_time=1., rate_func=rate_funcs.smooth, step=2, include_start=True):
+        self.u = 0.
+        self.du = 0.
+        self.time = 0.
+        self.dt = 0.
+        self.fps = fps
+        self.run_time = run_time
+        self.n = round(fps * run_time)
+        self.rate_func = rate_func
+        self.step = step
+        self.index = 0
+        self.start = include_start
+        self.context = Off()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.start:
+            self.start = False
+            return self
+
+        if self.index >= self.n:
+            raise StopIteration
+        self.index = min(self.index + self.step, self.n)
+        u0 = self.index / self.n
+
+
+        u = self.rate_func(u0).item()
+        t = u0 * self.run_time
+        self.du = u - self.u
+        self.dt = t - self.time
+        self.u = u
+        self.time = t
+        self.context = Sync(run_time=self.dt, rate_func=rate_funcs.identity)
+
+        return self
