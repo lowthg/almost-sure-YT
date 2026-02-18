@@ -486,7 +486,8 @@ def colordomain(fvals, out, f0=1., prescale=1., postscale=1.):
     m, n = fvals.shape
     for i in range(m):
         for j in range(n):
-            out[i, j] = Color(torch.tensor(colorsys.hls_to_rgb(h[i, j], lightness[i, j], 1)))
+            #out[i, j] = Color(torch.tensor(colorsys.hls_to_rgb(h[i, j], lightness[i, j], 1)))
+            out[i, j, :3] = torch.tensor(colorsys.hls_to_rgb(h[i, j], lightness[i, j], 1))
 
 def hypothesis(quality=LD, bgcol=BLACK, **kwargs):
 
@@ -546,6 +547,10 @@ def hypothesis(quality=LD, bgcol=BLACK, **kwargs):
         objs2.spawn()
         eq0.spawn()
         eq1.spawn()
+
+    name = 'hypothesis'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+    return
 
     Scene.wait(0.5)
     line_2.spawn()
@@ -627,4 +632,5 @@ if __name__ == "__main__":
     #xi_surf(quality=HD, bgcol=BLACK)
     #zeta_surf(quality=HD, bgcol=TRANSPARENT)
     #gamma_surf(quality=HD, bgcol=TRANSPARENT)
-    hypothesis(quality=HD, bgcol=BLACK)
+    #hypothesis(quality=HD, bgcol=BLACK)
+    hypothesis(quality=LD, bgcol=BLACK)
