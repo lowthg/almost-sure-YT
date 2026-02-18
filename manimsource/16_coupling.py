@@ -797,6 +797,7 @@ class StationaryPlot(ProbFinal):
 
     num_steps = 11
     heights1 = [_/55 for _ in range(10, 0, -1)]
+    minimal = False
 
     def plot_extra(self, ax):
         pass
@@ -830,6 +831,9 @@ class StationaryPlot(ProbFinal):
             anims1.append(FadeIn(line2, label2))
         else:
             add1 += [line2, label2]
+
+        if self.minimal:
+            VGroup(ax, labelx, labely, line1, line2, label1, label2, *labels).set_opacity(0)
 
         self.add(*add1)
         self.wait(0.1)
@@ -872,6 +876,11 @@ class StationaryPlot(ProbFinal):
 
 
         self.wait()
+
+class StationaryPlotThumb(StationaryPlot):
+    num_steps = 1
+    minimal = True
+
 
 class StationaryConv(StationaryPlot):
 #    height = 10/55 * 1.13 * 0.9
