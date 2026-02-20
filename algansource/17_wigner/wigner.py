@@ -76,22 +76,6 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         ax1.spawn()
         surf.spawn()
 
-    # params1 = gauss1d_std(scale=0.5)
-    # params2 = gauss1d_std(scale=2.)
-    # params1 = gauss_scale(params1, 1./gauss1d_norm(params1))
-    # params2 = gauss_scale(params2, -1./gauss1d_norm(params2))
-    # params = params1 + params2
-
-    # params = gauss_shift(params, 3)
-    # params = gauss1d_p_shift(params, 3)
-    # params = gauss_tfm(params)
-    #params += params1
-    # params += gauss_scale(gauss_reflect(params), 1.)
-
-    # params = gauss_scale(params, 1./gauss1d_norm(params))
-    # wig = gauss_wigner(params, params)
-
-
     def f0(t): # flat to round Gaussian
         params = gauss1d_std(scale=1.)
         wig = gauss_wigner(params, params)
@@ -166,8 +150,19 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         wig = gauss_wigner(params, params)
         return gauss2d_calc(wig, x, y)
 
+    def f11(t): # corner gauss cc
+        params = gauss1d_std(scale=1.5)
+        params = gauss_shift(params, 3)
+        params = gauss1d_p_shift(params, 3)
+        wig1 = gauss_wigner(params, params)
+        params = gauss_conj(params)
+        wig2 = gauss_wigner(params, params)
+        vals1 = gauss2d_calc(wig1, x, y)
+        vals2 = gauss2d_calc(wig2, x, y)
+        return vals1 * (1 - t) + vals2 * t
+
     nFT = 4
-    def f11(t): # FT of stretched gauss
+    def f12(t): # FT of stretched gauss
         params = gauss1d_std(scale=1.5)
         params = gauss_shift(params, 3)
         params = gauss1d_p_shift(params, 3)
@@ -180,7 +175,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         vals2 = gauss2d_calc(wig2, x, y)
         return vals1 * (1-t) + vals2 * t
 
-    def f12(t): # stretched in corner to round gauss
+    def f13(t): # stretched in corner to round gauss
         params = gauss1d_std(scale=math.exp((1-t)*math.log(1.5)))
         params = gauss_shift(params, 3)
         params = gauss1d_p_shift(params, 3)
@@ -190,7 +185,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
     u0 = 0.
     u1 = 1.
 
-    def f13(t): # round in corner to reflection
+    def f14(t): # round in corner to reflection
         params = gauss1d_std(scale=1.)
         params = gauss_shift(params, 3)
         params = gauss1d_p_shift(params, 3)
@@ -202,7 +197,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         u = u0 * (1-t) + u1 * t
         return vals1 * (1-u) + vals2 * u
 
-    def f14(t): # mixed state in corners to superposition
+    def f15(t): # mixed state in corners to superposition
         params = gauss1d_std(scale=1.)
         params = gauss_shift(params, 3)
         params = gauss1d_p_shift(params, 3)
@@ -218,7 +213,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         vals = (vals1 + vals2) * (0.5 * (1-t)) + vals3 * t
         return vals
 
-    def f15(t): # superposition state in corners phase
+    def f16(t): # superposition state in corners phase
         params = gauss1d_std(scale=1.)
         params = gauss_shift(params, 3)
         params = gauss1d_p_shift(params, 3)
@@ -229,7 +224,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
         wig = gauss_wigner(params, params)
         return gauss2d_calc(wig, x, y)
 
-    def f16(t): # superposition_to_center
+    def f17(t): # superposition_to_center
         shift = 3 * (1-t)
         params = gauss1d_std(scale=1.)
         params = gauss_shift(params, shift)
@@ -242,11 +237,12 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
 
     col_up = torch.tensor([1, .6, 0.])
     col_dn = INDIGO[:3]
+    print(col_dn)
     col = col0.clone()
 
     u0 = 1.
     u1 = 0.5
-    f = f15
+    f = f16
     run_time=1.
     rate_func = rate_funcs.smooth
     part = 1
@@ -285,27 +281,30 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
     elif anim == 13:
         run_time = 2.
         f = f10
-    elif 14 <= anim <= 17:
+    elif anim == 14:
         run_time = 1.
         f = f11
-        nFT = anim - 13
-    elif anim == 18:
+    elif 15 <= anim <= 18:
         run_time = 1.
         f = f12
-    elif 19 <= anim <= 20:
+        nFT = anim - 14
+    elif anim == 19:
         run_time = 1.
         f = f13
-        u0, u1 = (0., 1.) if anim == 19 else (1., .5)
-    elif 21 <= anim <= 24:
-        run_time = 1.5
+    elif 20 <= anim <= 21:
+        run_time = 1.
         f = f14
-        part = anim - 20
-    elif anim == 25:
-        run_time=6.
+        u0, u1 = (0., 1.) if anim == 20 else (1., .5)
+    elif 22 <= anim <= 25:
+        run_time = 1.5
         f = f15
+        part = anim - 21
     elif anim == 26:
-        run_time = 4.
+        run_time=6.
         f = f16
+    elif anim == 27:
+        run_time = 4.
+        f = f17
 
 
     def set_surf(vals):
@@ -340,7 +339,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1):
                 set_surf(f(frame.u))
     else:
         if part <= 4: f = f8
-        else: f = f14
+        else: f = f15
         with Off():
             set_surf(f(1.))
         if part == 2: move_view(cam, 1)
@@ -360,4 +359,4 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
-    wigner_anim(quality=HD, bgcol=BLACK, anim=26)
+    wigner_anim(quality=HD, bgcol=BLACK, anim=14)
