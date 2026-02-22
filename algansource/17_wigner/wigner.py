@@ -14,12 +14,150 @@ HD = RenderSettings((1920, 1080), 30)
 HD2 = RenderSettings((1920, 1080), 15)
 
 
-def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
-    xmin, xmax = (-5., 5.)
-    ymin, ymax = (-5., 5.)
-    zmin, zmax = (-.3, .3)
-    name = 'wigner_anim{}'.format(anim)
+def f0(t):  # flat to round Gaussian
+    params = gauss1d_std(scale=1.)
+    return [(params, t)]
 
+
+def f1(t):  # round Gaussian shift in X
+    params = gauss1d_std(scale=1.)
+    params = gauss_shift(params, 3.5 * t)
+    return [(params, 1.)]
+
+
+def f2(t):  # round Gaussian shift in P
+    params = gauss1d_std(scale=1.)
+    params = gauss1d_p_shift(params, 3.5 * t)
+    return [(params, 1.)]
+
+
+def f3(t):  # round to squeezed Gaussian
+    params = gauss1d_std(scale=math.exp(-t * math.log(2)))
+    return [(params, 1.)]
+
+
+def f4(t):  # squeezed to stretched Gaussian
+    params = gauss1d_std(scale=math.exp(t * math.log(4)) / 2)
+    return [(params, 1.)]
+
+
+def f5(t):  # stretched gaussian p skew
+    params = gauss1d_std(scale=2)
+    params = gauss_mult(params, [(-0.4j * t, 0, 0, 0, 0, 1.)])
+    return [(params, 1.)]
+
+
+def f6(t):  # stretched Gaussian to squeezed Gaussian via mixed states
+    params1 = gauss1d_std(scale=2)
+    params2 = gauss1d_std(scale=0.5)
+    return [(params1, 1 - t), (params2, t)]
+
+
+def f7(t):  # stretched Gaussian to sum Gaussians
+    params1 = gauss1d_std(scale=2)
+    params2 = gauss_scale(gauss1d_std(scale=0.5), t)
+    params = params1 + params2
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
+
+def f8(t):  # stretched plus squeezed Gaussian phase shift
+    params1 = gauss1d_std(scale=2)
+    phase = np.exp(t * PI * 1j)
+    params2 = gauss_scale(gauss1d_std(scale=0.5), phase)
+    params = params1 + params2
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
+
+def f9(t):  # stretched gauss diff to stretch gaussian
+    params1 = gauss1d_std(scale=math.exp((1 - t) * math.log(2) + t * math.log(1.5)))
+    params2 = gauss_scale(gauss1d_std(scale=0.5), t - 1)
+    params = params1 + params2
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
+
+def f10(t):  # stretch gauss to corner
+    params = gauss1d_std(scale=1.5)
+    params = gauss_shift(params, 3 * t)
+    params = gauss1d_p_shift(params, 3 * t)
+    return [(params, 1.)]
+
+
+def f11(t):  # corner gauss cc
+    params = gauss1d_std(scale=1.5)
+    params = gauss_shift(params, 3)
+    params = gauss1d_p_shift(params, 3)
+    params2 = gauss_conj(params)
+    return [(params, 1 - t), (params2, t)]
+
+def f12(nft=4): # FT of stretched gauss
+    def f(t):
+        params = gauss1d_std(scale=1.5)
+        params = gauss_shift(params, 3)
+        params = gauss1d_p_shift(params, 3)
+        for i in range(nft-1):
+            params = gauss_tfm(params)
+        params2 = gauss_tfm(params)
+        return [(params, 1-t), (params2, t)]
+    return f
+
+def f13(t): # stretched in corner to round gauss
+    params = gauss1d_std(scale=math.exp((1-t)*math.log(1.5)))
+    params = gauss_shift(params, 3)
+    params = gauss1d_p_shift(params, 3)
+    return [(params, 1.)]
+
+def f14(u0=0., u1=1.): # round in corner to reflection
+    def f(t):
+        params = gauss1d_std(scale=1.)
+        params = gauss_shift(params, 3)
+        params = gauss1d_p_shift(params, 3)
+        params2 = gauss_reflect(params)
+        u = u0 * (1-t) + u1 * t
+        return [(params, 1-u), (params2, u)]
+    return f
+
+def f15(t): # mixed state in corners to superposition
+    params = gauss1d_std(scale=1.)
+    params = gauss_shift(params, 3)
+    params = gauss1d_p_shift(params, 3)
+    params2 = gauss_reflect(params)
+    params3 = params + params2
+    params3 = gauss_scale(params3, 1./gauss1d_norm(params3))
+    return [(params, (1-t)/2), (params2, (1-t)/2), (params3, t)]
+
+def f16(t): # superposition state in corners phase
+    params = gauss1d_std(scale=1.)
+    params = gauss_shift(params, 3)
+    params = gauss1d_p_shift(params, 3)
+    params2 = gauss_reflect(params)
+    phase = np.exp(4j * PI * t)
+    params += gauss_scale(params2, phase)
+    params = gauss_scale(params, 1./gauss1d_norm(params))
+    return [(params, 1.)]
+
+def f17(t): # superposition_to_center
+    shift = 3 * (1-t)
+    params = gauss1d_std(scale=1.)
+    params = gauss_shift(params, shift)
+    params = gauss1d_p_shift(params, shift)
+    params += gauss_reflect(params)
+    params = gauss_scale(params, 1./gauss1d_norm(params))
+    return [(params, 1.)]
+
+def g1(t):
+    params = gauss1d_std(scale=1)
+    eps = 0.05
+    params1 = gauss_shift(params, eps)
+    params2 = gauss_shift(params, -eps)
+    # params = params1 + gauss_scale(params2, -1)
+    params = params1 + gauss_scale(params2, -1)
+    params = gauss_scale(params, 1./gauss1d_norm(params))
+    return [(params,1)]
+
+def setup_cam():
     with Off():
         cam: Camera = Scene.get_camera()
         cam.set_distance_to_screen(13)
@@ -29,11 +167,10 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         light.orbit_around_point(ORIGIN, -90, axis=OUT)
         light.move(UP*4)
 
-
-    colors = [
-        Color(mn.RED_D.to_rgb() * 0.5 / .8),
-        Color(mn.RED_E.to_rgb() * 0.5 / .8)
-    ]
+def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3)):
+    xmin, xmax = xrange
+    ymin, ymax = yrange
+    zmin, zmax = zrange
     xlen = 12.
     ylen = 12.
     zlen = 6.
@@ -58,6 +195,27 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     txt2 = ManimMob(txt2)
     Group(*ax1.submobjects[:2], txt1, txt2).move(IN*0.11)
 
+    with Off():
+        txt1.spawn()
+        txt2.spawn()
+        ax1.spawn()
+
+    return origin, right, up, out
+
+def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
+    name = 'wigner_anim{}'.format(anim)
+    setup_cam()
+
+    xmin, xmax = xrange = (-5., 5.)
+    ymin, ymax = yrange = (-5., 5.)
+
+    origin, right, up, out = setup_surf(xrange, yrange)
+
+    colors = [
+        Color(mn.RED_D.to_rgb() * 0.5 / .8),
+        Color(mn.RED_E.to_rgb() * 0.5 / .8)
+    ]
+
     surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=RED_E,
                            fill_opacity=0.9, stroke_opacity=1)
     surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
@@ -76,17 +234,10 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     col_dn = INDIGO[:3]
     col = col0.clone()
     with Off():
-        txt1.spawn()
-        txt2.spawn()
-        ax1.spawn()
         surf.spawn()
 
     if show_wave:
         name = 'wigner_wave{}'.format(anim)
-        # wxlen=10.
-        # wright = rotate_vector_around_axis(RIGHT, 60, OUT, dim=-1) * wxlen / (xmax - xmin)
-        # wup = rotate_vector_around_axis(OUT, -0, wright, dim=-1)
-        # worigin = rotate_vector_around_axis(RIGHT, -30, OUT, dim=-1) * 6
 
         surfx = Surface(grid_height=4, grid_width=640)
         px = surfx.get_descendants()[1]
@@ -106,10 +257,12 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         n_col = len(colx[0])
         colp[...,4] = 0.75
 
-        originx = torch.tensor(ax.coords_to_point(0, ymax), dtype=ORIGIN.dtype)
+        # originx = torch.tensor(ax.coords_to_point(0, ymax), dtype=ORIGIN.dtype)
+        originx = origin + ymax * up
         rightx = right
         upx = out * 0.5
-        originp = torch.tensor(ax.coords_to_point(xmin, 0), dtype=ORIGIN.dtype)
+        originp = origin + xmin * right
+        # originp = torch.tensor(ax.coords_to_point(xmin, 0), dtype=ORIGIN.dtype)
         rightp = up
         upp = upx
 
@@ -161,133 +314,6 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
                 colp[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
             pp.set_non_recursive(location=locp.clone(), color=colp.clone())
 
-
-    def f0(t): # flat to round Gaussian
-        params = gauss1d_std(scale=1.)
-        return [(params, t)]
-
-    def f1(t): # round Gaussian shift in X
-        params = gauss1d_std(scale=1.)
-        params = gauss_shift(params, 3.5 * t)
-        return [(params, 1.)]
-
-    def f2(t): # round Gaussian shift in P
-        params = gauss1d_std(scale=1.)
-        params = gauss1d_p_shift(params, 3.5 * t)
-        return [(params, 1.)]
-
-    def f3(t): # round to squeezed Gaussian
-        params = gauss1d_std(scale=math.exp(-t*math.log(2)))
-        return [(params, 1.)]
-
-    def f4(t): # squeezed to stretched Gaussian
-        params = gauss1d_std(scale=math.exp(t*math.log(4))/2)
-        return [(params, 1.)]
-
-    def f5(t): # stretched gaussian p skew
-        params = gauss1d_std(scale=2)
-        params = gauss_mult(params, [(-0.4j * t, 0, 0, 0, 0, 1.)])
-        return [(params, 1.)]
-
-    def f6(t): # stretched Gaussian to squeezed Gaussian via mixed states
-        params1 = gauss1d_std(scale=2)
-        params2 = gauss1d_std(scale=0.5)
-        return [(params1, 1-t), (params2, t)]
-
-    def f7(t): # stretched Gaussian to sum Gaussians
-        params1 = gauss1d_std(scale=2)
-        params2 = gauss_scale(gauss1d_std(scale=0.5), t)
-        params = params1 + params2
-        params = gauss_scale(params, 1./gauss1d_norm(params))
-        return [(params, 1.)]
-
-    def f8(t): # stretched plus squeezed Gaussian phase shift
-        params1 = gauss1d_std(scale=2)
-        phase = np.exp(t*PI*1j)
-        params2 = gauss_scale(gauss1d_std(scale=0.5), phase)
-        params = params1 + params2
-        params = gauss_scale(params, 1./gauss1d_norm(params))
-        return [(params, 1.)]
-
-    def f9(t): # stretched gauss diff to stretch gaussian
-        params1 = gauss1d_std(scale=math.exp((1-t) * math.log(2) + t*math.log(1.5)))
-        params2 = gauss_scale(gauss1d_std(scale=0.5), t-1)
-        params = params1 + params2
-        params = gauss_scale(params, 1./gauss1d_norm(params))
-        return [(params, 1.)]
-
-    def f10(t): # stretch gauss to corner
-        params = gauss1d_std(scale=1.5)
-        params = gauss_shift(params, 3 * t)
-        params = gauss1d_p_shift(params, 3 * t)
-        return [(params, 1.)]
-
-    def f11(t): # corner gauss cc
-        params = gauss1d_std(scale=1.5)
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        params2 = gauss_conj(params)
-        return [(params, 1-t), (params2, t)]
-
-    nFT = 4
-    def f12(t): # FT of stretched gauss
-        params = gauss1d_std(scale=1.5)
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        for i in range(nFT-1):
-            params = gauss_tfm(params)
-        params2 = gauss_tfm(params)
-        return [(params, 1-t), (params2, t)]
-
-    def f13(t): # stretched in corner to round gauss
-        params = gauss1d_std(scale=math.exp((1-t)*math.log(1.5)))
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        return [(params, 1.)]
-
-    u0 = 0.
-    u1 = 1.
-
-    def f14(t): # round in corner to reflection
-        params = gauss1d_std(scale=1.)
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        params2 = gauss_reflect(params)
-        u = u0 * (1-t) + u1 * t
-        return [(params, 1-u), (params2, u)]
-
-    def f15(t): # mixed state in corners to superposition
-        params = gauss1d_std(scale=1.)
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        params2 = gauss_reflect(params)
-        params3 = params + params2
-        params3 = gauss_scale(params3, 1./gauss1d_norm(params3))
-        return [(params, (1-t)/2), (params2, (1-t)/2), (params3, t)]
-
-    def f16(t): # superposition state in corners phase
-        params = gauss1d_std(scale=1.)
-        params = gauss_shift(params, 3)
-        params = gauss1d_p_shift(params, 3)
-        params2 = gauss_reflect(params)
-        phase = np.exp(4j * PI * t)
-        params += gauss_scale(params2, phase)
-        params = gauss_scale(params, 1./gauss1d_norm(params))
-        return [(params, 1.)]
-
-    def f17(t): # superposition_to_center
-        shift = 3 * (1-t)
-        params = gauss1d_std(scale=1.)
-        params = gauss_shift(params, shift)
-        params = gauss1d_p_shift(params, shift)
-        params += gauss_reflect(params)
-        params = gauss_scale(params, 1./gauss1d_norm(params))
-        return [(params, 1.)]
-
-
-    u0 = 1.
-    u1 = 0.5
-    f = f16
     rate_func = rate_funcs.smooth
     part = 1
 
@@ -330,15 +356,13 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         f = f11
     elif 15 <= anim <= 18:
         run_time = 1.
-        f = f12
-        nFT = anim - 14
+        f = f12(anim - 14)
     elif anim == 19:
         run_time = 1.
         f = f13
     elif 20 <= anim <= 21:
         run_time = 1.
-        f = f14
-        u0, u1 = (0., 1.) if anim == 20 else (1., .5)
+        f = f14(0., 1.) if anim == 20 else f14(1., .5)
     elif 22 <= anim <= 25:
         run_time = 1.5
         f = f15
@@ -349,6 +373,9 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     elif anim == 27:
         run_time = 4.
         f = f17
+    elif anim == -1:
+        run_time=0.2
+        f = g1
 
     if part > 1:
         show_wave = False
@@ -383,6 +410,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     else:
         with Off():
             set_frame(f(1.))
+        cam: Camera = Scene.get_camera()
         if part == 2: move_view(cam, 1)
         if part == 3: move_view(cam, 2)
         if part == 4: move_view(cam, 3)
@@ -396,9 +424,10 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
 
 
 if __name__ == "__main__":
+    g1(0.)
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    for anim in [21,22]:
-            wigner_anim(quality=HD, bgcol=BLACK, anim=anim, show_wave=True)
+    for anim in [8]:
+        wigner_anim(quality=LD, bgcol=BLACK, anim=anim, show_wave=True)
