@@ -215,12 +215,11 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3)):
 
     return origin, right, up, out, p, x, y
 
-def setup_wave(xrange=(-5., 5.), yrange=(-5., 5.)):
+def setup_wave(xrange=(-5., 5.), npts=640):
     xmin, xmax = xrange
-    ymin, ymax = yrange
 
     n_col=4
-    surfx = Surface(grid_height=n_col, grid_width=640)
+    surfx = Surface(grid_height=n_col, grid_width=npts)
     px = surfx.get_descendants()[1]
     locx = px.location.clone()
     colx = px.color.clone()
@@ -229,19 +228,23 @@ def setup_wave(xrange=(-5., 5.), yrange=(-5., 5.)):
     colx[..., 4] = 0.75
     px.set_non_recursive(color=colx)
 
-    surfp = Surface(grid_height=n_col, grid_width=640)
-    pp = surfp.get_descendants()[1]
-    locp = pp.location.clone()
-    colp = pp.color.clone()
-    xp = locp[:, :, 0] * (ymax - ymin) / 2 + (ymax + ymin) / 2
-    yp = (locp[:, :, 1] + 1) / 2
-    colp[..., 4] = 0.75
-    pp.set_non_recursive(color=colp)
     with Off():
         surfx.spawn()
-        surfp.spawn()
 
-    return px, xx, yx, pp, xp, yp
+    return px, xx, yx
+
+def set_wave(p, xvals, vals, vals1, origin, right, up):
+    yvals = torch.linspace(0., 1., 4)
+    n = len(xvals)
+    locx = (xvals.repeat_interleave(4).view(1, -1, 1) * right +
+                    (vals.view(n, 1) * yvals.view(1, 4)).reshape(1, n*4, 1) * up + origin)
+    colx = p.color.clone()
+
+    for i in range(n*4):
+        lightness = min(0.15 + vals[i // 4] * 0.3 * yvals[i % 4], 0.8)
+        colx[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[i // 4]) / (2 * PI) + 0.5, lightness, 0.85)])
+
+    p.set_non_recursive(location=locx, color=colx)
 
 
 def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
@@ -333,18 +336,12 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     if show_wave:
         name = 'wigner_wave{}'.format(anim)
 
-        px, xx, yx, pp, xp, yp = setup_wave(xrange=xrange, yrange=yrange)
-        locx = px.location.clone()
-        colx = px.color.clone()
-        locp = pp.location.clone()
-        colp = pp.color.clone()
+        npts = 640
+        px, xx, yx = setup_wave(xrange=xrange, npts=npts)
+        pp, xp, yp = setup_wave(xrange=yrange, npts=npts)
+        xvals = torch.linspace(xmin, xmax, npts)
+        pvals = torch.linspace(ymin, ymax, npts)
 
-        originx = origin + ymax * up
-        rightx = right
-        upx = out * 0.5
-        originp = origin + xmin * right
-        rightp = up
-        upp = upx
 
 
     def set_frame(mixed_params):
@@ -364,39 +361,23 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
             vals = 0
             vals1 = 0.+0j
             for params, a in mixed_params:
-            # params, a = mixed_params[0]
-                vals0 = gauss2d_calc(params, xx, xx*0)
+                vals0 = gauss2d_calc(params, xvals, xvals*0)
                 w = vals0.abs()
                 vals1 += vals0 * w * a
                 vals += w * w * a
 
-            # vals = vals1.abs()
-            # vals *= vals
-            u = 0.3
-
-            locx[..., :] = xx.unsqueeze(-1) * rightx + yx.unsqueeze(-1) * vals.unsqueeze(-1) * upx + originx
-            for i in range(len(colx[0])):
-                lightness = min(0.15 + vals[0, i] * u * yx[0,i], 0.8)
-                colx[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
-            px.set_non_recursive(location=locx.clone(), color=colx.clone())
+            set_wave(px, xvals, vals, vals1, origin + ymax * up, right, out*0.5)
 
             vals = 0
             vals1 = 0.+0j
             for params, a in mixed_params:
                 params2 = gauss_tfm(params)
-                vals0 = gauss2d_calc(params2, xp, xp*0)
+                vals0 = gauss2d_calc(params2, pvals, pvals*0)
                 w = vals0.abs()
                 vals1 += vals0 * w * a
                 vals += w * w * a
 
-            locp[..., :] = xp.unsqueeze(-1) * -rightp + yp.unsqueeze(-1) * vals.unsqueeze(-1) * upp + originp
-            for i in range(len(colp[0])):
-                lightness = min(0.15 + vals[0, i] * u * yp[0,i], 0.8)
-                colp[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
-            pp.set_non_recursive(location=locp.clone(), color=colp.clone())
-
-
-
+            set_wave(pp, pvals, vals, vals1, origin + xmin * right, -up, out*0.5)
 
     # run_time = 0.1
 
