@@ -195,124 +195,74 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3)):
     txt2 = ManimMob(txt2)
     Group(*ax1.submobjects[:2], txt1, txt2).move(IN*0.11)
 
+    colors = [
+        Color(mn.RED_D.to_rgb() * 0.5 / .8),
+        Color(mn.RED_E.to_rgb() * 0.5 / .8)
+    ]
+    surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=RED_E,
+                           fill_opacity=0.9, stroke_opacity=1)
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    x = loc[:,:,0] * (xmax - xmin) / 2 + (xmax+xmin)/2
+    y = loc[:,:,1] * (ymax - ymin) / 2 + (ymax+ymin)/2
+    surf.scale(np.array([(xmax-xmin)*right[0]/2, (ymax-ymin)*up[1]/2, 1])).move_to(origin)
+
     with Off():
         txt1.spawn()
         txt2.spawn()
         ax1.spawn()
+        surf.spawn()
 
-    return origin, right, up, out
+    return origin, right, up, out, p, x, y
+
+def setup_wave(xrange=(-5., 5.), yrange=(-5., 5.)):
+    xmin, xmax = xrange
+    ymin, ymax = yrange
+
+    n_col=4
+    surfx = Surface(grid_height=n_col, grid_width=640)
+    px = surfx.get_descendants()[1]
+    locx = px.location.clone()
+    colx = px.color.clone()
+    xx = locx[:, :, 0] * (xmax - xmin) / 2 + (xmax + xmin) / 2
+    yx = (locx[:, :, 1] + 1) / 2
+    colx[..., 4] = 0.75
+    px.set_non_recursive(color=colx)
+
+    surfp = Surface(grid_height=n_col, grid_width=640)
+    pp = surfp.get_descendants()[1]
+    locp = pp.location.clone()
+    colp = pp.color.clone()
+    xp = locp[:, :, 0] * (ymax - ymin) / 2 + (ymax + ymin) / 2
+    yp = (locp[:, :, 1] + 1) / 2
+    colp[..., 4] = 0.75
+    pp.set_non_recursive(color=colp)
+    with Off():
+        surfx.spawn()
+        surfp.spawn()
+
+    return px, xx, yx, pp, xp, yp
+
 
 def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
-    name = 'wigner_anim{}'.format(anim)
+    name = 'wigner_wave{}'.format(anim) if show_wave else 'wigner_anim{}'.format(anim)
     setup_cam()
 
     xmin, xmax = xrange = (-5., 5.)
     ymin, ymax = yrange = (-5., 5.)
 
-    origin, right, up, out = setup_surf(xrange, yrange)
+    origin, right, up, out, p, x, y = setup_surf(xrange, yrange)
 
-    colors = [
-        Color(mn.RED_D.to_rgb() * 0.5 / .8),
-        Color(mn.RED_E.to_rgb() * 0.5 / .8)
-    ]
-
-    surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=RED_E,
-                           fill_opacity=0.9, stroke_opacity=1)
     surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
     mesh_mask = 1 - fill_mask
 
-    p = surf.get_descendants()[1]
-    loc = p.location
     col0 = p.color.clone()
-    x = loc[:,:,0] * (xmax - xmin) / 2 + (xmax+xmin)/2
-    y = loc[:,:,1] * (ymax - ymin) / 2 + (ymax+ymin)/2
-    surf.scale(np.array([(xmax-xmin)*right[0]/2, (ymax-ymin)*up[1]/2, 1])).move_to(origin)
     loc = p.location.clone()
-    # line = Line(origin, origin+RIGHT, color=RED)
+
     col_up = torch.tensor([1, .6, 0.])
     col_dn = INDIGO[:3]
     col = col0.clone()
-    with Off():
-        surf.spawn()
-
-    if show_wave:
-        name = 'wigner_wave{}'.format(anim)
-
-        surfx = Surface(grid_height=4, grid_width=640)
-        px = surfx.get_descendants()[1]
-        locx = px.location.clone()
-        colx = px.color.clone()
-        xx = locx[:,:,0] * (xmax - xmin) / 2 + (xmax+xmin)/2
-        yx = (locx[:,:,1]+1)/2
-        n_col = len(colx[0])
-        colx[...,4] = 0.75
-
-        surfp = Surface(grid_height=4, grid_width=640)
-        pp = surfp.get_descendants()[1]
-        locp = pp.location.clone()
-        colp = pp.color.clone()
-        xp = locp[:,:,0] * (ymax - ymin) / 2 + (ymax+ymin)/2
-        yp = (locp[:,:,1]+1)/2
-        n_col = len(colx[0])
-        colp[...,4] = 0.75
-
-        # originx = torch.tensor(ax.coords_to_point(0, ymax), dtype=ORIGIN.dtype)
-        originx = origin + ymax * up
-        rightx = right
-        upx = out * 0.5
-        originp = origin + xmin * right
-        # originp = torch.tensor(ax.coords_to_point(xmin, 0), dtype=ORIGIN.dtype)
-        rightp = up
-        upp = upx
-
-
-    def set_frame(mixed_params):
-        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
-
-        loc[...,2] = origin[2] + vals * out[2]
-        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
-        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
-        col[...,:3] = fill_mask * shade_up * col_up\
-                        + fill_mask * shade_down * col_dn\
-                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
-                        + mesh_mask * col0[...,:3]
-        p.set_non_recursive(location=loc.clone(), color=col.clone())
-
-        if show_wave:
-            vals = 0
-            vals1 = 0.+0j
-            for params, a in mixed_params:
-            # params, a = mixed_params[0]
-                vals0 = gauss2d_calc(params, xx, xx*0)
-                w = vals0.abs()
-                vals1 += vals0 * w * a
-                vals += w * w * a
-
-            # vals = vals1.abs()
-            # vals *= vals
-            u = 0.3
-
-            locx[..., :] = xx.unsqueeze(-1) * rightx + yx.unsqueeze(-1) * vals.unsqueeze(-1) * upx + originx
-            for i in range(n_col):
-                lightness = min(0.15 + vals[0, i] * u * yx[0,i], 0.8)
-                colx[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
-            px.set_non_recursive(location=locx.clone(), color=colx.clone())
-
-            vals = 0
-            vals1 = 0.+0j
-            for params, a in mixed_params:
-                params2 = gauss_tfm(params)
-                vals0 = gauss2d_calc(params2, xp, xp*0)
-                w = vals0.abs()
-                vals1 += vals0 * w * a
-                vals += w * w * a
-
-            locp[..., :] = xp.unsqueeze(-1) * -rightp + yp.unsqueeze(-1) * vals.unsqueeze(-1) * upp + originp
-            for i in range(n_col):
-                lightness = min(0.15 + vals[0, i] * u * yp[0,i], 0.8)
-                colp[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
-            pp.set_non_recursive(location=locp.clone(), color=colp.clone())
 
     rate_func = rate_funcs.smooth
     part = 1
@@ -379,10 +329,73 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
 
     if part > 1:
         show_wave = False
+
     if show_wave:
-        with Off():
-            surfx.spawn()
-            surfp.spawn()
+        name = 'wigner_wave{}'.format(anim)
+
+        px, xx, yx, pp, xp, yp = setup_wave(xrange=xrange, yrange=yrange)
+        locx = px.location.clone()
+        colx = px.color.clone()
+        locp = pp.location.clone()
+        colp = pp.color.clone()
+
+        originx = origin + ymax * up
+        rightx = right
+        upx = out * 0.5
+        originp = origin + xmin * right
+        rightp = up
+        upp = upx
+
+
+    def set_frame(mixed_params):
+        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+
+        loc[...,2] = origin[2] + vals * out[2]
+        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
+        col[...,:3] = fill_mask * shade_up * col_up\
+                        + fill_mask * shade_down * col_dn\
+                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + mesh_mask * col0[...,:3]
+        p.set_non_recursive(location=loc.clone(), color=col.clone())
+
+
+        if show_wave:
+            vals = 0
+            vals1 = 0.+0j
+            for params, a in mixed_params:
+            # params, a = mixed_params[0]
+                vals0 = gauss2d_calc(params, xx, xx*0)
+                w = vals0.abs()
+                vals1 += vals0 * w * a
+                vals += w * w * a
+
+            # vals = vals1.abs()
+            # vals *= vals
+            u = 0.3
+
+            locx[..., :] = xx.unsqueeze(-1) * rightx + yx.unsqueeze(-1) * vals.unsqueeze(-1) * upx + originx
+            for i in range(len(colx[0])):
+                lightness = min(0.15 + vals[0, i] * u * yx[0,i], 0.8)
+                colx[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
+            px.set_non_recursive(location=locx.clone(), color=colx.clone())
+
+            vals = 0
+            vals1 = 0.+0j
+            for params, a in mixed_params:
+                params2 = gauss_tfm(params)
+                vals0 = gauss2d_calc(params2, xp, xp*0)
+                w = vals0.abs()
+                vals1 += vals0 * w * a
+                vals += w * w * a
+
+            locp[..., :] = xp.unsqueeze(-1) * -rightp + yp.unsqueeze(-1) * vals.unsqueeze(-1) * upp + originp
+            for i in range(len(colp[0])):
+                lightness = min(0.15 + vals[0, i] * u * yp[0,i], 0.8)
+                colp[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[0,i])/(2*PI)+0.5, lightness, 0.85)])
+            pp.set_non_recursive(location=locp.clone(), color=colp.clone())
+
+
 
 
     # run_time = 0.1
