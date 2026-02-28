@@ -7,6 +7,8 @@ import scipy as sp
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO
 from scipy.fft import fft, ifft, fftfreq
 
+from general.integratepowers import xrange
+
 sys.path.append('../../')
 import alganhelper as ah
 from common.wigner import *
@@ -527,50 +529,134 @@ def time_evolution(psi, V, dt=1., dx=0.1, mass=1.):
     psi = torch.exp(-1j * V * dt) * psi  # Evolve due to potential
     return psi
 
+class WaveEvolution:
+    def __init__(self, xrange=(-5., 5.), prange=(-5., 5.), npts=639, n_extend_left=200, n_extend_right=200,
+                 n_scale=1, dt=0.001, mass=1., speed=PI):
+        xmin, xmax = self.xrange = xrange
+        pmin, pmax = self.prange = prange
+        self.npts = npts
+        self.n_extend_left = n_extend_left
+        self.n_extend_right = n_extend_right
+        self.n_scale = 1
+        setup_cam()
+        npts1 = (npts + n_extend_left+n_extend_right-1)*n_scale+1
+        i_x0 = n_extend_left * n_scale
+        i_x1 = npts1 - n_extend_right * n_scale
+        x_extend_left = (xmax - xmin) / (npts-1) * n_extend_left
+        x_extend_right = (xmax - xmin) / (npts-1) * n_extend_right
+        xmin1, xmax1 = (xmin - x_extend_left, xmax + x_extend_right)
+
+        origin, right, up, out, p, xsurf, y, shape, self.txt = setup_surf(xrange, prange, spawn=True)
+        assert shape == (npts, npts)
+
+        self.col0 = p.color.clone()
+        surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+        self.fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
+        self.mesh_mask = 1 - self.fill_mask
+
+        self.dt = dt
+        self.speed = speed
+        self.mass = mass
+        self.xvals1 = torch.linspace(xmin1, xmax1, npts1)
+        self.psi = self.xvals1 * 0
+        self.xvals = torch.linspace(xmin, xmax, npts)
+        dx = (self.xvals[1] - self.xvals[0]).item()
+        self.stride = (i_x0, i_x1, n_scale)
+        self.V = self.xvals1 * 0
+        self.dx1 = dx/n_scale
+        self.dirs = (origin, right, up, out)
+        self.pvals = torch.linspace(pmin, pmax, npts)
+        self.xrange1 = (xmin1, xmax1)
+        self.p = p
+        self.px = self.xx = self.yx = None
+        self.pp = self.xp = self.yp = None
+
+    def create_wave(self):
+        self.px, self.xx, self.yx = setup_wave(xrange=self.xrange, npts=self.npts)
+        self.pp, self.xp, self.yp = setup_wave(xrange=self.prange, npts=self.npts)
+
+    def evolve(self, time_inc):
+        ndt = math.ceil(time_inc / self.dt)
+
+        if ndt > 0:
+            # print(ndt)
+            dt1 = time_inc / ndt
+            for i in range(ndt):
+                self.psi = time_evolution(self.psi, self.V, self.speed * dt1, self.dx1, mass=self.mass)
+
+        pmin, pmax = self.prange
+        xmin, xmax = self.xrange
+        psi = self.psi
+        psi0 = psi[self.stride[0]:self.stride[1]:self.stride[2]]
+        origin, right, up, out = self.dirs
+
+        if self.px is not None:
+            set_wave(self.px, self.xvals, psi0.abs()**2, psi0, origin + pmax * up, right, out * 0.5)
+        if self.pp is not None:
+            phase = np.exp(1j * np.outer(self.pvals, self.xvals1))
+            psi_k = torch.tensor(phase @ psi.numpy()) * self.dx1 / math.sqrt(2*PI)
+            set_wave(self.pp, self.pvals, psi_k.abs() ** 2, psi_k, origin + xmin * right, -up, out * 0.5)
+
+        p = self.p
+        xmin1, xmax1 = self.xrange1
+        i0, i1, n_scale = self.stride
+        W = torch.tensor(wigner_fft(psi.numpy(), xmin1, xmax1, pmin, pmax, self.npts, i0=i0, i1=i1, step=n_scale))
+        loc = p.location.clone()
+        col = p.color.clone()
+        loc[0, :, 2] = origin[2] + out[2] * 2 * W.reshape(-1)
+        shade_up = torch.pow(((W - 0.05) * 4).clamp(0, 1), 0.8).flatten().view(1,-1,1)
+        shade_down = (W * -50).clamp(0., 1).flatten().view(1,-1,1)
+        fill_mask = self.fill_mask
+
+        col[..., :3] = fill_mask * shade_up * col_up \
+                       + fill_mask * shade_down * col_dn \
+                       + fill_mask * (1 - shade_up - shade_down) * self.col0[:, :, :3] \
+                       + self.mesh_mask * self.col0[..., :3]
+        p.set_non_recursive(location=loc, color=col)
+
+    def orbit(self, anim=1):
+        origin, right, up, out = self.dirs
+        cam = Scene.get_camera()
+        if anim == 1:
+            with Seq():
+                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
+        elif anim == 2:
+            with Off():
+                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
+            with Sync(run_time=3):
+                cam.orbit_around_point(origin, -60 * DEGREES, out)
+                cam.orbit_around_point(origin, -130 * DEGREES, cam.get_right_direction())
+                self.txt[0].orbit_around_point(self.txt[0].get_center(), -90, RIGHT)
+        else:
+            orbit_time = 4.
+            with Sync(run_time=orbit_time):
+                cam.orbit_around_point(origin, 180 * DEGREES, out)
+            with Sync(run_time=1.5):
+                cam.orbit_around_point(origin, -70 * DEGREES, cam.get_right_direction())
+
+    def set_gaussian(self, x=0.):
+        sigma = np.sqrt(0.5)  # Width of Gaussian
+        self.psi = torch.exp(-(self.xvals1 - x) ** 2 / (4 * sigma ** 2))  # + xvals1 * 6 * 1j)
+
+        # Normalize the wavefunction
+        self.psi /= np.linalg.norm(self.psi) * np.sqrt(self.dx1)
+
 
 def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
-    xmin, xmax = xrange = (-5., 5.)
-    pmin, pmax = prange = (-5., 5.)
-    npts = 639
-    n_extend_left = 200
-    n_extend_right = 200
-    n_scale=1
-
-    setup_cam()
-    npts1 = (npts + n_extend_left+n_extend_right-1)*n_scale+1
-    i_x0 = n_extend_left * n_scale
-    i_x1 = npts1 - n_extend_right * n_scale
-    x_extend_left = (xmax - xmin) / (npts-1) * n_extend_left
-    x_extend_right = (xmax - xmin) / (npts-1) * n_extend_right
-    xmin1, xmax1 = (xmin - x_extend_left, xmax + x_extend_right)
-    xvals = torch.linspace(xmin, xmax, npts)
-    xvals1 = torch.linspace(xmin1, xmax1, npts1)
-    pvals = torch.linspace(pmin, pmax, npts)
-    dx = (xvals[1] - xvals[0]).item()
-
-    origin, right, up, out, p, xsurf, y, shape, txt = setup_surf(xrange, prange, spawn=True)
-    assert shape == (npts, npts)
-    col0 = p.color.clone()
-    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
-    fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
-    mesh_mask = 1 - fill_mask
-
-    dt = 0.001
-    mass=1.
+    evolver = WaveEvolution()
 
     start_time=0.
     run_time = 1.
     rate_func=rate_funcs.identity
-    speed=PI
     part = 1
 
     if anim == 1:
-        V = (xvals1)**2 * 0.5
+        evolver.V = (evolver.xvals1)**2 * 0.5
         run_time=4.
     else:
         # pendulum
         eps = 1/3.5 * PI/3
-        V = (1-torch.cos(xvals1 * eps))/(eps*eps)
+        evolver.V = (1-torch.cos(evolver.xvals1 * eps))/(eps*eps)
         if 2 <= anim <= 9:
             start_time=(anim-2) * 2
             run_time=2.
@@ -582,77 +668,27 @@ def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
             start_time=16.
             part = anim - 9
 
-    x0 = -3.5  # Initial position
-    sigma = np.sqrt(0.5)  # Width of Gaussian
-    psi0 = torch.exp(-(xvals1 - x0) ** 2 / (4 * sigma ** 2))# + xvals1 * 6 * 1j)
-
-    # Normalize the wavefunction
-    psi0 /= np.linalg.norm(psi0) * np.sqrt(dx/n_scale)
-    psi = psi0.clone()
+    evolver.set_gaussian(-3.5)
 
     if part <= 2:
-        px, xx, yx = setup_wave(xrange=xrange, npts=npts)
-        pp, xp, yp = setup_wave(xrange=prange, npts=npts)
+        evolver.create_wave()
 
     t0 = 0.
     for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
         t1 = frame.u * run_time + start_time
         print(frame.index, frame.time)
-        ndt = math.ceil((t1 - t0)/dt)
-        if ndt > 0:
-            # print(ndt)
-            dt1 = (t1-t0)/ndt
-            for i in range(ndt):
-                psi = time_evolution(psi, V, speed * dt1, dx/n_scale, mass=mass)
         with frame.context:
-            if part <= 2:
-                set_wave(px, xvals, psi[i_x0:i_x1:n_scale].abs()**2, psi[i_x0:i_x1:n_scale], origin + pmax * up, right, out * 0.5)
-                phase = np.exp(1j * np.outer(pvals, xvals1))
-                psi_k = torch.tensor(phase @ psi.numpy()) * dx / math.sqrt(2*PI) / n_scale
-                set_wave(pp, pvals, psi_k.abs() ** 2, psi_k, origin + xmin * right, -up, out * 0.5)
-
-            print('1')
-            # W = torch.tensor(wigner_fft(psi[i_x0:i_x1:n_scale].numpy(), xmin, xmax, pmin, pmax, npts))
-            # W = torch.tensor(wigner_fft(psi.numpy(), xmin1, xmax1, pmin, pmax, npts))[i_x0:i_x1:n_scale,:]
-            W = torch.tensor(wigner_fft(psi.numpy(), xmin1, xmax1, pmin, pmax, npts, i0=i_x0, i1=i_x1, step=n_scale))
-            print('2')
-            loc = p.location.clone()
-            col = p.color.clone()
-            loc[0, :, 2] = origin[2] + out[2] * 2 * W.reshape(-1)
-            print('3')
-            shade_up = torch.pow(((W - 0.05) * 4).clamp(0, 1), 0.8).flatten().view(1,-1,1)
-            shade_down = (W * -50).clamp(0., 1).flatten().view(1,-1,1)
-            col[..., :3] = fill_mask * shade_up * col_up \
-                           + fill_mask * shade_down * col_dn \
-                           + fill_mask * (1 - shade_up - shade_down) * col0[:, :, :3] \
-                           + mesh_mask * col0[..., :3]
-            p.set_non_recursive(location=loc, color=col)
-            print('4')
+            evolver.evolve(t1 - t0)
         t0 = t1
         if part > 1:
             break
 
     if part > 1:
-        cam = Scene.get_camera()
         if part == 2:
             Scene.wait(2.1/quality.frames_per_second)
-        elif part == 3:
-            with Seq():
-                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
-        elif part == 4:
-            with Off():
-                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
-            with Sync(run_time=3):
-                cam.orbit_around_point(origin, -60 * DEGREES, out)
-                cam.orbit_around_point(origin, -130 * DEGREES, cam.get_right_direction())
-                txt[0].orbit_around_point(txt[0].get_center(), -90, RIGHT)
         else:
-            orbit_time = 4.
-            with Sync(run_time=orbit_time):
-                cam.orbit_around_point(origin, 180 * DEGREES, out)
-            with Sync(run_time=1.5):
-                cam.orbit_around_point(origin, -70 * DEGREES, cam.get_right_direction())
-        Scene.wait(0.1)
+            evolver.orbit(part - 2)
+        # Scene.wait(0.1)
 
     name = r'evolve_wave{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
@@ -666,4 +702,4 @@ if __name__ == "__main__":
     # for anim in [8]:
     #     wigner_anim(quality=LD, bgcol=BLACK, anim=anim, show_wave=True)
     for anim in [13]:
-        evolve_wave(quality=HD, bgcol=BLACK, anim=anim)
+        evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
