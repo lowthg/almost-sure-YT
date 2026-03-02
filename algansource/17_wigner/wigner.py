@@ -6,8 +6,8 @@ import manim as mn
 import scipy as sp
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO
 from scipy.fft import fft, ifft, fftfreq
+from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 
-from general.integratepowers import xrange
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -634,9 +634,9 @@ class WaveEvolution:
             with Sync(run_time=1.5):
                 cam.orbit_around_point(origin, -70 * DEGREES, cam.get_right_direction())
 
-    def set_gaussian(self, x=0.):
+    def set_gaussian(self, x=0., p = 0.):
         sigma = np.sqrt(0.5)  # Width of Gaussian
-        self.psi = torch.exp(-(self.xvals1 - x) ** 2 / (4 * sigma ** 2))  # + xvals1 * 6 * 1j)
+        self.psi = torch.exp(-(self.xvals1 - x) ** 2 / (4 * sigma ** 2) + 1j * p * self.xvals1)  # + xvals1 * 6 * 1j)
 
         # Normalize the wavefunction
         self.psi /= np.linalg.norm(self.psi) * np.sqrt(self.dx1)
@@ -645,12 +645,12 @@ class WaveEvolution:
 def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
     evolver = WaveEvolution()
 
-    start_time=0.
     run_time = 1.
     rate_func=rate_funcs.identity
     part = 1
 
     if anim == 1:
+        start_time = 0.
         evolver.V = (evolver.xvals1)**2 * 0.5
         run_time=4.
     else:
@@ -693,6 +693,112 @@ def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
     name = r'evolve_wave{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def dynamics_simple(quality=LD, bgcol=BLACK, anim=1):
+    force = 0.
+    n_extend_right=200
+    x0, p0 = (0., 0.)
+    run_time=2.
+    if anim == 1:
+        x0, p0 = (0., 0.)
+    elif anim == 2:
+        x0, p0 = (-3.5, 3.5)
+        n_extend_right=2000
+        run_time = 2
+    elif anim == 3:
+        pass
+    elif anim == 4:
+        x0, p0 = (-3.5, 3.5)
+        force = 1.
+        n_extend_right=1000
+        n_extend_left=1000
+
+
+    evolver = WaveEvolution(n_extend_right=n_extend_right, speed=3.)
+    evolver.set_gaussian(x0, p0)
+    evolver.V = evolver.xvals1 * force
+
+
+    t0 = 0.
+    start_time = 0.
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.identity):
+        t1 = frame.u * run_time + start_time
+        print(frame.index, frame.time)
+        with frame.context:
+            evolver.evolve(t1 - t0)
+        t0 = t1
+
+    name = r'dynamics_simple{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+def barrier(quality=LD, bgcol=BLACK, anim=1):
+    n_extend_right = 2000 if anim == 4 else 200
+    n_extend_left = 2000  #if anim == 4 or anim <= 1 else 200
+    evolver = WaveEvolution(n_extend_left=n_extend_left, n_extend_right=n_extend_right, speed=1.5)
+    evolver.set_gaussian(-3.5, 3.5)
+    evolver.create_wave()
+
+    if anim == 1:
+        psi = evolver.psi.clone()
+        for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1., step=1,
+                                     rate_func=rate_funcs.smooth):
+            evolver.psi = psi * frame.u
+            print(frame.u)
+            with frame.context:
+                evolver.evolve(0.)
+        Scene.wait(0.1)
+    else:
+        x = evolver.xvals1
+        x0 = 0.
+        x1 = 2. if anim <= 3 else 0.15
+        rect1 = Surface(grid_height=40, grid_width=40, color=GREY, opacity=0.4).set_shader(default_shader)
+        rect2 = rect1.clone()
+        rect3 = rect1.clone()
+
+        p1 = rect1.get_descendants()[1]
+        p2 = rect2.get_descendants()[1]
+        p3 = rect3.get_descendants()[1]
+
+        loc = p1.location.clone()
+        origin, right, up, out = evolver.dirs
+        pmin, pmax = evolver.prange
+
+        p1.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x0)
+        p2.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x1)
+        p3.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * right * (x1 - x0) / 2 + (
+                    origin + out * 0.3 + right * (x0 + x1) / 2)
+        line = Line(origin + right * x1 + out * 0.3 - up * pmax,
+                    origin + right * x1 + out * 0.3 + up * pmax,
+                    color=GREY, border_width=1, opacity=0.6)
+        with Off():
+            rect1.spawn()
+            rect2.spawn()
+            rect3.spawn()
+            line.spawn()
+
+        if anim == 3:
+            with Off():
+                evolver.evolve(0.)
+            dx1 = 0.15 - x1
+            x1 = 0.15
+            loc2 = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x1)
+            loc3 = loc[..., :1] * up * pmax + loc[..., 1:2] * right * (x1 - x0) / 2 + (origin + out * 0.3 + right * (x0 + x1) / 2)
+            with Sync(run_time=1.5):
+                p2.set_non_recursive(location=loc2)
+                p3.set_non_recursive(location=loc3)
+                line.move(right*dx1)
+        else:
+            evolver.V = ((x > 0) & (x < x1)).to(x.dtype) * 20.
+
+            run_time=4.
+
+            for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.identity):
+                with frame.context:
+                    evolver.evolve(frame.du * run_time)
+
+
+    name = r'potential_barrier{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
 if __name__ == "__main__":
     g1(0.)
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
@@ -701,5 +807,8 @@ if __name__ == "__main__":
     # for anim in [15,16,17,18]:
     # for anim in [8]:
     #     wigner_anim(quality=LD, bgcol=BLACK, anim=anim, show_wave=True)
-    for anim in [13]:
-        evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
+    # for anim in [13]:
+    #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
+    # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
+    barrier(quality=HD, bgcol=TRANSPARENT, anim=4)
+    # barrier(quality=HD, bgcol=BLACK, anim=4)
