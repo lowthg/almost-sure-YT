@@ -59,13 +59,20 @@ def transform(*args, **kwargs):
     return Transform(VGroup(*args[0::2]), VGroup(*args[1::2]), **kwargs)
 
 
-def rtransform(*args, **kwargs):
+def rtransform(*args, copy_colors=None, **kwargs):
     """
     for args a1, b1, a2, b2,...
     ReplacementTransform a1 to b1, a2 to b2, etc
     """
+    if copy_colors is None:
+        copy_colors = rtransform.copy_colors
     assert(len(args) % 2 == 0)
+    if copy_colors:
+        for i in range(0, len(args), 2):
+            copy_colors_eq(args[i], args[i+1])
     return ReplacementTransform(VGroup(*args[0::2]), VGroup(*args[1::2]), **kwargs)
+
+rtransform.copy_colors = False
 
 
 def circle_eq(eq, color=RED, stroke_width=10) -> ParametricFunction:
@@ -115,3 +122,29 @@ class mathlabel_ctr2(MathTex):
 
 def label_ctrMU(text, font_size):
     return MarkupText(text, font_size=font_size, color=RED)
+
+def copy_colors_eq(*eqs, depth=0):
+    """
+    copy eq colors from source to destination
+    input: (source1, destination1, source2, destination2, ...)
+    """
+    assert depth < 5
+    n = len(eqs)
+    assert n % 2 == 0
+    for j in range(0, n, 2):
+        assert len(eqs[j][:]) == len(eqs[j+1][:])
+        if eqs[j][0] == eqs[j]:
+            eqs[j+1].set_color(eqs[j].color)
+        else:
+            for i, x in enumerate(eqs[j+1][:]):
+                copy_colors_eq(eqs[j][i], x, depth=depth+1)
+
+def copy_eq_colors(destination, source):
+    copy_colors_eq(source, destination)
+
+def font_size_sub(eq: Mobject, index: int, font_size: float):
+    eq_1 = eq[index].copy()
+    pos = eq.get_center()
+    eq[index].set(font_size=font_size).align_to(eq_1, RIGHT)
+    eq[index:].align_to(eq_1, LEFT)
+    return eq.move_to(pos, coor_mask=RIGHT)

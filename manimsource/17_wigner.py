@@ -1,3 +1,4 @@
+from algan.external_libraries.manim.utils.color import ManimColor
 from fontTools.unicodedata import block
 from manim import *
 import numpy as np
@@ -14,13 +15,14 @@ sys.path.append('../')
 import manimhelper as mh
 from common.wigner import *
 
-col_psi = RED
-col_x = BLUE
-col_p = GREEN
-col_num = TEAL_E
-col_special = TEAL
-col_i = YELLOW
-col_WVD = GREEN_D
+col_psi = (RED-WHITE)*0.8 + WHITE
+col_x = (BLUE-WHITE)*0.6 + WHITE
+col_p = (GREEN-WHITE)*0.8 + WHITE
+col_num = WHITE #(TEAL_E - WHITE) * 0.5 + WHITE
+col_special = WHITE #(TEAL - WHITE) * 0.5 + WHITE
+col_i = WHITE #(YELLOW - WHITE) * 0.4 + WHITE
+col_WVD = (ORANGE-WHITE)*0.9 + WHITE
+col_op = WHITE #(PURPLE-WHITE) * 0.6 + WHITE
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -325,9 +327,9 @@ class STFTWigner(STFT):
 
     def construct(self):
         MathTex.set_default(stroke_width=1.5, font_size=60)
-        eq1 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-i\omega s}\,ds')
-        eq2 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)^*e^{-i\omega s}\,ds')
-        eq3 = MathTex(r'\phi(0,0)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-0)^*e^{-i0 s}\,ds')
+        eq1 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-is\omega}\,ds')
+        eq2 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)^*e^{-is\omega}\,ds')
+        eq3 = MathTex(r'\phi(0,0)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-0)^*e^{-is0}\,ds')
         eq4 = MathTex(r'\phi(0,0)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s)^*\,ds')
         eq5 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\frac1{2\pi}', r'\left(\int\psi(s)w(s)^*\,ds\right)^*', r'\int\psi(s)w(s)^*\,ds')
         eq6 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\frac1{2\pi}', r'\int\psi(s)^*w(s)\,ds', r'\int\psi(s)w(s)^*\,ds')
@@ -361,34 +363,39 @@ class STFTWigner(STFT):
         eq25 = MathTex(r'\hat g_s(z)', r'=', r'W_w(s,z)')
         eq26 = MathTex(r'\hat g_s(z)^*', r'=', r'W_w(s,z)')
         eq27 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\iint W_\psi(s,z)W_w(s,z)\,dsdz')
-        eq28 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-i\omega s}\,ds', font_size=55)
-        eq29 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s+t)w(s)e^{-i\omega (s+t)}\,ds', font_size=55)
-        eq30 = MathTex(r'\phi(t,\omega)', r'=', r'\frac{e^{-i\omega t} }{\sqrt{2\pi} }', r'\int e^{-i\omega s}\psi(s+t)w(s)\,ds', font_size=55)
+        eq28 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-is\omega}\,ds', font_size=55)
+        eq29 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s+t)w(s)e^{-i(s+t)\omega}\,ds', font_size=55)
+        eq30 = MathTex(r'\phi(t,\omega)', r'=', r'\frac{e^{-it\omega} }{\sqrt{2\pi} }', r'\int e^{-i s\omega}\psi(s+t)w(s)\,ds', font_size=55)
         eq31 = MathTex(r'\lvert\phi(t,\omega)\rvert^2', r'=', r'\iint W_\psi(t+s,\omega+z)W_w(s,z)\,dsdz')
 
-        VGroup(eq1[0][0], eq3[0][0], eq1[3][1], eq1[3][5], eq12[0][0], eq12[3][0], eq12[3][5],
+        VGroup(eq1[0][0], eq1[3][1], eq1[3][5], eq12[0][0], eq12[3][0], eq12[3][5],
                eq14[3][5:7], eq23[2][1]).set_color(col_psi)
-        VGroup(eq1[0][2], eq1[3][3], eq1[3][7], eq1[3][9], eq1[3][15], eq1[3][-1],
-               eq4[3][-1], eq6[3][-1], eq7[3][3], eq7[3][8], eq7[3][11], eq7[4][3], eq7[4][7], eq7[4][11],
+        VGroup(eq1[0][2], eq1[3][3], eq1[3][7], eq1[3][9], eq1[3][14], eq1[3][-1],
+               eq7[3][3], eq7[3][8], eq7[3][11], eq7[4][3], eq7[4][7], eq7[4][11],
                eq9[0], eq9[2][0], eq9[2][2], eq12[0][1], eq12[0][3], eq12[3][2], eq12[3][7], eq14[3][3],
-               eq14[3][7], eq16[0][-1], eq16[5][-1], eq23[2][3]).set_color(col_x)
-        VGroup(eq1[0][4], eq1[3][14], eq14[3][4], eq14[3][9], eq14[3][-1], eq23[2][5]).set_color(col_p)
+               eq14[3][7], eq16[0][-1], eq16[5][-1], eq23[2][3], eq29[3][5], eq29[3][17],
+               eq31[2][5]).set_color(col_x)
+        VGroup(eq1[0][4], eq1[3][15], eq14[3][4], eq14[3][9], eq14[3][-1], eq23[2][5], eq31[2][9]).set_color(col_p)
         VGroup(eq3[0][2], eq3[0][4], eq5[0][-1], eq31[0][-1],
-               eq1[2][0], eq1[2][-2], eq5[2][0], eq5[2][-2], eq9[2][4]).set_color(col_num)
-        VGroup(eq1[2][-1], eq5[2][-1], eq1[3][11], eq14[3][1]).set_color(col_special)
-        VGroup(eq1[3][13], eq2[3][11], eq4[3][9], eq5[3][-1], eq6[3][5], eq12[3][4],
-               eq11[2][12], eq15[0][-1], eq15[3][-3], eq14[3][2]).set_color(col_i)
+               eq1[2][0], eq1[2][-2], eq9[2][4]).set_color(col_num)
+        VGroup(eq1[2][-1], eq1[3][11], eq14[3][1]).set_color(col_special)
+        VGroup(eq1[3][13], eq2[3][11], eq5[3][-1], eq12[3][4],
+               eq11[2][12], eq15[0][-1], eq15[3][-3], eq14[3][2], eq26[0][-1]).set_color(col_i)
         VGroup(eq23[2][0]).set_color(col_WVD)
+        VGroup(eq1[2][2:-2], eq1[3][0], eq1[3][-2], eq14[3][0], eq14[3][-2],
+               eq16[0][0], eq16[0][-2], eq16[2][0], eq16[5][-2], eq20[3]).set_color(col_op)
 
         mh.rtransform.copy_colors = True
-        mh.copy_colors_eq(eq1[0], eq28[0], eq1[0], eq31[0][1:-2])
-        mh.copy_colors_eq(eq1[2], eq12[2], eq1[2], eq14[2], eq1[2], eq20[2], eq1[2], eq28[2])
+        mh.copy_colors_eq(eq1[0], eq31[0][1:-2])
+        mh.copy_colors_eq(eq1[2], eq12[2], eq1[2], eq14[2], eq1[2], eq20[2])
         mh.copy_colors_eq(eq9, eq10, eq12, eq13, eq12[0], eq14[0], eq12[0], eq16[0][1:6],
                           eq12[0], eq16[2][1:], eq14[3][5:11], eq18[2][1:7], eq23, eq25,
-                          eq14[3][5:11], eq20[0],
+                          eq14[3][5:11], eq20[0], eq12[0], eq20[4], eq1[3][11:16], eq20[5][:5],
+                          eq1[3][-2:], eq20[5][-2:], eq12[3], eq21[4], eq9[2], eq22[4][2:7],
+                          eq10[2], eq22[4][11:16], eq14[3][5:11], eq25[0], eq1, eq28
         )
 
-        VGroup(eq3[3][9], eq3[3][15]).set_color(col_num)
+        VGroup(eq3[3][9], eq3[3][16]).set_color(col_num)
 
         mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
         mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
@@ -426,12 +433,12 @@ class STFTWigner(STFT):
                   FadeIn(eq2[3][11]))
         self.wait(0.1)
         self.play(mh.rtransform(eq2[0][:2], eq3[0][:2], eq2[0][3], eq3[0][3], eq2[0][-1], eq3[0][-1],
-                                eq2[1:3], eq3[1:3], eq2[3][:9], eq3[3][:9], eq2[3][10:15], eq3[3][10:15],
-                                eq2[3][16:], eq3[3][16:]),
+                                eq2[1:3], eq3[1:3], eq2[3][:9], eq3[3][:9], eq2[3][10:16], eq3[3][10:16],
+                                eq2[3][17:], eq3[3][17:]),
                   mh.fade_replace(eq2[0][2],eq3[0][2], coor_mask=RIGHT),
                   mh.fade_replace(eq2[0][4],eq3[0][4], coor_mask=RIGHT),
                   mh.fade_replace(eq2[3][9], eq3[3][9], coor_mask=RIGHT),
-                  mh.fade_replace(eq2[3][15], eq3[3][15], coor_mask=RIGHT),
+                  mh.fade_replace(eq2[3][16], eq3[3][16], coor_mask=RIGHT),
                   )
         self.wait(0.1)
         self.play(FadeOut(eq3[3][8:10], eq3[3][12:17]))
@@ -584,17 +591,19 @@ class STFTWigner(STFT):
         self.play(FadeIn(eq28))
         self.wait(0.1)
         self.play(mh.rtransform(eq28[:3], eq29[:3], eq28[3][:4], eq29[3][:4], eq28[3][4:8], eq29[3][6:10],
-                                eq28[3][10:15], eq29[3][10:15], eq28[3][15], eq29[3][16], eq28[3][16:], eq29[3][20:]),
+                                eq28[3][10:14], eq29[3][10:14], eq28[3][14], eq29[3][15],
+                                eq28[3][15:], eq29[3][19:]),
                   FadeOut(eq28[3][8:10]),
-                  Succession(Wait(0.2), FadeIn(eq29[3][4:6], eq29[3][15], eq29[3][17:20])))
+                  Succession(Wait(0.2), FadeIn(eq29[3][4:6], eq29[3][14], eq29[3][16:19])))
         self.wait(0.1)
         self.play(AnimationGroup(
             mh.rtransform(eq29[:2], eq30[:2], eq29[2][1:], eq30[2][5:], eq29[3][0], eq30[3][0],
                           eq29[3][1:11], eq30[3][6:16], eq29[3][-2:], eq30[3][-2:]),
-            mh.rtransform(eq29[3][11:15], eq30[2][:4], eq29[3][18], eq30[2][4], path_arc=PI/3),
-            mh.rtransform(eq29[3][11:15].copy(), eq30[3][1:5], eq29[3][16], eq30[3][5], path_arc=PI/2),
+            mh.rtransform(eq29[3][11:14], eq30[2][:3], eq29[3][17], eq30[2][3], eq29[3][19].copy(), eq30[2][4], path_arc=PI/3),
+            mh.rtransform(eq29[3][11:14].copy(), eq30[3][1:4], eq29[3][15], eq30[3][4], eq29[3][19], eq30[3][5], path_arc=PI/2),
             FadeOut(eq29[2][0]), run_time=2),
-            FadeOut(eq29[3][15], eq29[3][17], eq29[3][19], run_time=1))
+            FadeOut(eq29[3][14], eq29[3][16], eq29[3][18], run_time=1)
+            )
         self.wait(0.1)
         s1 = mh.diff(eq27[2][5], eq31[2][7])
         s2 = mh.diff(eq27[2][7], eq31[2][9])
