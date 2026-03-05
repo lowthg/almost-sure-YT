@@ -368,8 +368,8 @@ class STFTWigner(STFT):
         eq30 = MathTex(r'\phi(t,\omega)', r'=', r'\frac{e^{-it\omega} }{\sqrt{2\pi} }', r'\int e^{-i s\omega}\psi(s+t)w(s)\,ds', font_size=55)
         eq31 = MathTex(r'\lvert\phi(t,\omega)\rvert^2', r'=', r'\iint W_\psi(t+s,\omega+z)W_w(s,z)\,dsdz')
 
-        VGroup(eq1[0][0], eq1[3][1], eq1[3][5], eq12[0][0], eq12[3][0], eq12[3][5],
-               eq14[3][5:7], eq23[2][1]).set_color(col_psi)
+        VGroup(eq1[0][0], eq1[3][1], eq1[3][5], eq12[3][0], eq12[3][5],
+               eq23[2][1]).set_color(col_psi)
         VGroup(eq1[0][2], eq1[3][3], eq1[3][7], eq1[3][9], eq1[3][14], eq1[3][-1],
                eq7[3][3], eq7[3][8], eq7[3][11], eq7[4][3], eq7[4][7], eq7[4][11],
                eq9[0], eq9[2][0], eq9[2][2], eq12[0][1], eq12[0][3], eq12[3][2], eq12[3][7], eq14[3][3],
@@ -381,7 +381,7 @@ class STFTWigner(STFT):
         VGroup(eq1[2][-1], eq1[3][11], eq14[3][1]).set_color(col_special)
         VGroup(eq1[3][13], eq2[3][11], eq5[3][-1], eq12[3][4],
                eq11[2][12], eq15[0][-1], eq15[3][-3], eq14[3][2], eq26[0][-1]).set_color(col_i)
-        VGroup(eq23[2][0]).set_color(col_WVD)
+        VGroup(eq23[2][0], eq12[0][0], eq14[3][5:7]).set_color(col_WVD)
         VGroup(eq1[2][2:-2], eq1[3][0], eq1[3][-2], eq14[3][0], eq14[3][-2],
                eq16[0][0], eq16[0][-2], eq16[2][0], eq16[5][-2], eq20[3]).set_color(col_op)
 
