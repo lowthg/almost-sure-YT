@@ -6,9 +6,9 @@ import sys
 import scipy as sp
 from matplotlib.font_manager import font_scalings
 from numpy.random.mtrand import Sequence
-from pygments.styles.gh_dark import ORANGE_2
 from sorcery import switch
 from torch.utils.jit.log_extract import run_test
+
 
 sys.path.append('../')
 import manimhelper as mh
@@ -18,6 +18,9 @@ col_psi = RED
 col_x = BLUE
 col_p = GREEN
 col_num = TEAL_E
+col_special = TEAL
+col_i = YELLOW
+col_WVD = GREEN_D
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -332,10 +335,6 @@ class STFTWigner(STFT):
         eq8 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\frac1{2\pi}', r'\iint\psi(u)^*\psi(v)w(u)w(v)^*\,dudv')
         eq9 = MathTex(r'u', r'=', r's-\frac y2', font_size=55)
         eq10 = MathTex(r'v', r'=', r's+\frac y2', font_size=55)
-        # eq11 = MathTex(r'\renewcommand\arraystretch{1.7}\begin{pmatrix} u \\ v \end{pmatrix}', r'=', r'\renewcommand\arraystretch{1.7}\begin{pmatrix}\displaystyle s-\frac y2 \\ \displaystyle s+\frac y2 \end{pmatrix}')
-        # eq12 = MathTex(r'\renewcommand\arraystretch{1.7}\begin{pmatrix} u \\ v \end{pmatrix}', r'=', r'\renewcommand\arraystretch{1.7}\begin{pmatrix}\displaystyle 1 &\displaystyle -\frac 12 \\ \displaystyle 1 &\displaystyle \frac 12 \end{pmatrix}',
-        #                r'\renewcommand\arraystretch{1.7}\begin{pmatrix} s \\ y \end{pmatrix}')
-        # eq9 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\frac1{2\pi}', r'\iint\psi\left(t-\frac y2\right)^*\psi\left(t+\frac y2\right)', r'w\left(t - \frac y2\right)w\left(t + \frac y2\right)^*\,dydt')
         eq11 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\iint f_s(y)g_s(y)^*\,dyds')
         eq12 = MathTex(r'f_s(y)', r'=', r'\frac1{\sqrt{2\pi} }', r'\psi(u)^*\psi(v)', font_size=55)
         eq13 = MathTex(r'g_s(y)', r'=', r'\frac1{\sqrt{2\pi} }', r'w(u)^*w(v)', font_size=55)
@@ -366,6 +365,30 @@ class STFTWigner(STFT):
         eq29 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s+t)w(s)e^{-i\omega (s+t)}\,ds', font_size=55)
         eq30 = MathTex(r'\phi(t,\omega)', r'=', r'\frac{e^{-i\omega t} }{\sqrt{2\pi} }', r'\int e^{-i\omega s}\psi(s+t)w(s)\,ds', font_size=55)
         eq31 = MathTex(r'\lvert\phi(t,\omega)\rvert^2', r'=', r'\iint W_\psi(t+s,\omega+z)W_w(s,z)\,dsdz')
+
+        VGroup(eq1[0][0], eq3[0][0], eq1[3][1], eq1[3][5], eq12[0][0], eq12[3][0], eq12[3][5],
+               eq14[3][5:7], eq23[2][1]).set_color(col_psi)
+        VGroup(eq1[0][2], eq1[3][3], eq1[3][7], eq1[3][9], eq1[3][15], eq1[3][-1],
+               eq4[3][-1], eq6[3][-1], eq7[3][3], eq7[3][8], eq7[3][11], eq7[4][3], eq7[4][7], eq7[4][11],
+               eq9[0], eq9[2][0], eq9[2][2], eq12[0][1], eq12[0][3], eq12[3][2], eq12[3][7], eq14[3][3],
+               eq14[3][7], eq16[0][-1], eq16[5][-1], eq23[2][3]).set_color(col_x)
+        VGroup(eq1[0][4], eq1[3][14], eq14[3][4], eq14[3][9], eq14[3][-1], eq23[2][5]).set_color(col_p)
+        VGroup(eq3[0][2], eq3[0][4], eq5[0][-1], eq31[0][-1],
+               eq1[2][0], eq1[2][-2], eq5[2][0], eq5[2][-2], eq9[2][4]).set_color(col_num)
+        VGroup(eq1[2][-1], eq5[2][-1], eq1[3][11], eq14[3][1]).set_color(col_special)
+        VGroup(eq1[3][13], eq2[3][11], eq4[3][9], eq5[3][-1], eq6[3][5], eq12[3][4],
+               eq11[2][12], eq15[0][-1], eq15[3][-3], eq14[3][2]).set_color(col_i)
+        VGroup(eq23[2][0]).set_color(col_WVD)
+
+        mh.rtransform.copy_colors = True
+        mh.copy_colors_eq(eq1[0], eq28[0], eq1[0], eq31[0][1:-2])
+        mh.copy_colors_eq(eq1[2], eq12[2], eq1[2], eq14[2], eq1[2], eq20[2], eq1[2], eq28[2])
+        mh.copy_colors_eq(eq9, eq10, eq12, eq13, eq12[0], eq14[0], eq12[0], eq16[0][1:6],
+                          eq12[0], eq16[2][1:], eq14[3][5:11], eq18[2][1:7], eq23, eq25,
+                          eq14[3][5:11], eq20[0],
+        )
+
+        VGroup(eq3[3][9], eq3[3][15]).set_color(col_num)
 
         mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
         mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
@@ -448,7 +471,7 @@ class STFTWigner(STFT):
                                 eq7[3][1:6], eq8[3][2:7], eq7[3][6:10], eq8[3][11:15],
                                 eq7[3][10:12], eq8[3][20:22], eq7[4][0], eq8[3][1],
                                 eq7[4][1:5], eq8[3][7:11], eq7[4][5:10], eq8[3][15:20],
-                                eq7[4][10:], eq8[3][22:]),
+                                eq7[4][10:], eq8[3][22:], copy_colors=True),
                   run_time=1.8)
         self.wait(0.1)
         self.play(FadeIn(eq9, eq10))
@@ -464,6 +487,7 @@ class STFTWigner(STFT):
         self.wait(0.1)
         eq11_2 = eq11[2][2:7].copy().move_to(eq8[3][2:11], coor_mask=RIGHT)
         eq8_1 = MathTex(r'\frac1{\sqrt{2\pi} }', font_size=55)[0]
+        mh.copy_colors_eq(eq1[2], eq8_1)
         mh.align_sub(eq8_1, eq8_1[1], eq8[2][1])
         self.play(FadeOut(eq8[3][2:11]), mh.rtransform(eq12[0][:].copy(), eq11_2),
                   mh.rtransform(eq8[2][:2], eq8_1[:2], eq8[2][-2:], eq8_1[-2:]),
@@ -572,13 +596,16 @@ class STFTWigner(STFT):
             FadeOut(eq29[2][0]), run_time=2),
             FadeOut(eq29[3][15], eq29[3][17], eq29[3][19], run_time=1))
         self.wait(0.1)
+        s1 = mh.diff(eq27[2][5], eq31[2][7])
+        s2 = mh.diff(eq27[2][7], eq31[2][9])
         self.play(mh.rtransform(eq27[0][:3], eq31[0][:3], eq27[0][4], eq31[0][4], eq27[0][6:], eq31[0][6:],
                                 eq27[1], eq31[1], eq27[2][:5], eq31[2][:5], eq27[2][5:7], eq31[2][7:9],
                                 eq27[2][7:], eq31[2][11:]),
                   mh.fade_replace(eq27[0][3], eq31[0][3], coor_mask=RIGHT),
                   mh.fade_replace(eq27[0][5], eq31[0][5], coor_mask=RIGHT),
-                  FadeIn(eq31[2][5:7], shift=mh.diff(eq27[2][5], eq31[2][7])),
-                  FadeIn(eq31[2][9:11], shift=mh.diff(eq27[2][7], eq31[2][9]))
+                  eq31[2][5:7].set_opacity(-2).shift(-s1).animate.set_opacity(1).shift(s1),
+                  eq31[2][9:11].set_opacity(-2).shift(-s2).animate.set_opacity(1).shift(s2),
+                  run_time=1.2
                   )
         self.wait(0.1)
         self.play(FadeOut(eq30))
@@ -587,5 +614,5 @@ class STFTWigner(STFT):
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
-        Example().render()
+        STFTWigner().render()
 

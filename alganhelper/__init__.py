@@ -1,3 +1,4 @@
+import torch
 from algan import *
 
 def anchor_pts(start=0., end=1., n=10):
@@ -70,6 +71,7 @@ class FrameStepper:
         return self
 
     def __next__(self):
+        print('Frame number:', self.index)
         if self.start:
             self.start = False
             return self
@@ -80,7 +82,9 @@ class FrameStepper:
         u0 = self.index / self.n
 
 
-        u = self.rate_func(u0).item()
+        u = self.rate_func(u0)
+        if type(u) == torch.Tensor:
+            u = u.item()
         t = u0 * self.run_time
         self.du = u - self.u
         self.dt = t - self.time
