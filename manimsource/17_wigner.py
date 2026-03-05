@@ -362,17 +362,19 @@ class STFTWigner(STFT):
         eq25 = MathTex(r'\hat g_s(z)', r'=', r'W_w(s,z)')
         eq26 = MathTex(r'\hat g_s(z)^*', r'=', r'W_w(s,z)')
         eq27 = MathTex(r'\lvert\phi(0,0)\rvert^2', r'=', r'\iint W_\psi(s,z)W_w(s,z)\,dsdz')
+        eq28 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-i\omega s}\,ds', font_size=55)
+        eq29 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s+t)w(s)e^{-i\omega (s+t)}\,ds', font_size=55)
+        eq30 = MathTex(r'\phi(t,\omega)', r'=', r'\frac{e^{-i\omega t} }{\sqrt{2\pi} }', r'\int e^{-i\omega s}\psi(s+t)w(s)\,ds', font_size=55)
+        eq31 = MathTex(r'\lvert\phi(t,\omega)\rvert^2', r'=', r'\iint W_\psi(t+s,\omega+z)W_w(s,z)\,dsdz')
 
         mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
         mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
         mh.align_sub(eq7, eq7[1], eq6[1], coor_mask=UP)
         mh.align_sub(eq8, eq8[1], eq7[1], coor_mask=UP)
-        # eq9[4:].next_to(eq9[3], DOWN, buff=0.2).align_to(eq9[3][2], LEFT)
         eq9.next_to(eq8, DOWN, buff=0.5)
         eq10.next_to(eq9, DOWN, buff=0.2)
         mh.align_sub(eq10, eq10[1], eq9[1], coor_mask=RIGHT)
         mh.align_sub(eq11, eq11[1], eq8[1], coor_mask=UP)
-        # mh.align_sub(eq12, eq12[1], eq11[1])
         mh.align_sub(eq12, eq12[1], eq9[1]).shift(RIGHT*1.5)
         mh.align_sub(eq13, eq13[1], eq10[1]).shift(RIGHT*1.5)
         eq14.next_to(eq8, UP, buff=0.6, coor_mask=UP)
@@ -390,6 +392,10 @@ class STFTWigner(STFT):
         mh.align_sub(eq26, eq26[1], eq22[1], coor_mask=UP)
         mh.align_sub(eq25, eq25[1], eq26[1])
         mh.align_sub(eq27, eq27[1], eq24[1], coor_mask=UP)
+        eq28.next_to(eq27, DOWN, buff=1)
+        mh.align_sub(eq29, eq29[1], eq28[1])
+        mh.align_sub(eq30, eq30[1], eq29[1])
+        mh.align_sub(eq31, eq31[1], eq27[1], coor_mask=UP)
 
         self.add(eq1)
         self.wait(0.1)
@@ -447,24 +453,6 @@ class STFTWigner(STFT):
         self.wait(0.1)
         self.play(FadeIn(eq9, eq10))
         self.wait(0.1)
-        # self.play(mh.rtransform(eq9[0][0], eq11[0][3], eq10[0][0], eq11[0][4],
-        #                         eq9[1], eq11[1], eq9[2][:], eq11[2][3:8],
-        #                         eq10[2][:], eq11[2][8:13]),
-        #           mh.rtransform(eq10[1], eq11[1]),
-        #           Succession(Wait(0.5), FadeIn(eq11[0][:3], eq11[0][-3:], eq11[2][:3], eq11[2][-3:])))
-        # self.wait(0.1)
-        # self.play(mh.rtransform(eq11[:2], eq12[:2], eq11[2][:3], eq12[2][:3], eq11[2][3], eq12[3][3],
-        #                         eq11[2][4], eq12[2][4], eq11[2][5], eq12[3][4], eq11[2][6:8], eq12[2][6:8],
-        #                         eq11[2][11:], eq12[2][10:]),
-        #           mh.rtransform(eq11[2][8], eq12[3][3], eq11[2][10], eq12[3][4]),
-        #           mh.fade_replace(eq11[2][3].copy(), eq12[2][3]),
-        #           mh.fade_replace(eq11[2][5].copy(), eq12[2][5]),
-        #           mh.fade_replace(eq11[2][8].copy(), eq12[2][8]),
-        #           mh.fade_replace(eq11[2][10].copy(), eq12[2][9]),
-        #           FadeOut(eq11[2][9]),
-        #           FadeIn(eq12[3][:3], eq12[3][-3:])
-        #           )
-
         eq11_1 = eq11[2][-4:].copy().align_to(eq8[3][-4], LEFT)
         self.play(mh.rtransform(eq9[2][0].copy(), eq11_1[-1], eq8[3][-2], eq11_1[-2],
                                 eq9[2][2].copy(), eq11_1[-3], eq8[3][-4], eq11_1[-4]),
@@ -495,9 +483,6 @@ class STFTWigner(STFT):
                                 eq14[3][:2], eq15[3][:2], eq14[3][2:11], eq15[3][3:12],
                                 eq14[3][11:], eq15[3][13:]),
                   Succession(Wait(0.4), FadeIn(eq15[0][-1], eq15[3][2], eq15[3][12])))
-        # FadeIn(eq15[0][-1], shift=mh.diff(eq14[0][-1], eq15[0][-2])),
-        # FadeIn(eq15[3][2], shift=mh.diff(eq14[3][2], eq15[3][3])),
-        # FadeIn(eq15[3][12], shift=mh.diff(eq14[3][10], eq15[3][11])))
         self.wait(0.1)
         self.play(mh.rtransform(eq15[0][:], eq16[0][6:12], eq15[1], eq16[1],eq15[2], eq16[3],
                                 eq15[3], eq16[4]),
@@ -571,6 +556,32 @@ class STFTWigner(STFT):
                   run_time=1.6)
         self.wait(0.1)
         self.play(FadeOut(eq9, eq10, eq12, eq13))
+        self.wait(0.1)
+        self.play(FadeIn(eq28))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq28[:3], eq29[:3], eq28[3][:4], eq29[3][:4], eq28[3][4:8], eq29[3][6:10],
+                                eq28[3][10:15], eq29[3][10:15], eq28[3][15], eq29[3][16], eq28[3][16:], eq29[3][20:]),
+                  FadeOut(eq28[3][8:10]),
+                  Succession(Wait(0.2), FadeIn(eq29[3][4:6], eq29[3][15], eq29[3][17:20])))
+        self.wait(0.1)
+        self.play(AnimationGroup(
+            mh.rtransform(eq29[:2], eq30[:2], eq29[2][1:], eq30[2][5:], eq29[3][0], eq30[3][0],
+                          eq29[3][1:11], eq30[3][6:16], eq29[3][-2:], eq30[3][-2:]),
+            mh.rtransform(eq29[3][11:15], eq30[2][:4], eq29[3][18], eq30[2][4], path_arc=PI/3),
+            mh.rtransform(eq29[3][11:15].copy(), eq30[3][1:5], eq29[3][16], eq30[3][5], path_arc=PI/2),
+            FadeOut(eq29[2][0]), run_time=2),
+            FadeOut(eq29[3][15], eq29[3][17], eq29[3][19], run_time=1))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq27[0][:3], eq31[0][:3], eq27[0][4], eq31[0][4], eq27[0][6:], eq31[0][6:],
+                                eq27[1], eq31[1], eq27[2][:5], eq31[2][:5], eq27[2][5:7], eq31[2][7:9],
+                                eq27[2][7:], eq31[2][11:]),
+                  mh.fade_replace(eq27[0][3], eq31[0][3], coor_mask=RIGHT),
+                  mh.fade_replace(eq27[0][5], eq31[0][5], coor_mask=RIGHT),
+                  FadeIn(eq31[2][5:7], shift=mh.diff(eq27[2][5], eq31[2][7])),
+                  FadeIn(eq31[2][9:11], shift=mh.diff(eq27[2][7], eq31[2][9]))
+                  )
+        self.wait(0.1)
+        self.play(FadeOut(eq30))
         self.wait()
 
 
