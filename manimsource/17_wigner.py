@@ -16,13 +16,14 @@ import manimhelper as mh
 from common.wigner import *
 
 col_psi = (RED-WHITE)*0.8 + WHITE
-col_x = (BLUE-WHITE)*0.6 + WHITE
-col_p = (GREEN-WHITE)*0.8 + WHITE
-col_num = WHITE #(TEAL_E - WHITE) * 0.5 + WHITE
-col_special = WHITE #(TEAL - WHITE) * 0.5 + WHITE
-col_i = WHITE #(YELLOW - WHITE) * 0.4 + WHITE
+col_x = (BLUE-WHITE)*0.7 + WHITE
+col_p = (GREEN-WHITE)*0.9 + WHITE
+col_num = (TEAL_E - WHITE) * 0.5 + WHITE
+col_special = (PURPLE - WHITE) * 0.25 + (TEAL_E - WHITE) * 0.25 + WHITE
+col_i = (YELLOW - WHITE) * 0.3 + WHITE
 col_WVD = (ORANGE-WHITE)*0.9 + WHITE
-col_op = WHITE #(PURPLE-WHITE) * 0.6 + WHITE
+col_op = (PURPLE-WHITE) * 0.5 + WHITE
+col_var = col_special
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -34,6 +35,137 @@ def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_strok
         res.add(elem)
     return res
 
+
+class LinearComb(Scene):
+    fill_op = 0.7
+    bgcol = GREY
+
+    def __init__(self, *args, **kwargs):
+        if not config.transparent:
+            config.background_color=self.bgcol
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        eq1 = MathTex(r'aX+bP', font_size=100).set_z_index(1)
+        VGroup(eq1[0][1]).set_color(col_x)
+        eq1[0][4].set_color(col_p)
+        VGroup(eq1[0][0], eq1[0][3]).set_color(col_var)
+        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_opacity=self.fill_op,
+                                    fill_color=BLACK, corner_radius=0.15, buff=0.2)
+        VGroup(eq1, box1).to_edge(DOWN, buff=1)
+        self.add(eq1, box1)
+
+class Latexx(Scene):
+    def construct(self):
+        eq = MathTex(r'x', font_size=80, stroke_width=2)
+        self.add(eq)
+
+class Latexv(Scene):
+    def construct(self):
+        eq = MathTex(r'v', font_size=80, stroke_width=2)
+        self.add(eq)
+
+class SlitEqn(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=2)
+        eq1 = MathTex(r'x')
+        eq2 = MathTex(r'vt')
+        eq3 = MathTex(r'x + vt')
+        eq4 = MathTex(r'x + \frac{p}{m}t', font_size=80, stroke_width=2)
+        eq5 = MathTex(r'x + \frac{t}{m}p', font_size=80, stroke_width=2)
+        VGroup(eq1, eq2).arrange(DOWN, buff=1.8, aligned_edge=RIGHT)
+
+        eq3.move_to(eq1).align_to(eq1, RIGHT).shift(DOWN*0.5)
+        mh.align_sub(eq5, eq5[0][0], eq3[0][0]).align_to(eq1, RIGHT)
+        mh.align_sub(eq4, eq4[0][0], eq5[0][0])
+
+
+        self.add(eq1, eq2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[0][0], eq3[0][0], eq2[0][:], eq3[0][-2:]),
+                  Succession(Wait(0.4), FadeIn(eq3[0][1])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[0][:2], eq4[0][:2], eq3[0][-1], eq4[0][-1]),
+                  mh.fade_replace(eq3[0][-2], eq4[0][2:-1], coor_mask=RIGHT))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0][:2], eq5[0][:2], eq4[0][2], eq5[0][-1],
+                                eq4[0][-1], eq5[0][2], eq4[0][3:-1], eq5[0][3:-1]))
+        self.wait()
+
+class Interference(Scene):
+    def construct(self):
+        height = 1
+        xmax = 4
+        ymax = 1
+        n = 401
+        x0 = 0.75
+        s = 1.5
+        a = PI / x0 / 2 * 5
+        ax = Axes(x_range=[-xmax, xmax], y_range=[0, ymax], x_length=7, y_length=2,
+                  ).rotate(-PI/2)
+
+        d0 = 10
+
+        def f(x):
+            y = 0j
+            for x1 in [-x0, x0]:
+                d = (np.sqrt((x - x1) * (x - x1) / d0 + 1) - 1) * d0
+                y += np.exp(-(x - x1) * (x - x1) / (2 * s * s) + d * 1j * a)
+            y = np.abs(y)
+            y *= y / 4 * 1.35
+            return y
+
+        path = ax.plot(f, (-xmax, xmax), stroke_color=BLUE, stroke_width=5).set_z_index(1)
+        path.set_fill(opacity=0.7, color=BLUE)
+        VGroup(ax, path).shift(-path.get_center())
+
+        self.add(path)
+
+class MixedExp(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'\frac{\partial}{\partial t}\psi_t', r'=', r'i(uX+vP)', r'\psi_t')
+        eq2 = MathTex(r'\frac{\partial}{\partial t}\psi_t(x)', r'=', r'i\left(uX+vP\right)', r'\psi_t(x)')
+        eq3 = MathTex(r'\frac{\partial}{\partial t}\psi_t(x)', r'=', r'i\left(ux-iv\frac{\partial}{\partial x}\right)', r'\psi_t(x)')
+        eq4 = MathTex(r'\frac{\partial}{\partial t}\psi_t(x)', r'=', r'\left(iux+v\frac{\partial}{\partial x}\right)', r'\psi_t(x)')
+        eq5 = MathTex(r'\left(\frac{\partial}{\partial t}-v\frac{\partial}{\partial x}\right)', r'\psi_t(x)', r'=',
+                      r'iux', r'\psi_t(x)')
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[0][:], eq2[0][:-3], eq1[1], eq2[1], eq1[2], eq2[2], eq1[3][:], eq2[3][:-3]),
+                  Succession(Wait(0.4), FadeIn(eq2[0][-3:], eq2[3][-3:])),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:2], eq3[:2], eq2[3], eq3[3],
+                                eq2[2][0], eq3[2][0], eq2[2][2], eq3[2][2], eq2[2][5], eq3[2][6]),
+                  mh.stretch_replace(eq2[2][1], eq3[2][1]),
+                  mh.fade_replace(eq2[2][3], eq3[2][3], coor_mask=RIGHT),
+                  mh.fade_replace(eq2[2][4], eq3[2][4], coor_mask=RIGHT),
+                  mh.fade_replace(eq2[2][6], eq3[2][7:11], coor_mask=RIGHT),
+                  mh.stretch_replace(eq2[2][7], eq3[2][11]),
+                  FadeIn(eq3[2][5], shift=mh.diff(eq2[2][5], eq3[2][6])*RIGHT)
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[2][0], eq4[2][1], eq3[2][2:4], eq4[2][2:4],
+                                eq3[2][6:], eq4[2][5:], eq3[3], eq4[3]),
+                  mh.stretch_replace(eq3[2][1], eq4[2][0]),
+                  mh.fade_replace(eq3[2][4], eq4[2][4]),
+                  FadeOut(eq3[2][5])
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[1], eq5[2], eq4[3], eq5[4], eq4[0][:4], eq5[0][1:5],
+                                eq4[0][4:], eq5[1][:], eq4[2][0], eq5[0][0], eq4[2][5:], eq5[0][6:],
+                                eq4[2][1:4], eq5[3][:]),
+                  mh.fade_replace(eq4[2][4], eq5[0][5]),
+                  run_time=1.8
+                  )
+        # self.play(mh.rtransform(eq3[0][1:5], eq4[0][1:5], eq3[0][5:], eq4[1][:], eq3[1], eq4[2],
+        #                         eq3[2][5:12], eq4[0][6:13], eq3[3], eq4[4], eq3[2][2:4], eq4[3][:],
+        #                         eq3[2][1], eq4[0][0]),
+        #           mh.fade_replace(eq3[2][4], eq4[0][5]),
+        #           FadeOut(eq3[0][0]),
+        #           FadeOut(eq3[2][0]))
+        self.wait()
 
 class WignerNarration(Scene):
     def __init__(self, *args, **kwargs):
@@ -326,7 +458,7 @@ class STFTWigner(STFT):
     bgcol=BLACK
 
     def construct(self):
-        MathTex.set_default(stroke_width=1.5, font_size=60)
+        MathTex.set_default(stroke_width=1.5, font_size=60)#, stroke_color=col_op, fill_color=col_op, color=col_op)
         eq1 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)e^{-is\omega}\,ds')
         eq2 = MathTex(r'\phi(t,\omega)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-t)^*e^{-is\omega}\,ds')
         eq3 = MathTex(r'\phi(0,0)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(s)w(s-0)^*e^{-is0}\,ds')
@@ -382,8 +514,8 @@ class STFTWigner(STFT):
         VGroup(eq1[3][13], eq2[3][11], eq5[3][-1], eq12[3][4],
                eq11[2][12], eq15[0][-1], eq15[3][-3], eq14[3][2], eq26[0][-1]).set_color(col_i)
         VGroup(eq23[2][0], eq12[0][0], eq14[3][5:7]).set_color(col_WVD)
-        VGroup(eq1[2][2:-2], eq1[3][0], eq1[3][-2], eq14[3][0], eq14[3][-2],
-               eq16[0][0], eq16[0][-2], eq16[2][0], eq16[5][-2], eq20[3]).set_color(col_op)
+        VGroup(eq1[2][1], eq1[2][2:-2], eq1[3][0], eq1[3][-2], eq14[3][0], eq14[3][-2],
+               eq16[0][0], eq16[0][-2], eq16[2][0], eq16[5][-2], eq20[3], eq5[0][0], eq5[0][-2]).set_color(col_op)
 
         mh.rtransform.copy_colors = True
         mh.copy_colors_eq(eq1[0], eq31[0][1:-2])
@@ -620,7 +752,11 @@ class STFTWigner(STFT):
         self.play(FadeOut(eq30))
         self.wait()
 
-
+"""
+integral exp(-ax^2+bx) dx
+y = sqrt(a)x-b/2/sqrt(a)
+integral exp(-y^2+b^2/(4a)) dy / sqrt(a) = sqrt(pi/a) * exp(b^2/4a)
+"""
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
         STFTWigner().render()
