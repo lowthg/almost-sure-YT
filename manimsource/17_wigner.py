@@ -188,8 +188,9 @@ class FourierTomography(LinearComb):
         self.wait()
 
 class WaveFunction(FourierTomography):
-    def construct(self):
-        box, _, _, _ = self.get_eqs()
+    def get_eqs(self, do_anim):
+        box, _, _, _ = FourierTomography.get_eqs(self)
+
         eq1 = MathTex(r'\psi', r'\colon\mathbb R\to\mathbb C', font_size=80)
         eq2 = MathTex(r'\lvert\psi(x)\rvert^2', r'=', r'{\sf probability\ density}')
         eq3 = MathTex(r'\int', r'\lvert\psi(x)\rvert^2', r'dx', r'=', r'1')
@@ -197,22 +198,17 @@ class WaveFunction(FourierTomography):
         mh.font_size_sub(eq4, 2, 50)
         eq5 = MathTex(r'\psi(x)', r'=', r'\frac1{\sqrt[4]{2\pi\sigma^2} }', r'e^{-\frac{x^2}{4\sigma^2}')
         mh.font_size_sub(eq5, 2, 50)
-        eq6 = MathTex(r'X', r'\psi(x)', r'=', r'x\psi(x)', font_size=80)
-        eq7 = MathTex(r'\mathbb E[f(X)]', r'=', r'\int f(x)\lvert\psi(x)\rvert^2\,dx', font_size=80)
-        eq8 = MathTex(r'\mathbb E[f(X)]', r'=', r'\int\psi(x)^* f(X)\psi(x)\,dx', font_size=80)
-        eq9 = MathTex(r'=', r'\langle \psi\vert f(X)\psi\rangle', font_size=80)
-        VGroup(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9).set_z_index(1)
+
+        VGroup(eq1, eq2, eq3, eq4, eq5).set_z_index(1)
 
         eq2.next_to(eq1, DOWN, buff=0.5)
         VGroup(eq1, eq2).move_to(box)
         mh.align_sub(eq3, eq3[1], eq2[0])
         mh.align_sub(eq4, eq4[0], eq3[1])
         mh.align_sub(eq5, eq5[1], eq4[1])
-        eq6.move_to(box)
-        eq7.move_to(box)
-        mh.align_sub(eq8, eq8[1], eq7[1], coor_mask=UP)
-        mh.align_sub(eq9, eq9[0], eq8[1]).next_to(eq8, DOWN, buff=0.1)
-        # mh.rtransform.copy_colors = False
+
+        if not do_anim:
+            return box, eq1, eq5
 
         self.add(box)
         self.wait(0.1)
@@ -237,9 +233,54 @@ class WaveFunction(FourierTomography):
                   mh.fade_replace(eq4[3][5], eq5[3][5], coor_mask=RIGHT),
                   FadeIn(eq5[2][2]),
                   Succession(Wait(0.8), mh.rtransform(eq4[0][1:-2], eq5[0][:])))
+
+        return box, eq1, eq5
+
+    def construct(self):
+        box, eq1, eq5 = self.get_eqs(do_anim=True)
+
+        # go full screen
+        scale=1.1
+        eq6 = MathTex(r'\psi(x)', r'=', r'\frac1{\sqrt[4]{2\pi\sigma^2} }', r'e^{-\frac{x^2}{4\sigma^2}+ipx')
+        mh.font_size_sub(eq6, 2, 50).scale(scale)
+
+        box2 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0,
+                         fill_color=BLACK, fill_opacity=1)
+
+        eq5_1 = eq5.copy().move_to(ORIGIN).scale(scale)
+        mh.align_sub(eq6, eq6[1], eq5_1[1], coor_mask=UP)
+
+        self.wait(0.1)
+        self.play(LaggedStart(FadeOut(eq1, run_time=1),
+                  AnimationGroup(mh.rtransform(box, box2),
+                                 mh.transform(eq5, eq5_1),
+                                 run_time=1.5), lag_ratio=0.5))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[:3], eq6[:3], eq5[3][:], eq6[3][:-4]),
+                  FadeIn(eq6[3][-4:], shift=mh.diff(eq5[3][-1], eq6[3][-5])))
+
+        self.wait()
+
+class WavePosition(FourierTomography):
+    def construct(self):
+        box, _, _, _ = self.get_eqs()
+
+        eq6 = MathTex(r'X', r'\psi(x)', r'=', r'x\psi(x)', font_size=80)
+        eq7 = MathTex(r'\mathbb E[f(X)]', r'=', r'\int f(x)\lvert\psi(x)\rvert^2\,dx', font_size=80)
+        eq8 = MathTex(r'\mathbb E[f(X)]', r'=', r'\int\psi(x)^* f(X)\psi(x)\,dx', font_size=80)
+        eq9 = MathTex(r'=', r'\langle \psi\vert f(X)\psi\rangle', font_size=80)
+        VGroup( eq6, eq7, eq8, eq9).set_z_index(1)
+
+        eq6.move_to(box)
+        eq7.move_to(box)
+        mh.align_sub(eq8, eq8[1], eq7[1], coor_mask=UP)
+        mh.align_sub(eq9, eq9[0], eq8[1]).next_to(eq8, DOWN, buff=0.1)
+        # mh.rtransform.copy_colors = False
+
+        self.add(box)
         self.wait(0.1)
         eq6_1 = eq6[0].copy().scale(1.2).move_to(box)
-        self.play(LaggedStart(FadeOut(eq1, eq5), FadeIn(eq6_1), lag_ratio=0.8))
+        self.play(LaggedStart(FadeIn(eq6_1), lag_ratio=0.8))
         self.wait(0.1)
         self.play(mh.rtransform(eq6_1, eq6[0]),
                   Succession(Wait(0.5), FadeIn(eq6[1:])))
@@ -266,7 +307,7 @@ class WaveFunction(FourierTomography):
 
         self.wait()
 
-class WaveMomentum(WaveFunction):
+class WaveMomentum(FourierTomography):
     def construct(self):
         box, _, _, _ = self.get_eqs()
         MathTex.set_default(font_size=80)
@@ -471,7 +512,23 @@ class OperatorExp2(OperatorExp):
         eq5 = MathTex(r'e^{iPv}e^{iuX}', r'\psi(x)', r'=', r'e^{iPv}', r'e^{iux}\psi(x)')
         eq6 = MathTex(r'=', r'e^{iu(x+v)}\psi(x+v)')
         eq7 = MathTex(r'e^{i(uX+Pv)}', r'=', r'e^{iPv/2}e^{iuX}e^{iPv/2}')
-        VGroup(eq1, eq2, eq3, eq4, eq4_1, eq5, eq6, eq7).set_z_index(1)
+        eq8 = MathTex(r'\psi_t(x)', r'=', r'e^{it(uX+Pv)}', r'\psi(x)')
+        eq9 = MathTex(r'\frac{\partial}{\partial t}', r'\psi_t(x)', r'=', r'i(uX+Pv)', r'\psi(x)')
+        mh.font_size_sub(eq9, 0, 70)
+        eq9_1 = MathTex(r'\frac{\partial}{\partial t}', r'\psi_t(x)', r'=', r'i\Big(ux+v', r'\frac{\partial}{\partial x}', r'\Big)', r'\psi(x)')
+        mh.font_size_sub(eq9_1, 0, 70)
+        mh.font_size_sub(eq9, 4, 70)
+        eq10 = MathTex(r'\psi_t(x)', r'=', r'e^{itPv/2}', r'e^{ituX}', r'e^{itPv/2}', r'\psi(x)')
+        eq10_1 = MathTex(r'\psi(x', r'+tv/2', r')')
+        mh.font_size_sub(eq10_1, 1, 60)
+        eq10_1 = VGroup(VGroup(*eq10_1[0][:], *eq10_1[1][:], *eq10_1[2][:]))
+        eq10_2 = MathTex(r'e^{itux}')
+        eq10_3 = MathTex(r'e^{itu(x+tv/2)}', r'\psi(x', r'+tv/2+tv/2', r')')
+        mh.font_size_sub(eq10_3, 2, 60)
+        eq10_3 = VGroup(eq10_3[0], VGroup(*eq10_3[1][:], *eq10_3[2][:], *eq10_3[3][:]))
+        eq11 = MathTex(r'\psi_t(x)', r'=', r'e^{itu(x+tv/2)}', r'\psi(x', r'+tv', r')')
+        mh.font_size_sub(eq11, 4, 60)
+        VGroup(eq1, eq2, eq3, eq4, eq4_1, eq5, eq6, eq7, eq8, eq8, eq9, eq10, eq10_1, eq10_2, eq10_3, eq11).set_z_index(1)
 
         eq1.move_to(box)
         eq2.move_to(box)
@@ -483,6 +540,14 @@ class OperatorExp2(OperatorExp):
         mh.align_sub(eq4_1, eq4_1[0][0], eq4[3][0])
         mh.align_sub(eq6, eq6[0], eq5[2])
         eq7.move_to(box)
+        eq9.next_to(eq8, DOWN, buff=0.4)
+        VGroup(eq8, eq9).move_to(box)
+        mh.align_sub(eq10, eq10[1], eq8[1], coor_mask=UP)
+        mh.align_sub(eq9_1, eq9_1[1], eq9[1], coor_mask=UP)
+        mh.align_sub(eq10_1, eq10_1[0][0], eq10[5][0]).align_to(eq10[4], LEFT)
+        mh.align_sub(eq10_2, eq10_2[0][0], eq10[3][0])
+        mh.align_sub(eq10_3, eq10_3[0][0], eq10[2][0])
+        mh.align_sub(eq11, eq11[1], eq10[1])
 
         self.add(box, eq1)
         self.wait(0.1)
@@ -540,6 +605,60 @@ class OperatorExp2(OperatorExp):
         self.wait(0.1)
         self.play(FadeOut(eq4[:3], eq4_1, eq4[4:], eq5[:3], eq6[1]))
         self.play(FadeIn(eq7))
+        self.wait(0.1)
+        self.play(FadeOut(eq7[1:]),
+                  mh.rtransform(eq7[0][2:], eq8[2][3:], eq7[0][:2], eq8[2][:2]),
+                  FadeIn(eq8[2][2], target_position=eq7[0][1:3]),
+                  Succession(Wait(0.7), FadeIn(eq8[:2], eq8[3])),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeIn(eq9))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq9[:3], eq9_1[:3], eq9[3][2], eq9_1[3][2], eq9[3][0], eq9_1[3][0],
+                                eq9[3][4], eq9_1[3][4], eq9[3][6], eq9_1[3][5],
+                                eq9[4], eq9_1[6]
+                                ),
+                  mh.stretch_replace(eq9[3][3], eq9_1[3][3]),
+                  mh.stretch_replace(eq9[3][1], eq9_1[3][1]),
+                  mh.stretch_replace(eq9[3][-1], eq9_1[5]),
+                  mh.fade_replace(eq9[3][5], eq9_1[4]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(LaggedStart(FadeOut(eq8[2][3], eq8[2][6], eq8[2][9]),
+            AnimationGroup(mh.rtransform(eq8[:2], eq10[:2], eq8[2][:3], eq10[2][:3], eq8[2][:3].copy(), eq10[3][:3], eq8[2][:3].copy(), eq10[4][:3],
+                                eq8[2][4:6], eq10[3][3:5], eq8[2][7:9], eq10[2][3:5], eq8[2][7:9].copy(), eq10[4][3:5],
+                                eq8[3], eq10[5]),
+                  FadeIn(eq10[2][-2:], shift=mh.diff(eq8[2][8], eq10[2][4])),
+                  FadeIn(eq10[4][-2:], shift=mh.diff(eq8[2][8], eq10[4][4]))),
+                              lag_ratio=0.5))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq10[5][:3], eq10_1[0][:3], eq10[5][-1], eq10_1[0][-1],
+                                eq10[4][-3:-1], eq10_1[0][5:7], eq10[4][2], eq10_1[0][4]),
+                  FadeOut(eq10[4][:2], eq10[4][3]),
+                  FadeIn(eq10_1[0][3]),
+                  mh.stretch_replace(eq10[4][-1], eq10_1[0][7]),
+                  run_time=1.3)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq10[3][:4], eq10_2[0][:4]),
+                  mh.stretch_replace(eq10[3][4], eq10_2[0][4]))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq10_2[0][:4], eq10_3[0][:4], eq10_2[0][4], eq10_3[0][5],
+                                eq10[2][2], eq10_3[0][7], eq10[2][-3:], eq10_3[0][8:11]),
+                  FadeOut(eq10[2][:2], eq10[2][3]),
+                  mh.rtransform(eq10_1[0][:3], eq10_3[1][:3],
+                                eq10[2][2].copy(), eq10_3[1][4], eq10[2][-3:-1].copy(), eq10_3[1][5:7],
+                                eq10_1[0][-6:], eq10_3[1][-6:]),
+                  mh.stretch_replace(eq10[2][-1].copy(), eq10_3[1][7]),
+                  run_time=1.7),
+                  Succession(Wait(1), FadeIn(eq10_3[0][4], eq10_3[0][6], eq10_3[0][11], eq10_3[1][3]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq10[:2], eq11[:2], eq10_3[0], eq11[2],
+                                eq10_3[1][:3], eq11[3][:], eq10_3[1][3:6], eq11[4][:]),
+                  mh.rtransform(eq10_3[1][8:11], eq11[4][:3], eq10_3[1][-1], eq11[5][0]),
+                  FadeOut(eq10_3[1][6:8]),
+                  FadeOut(eq10_3[1][11:13], target_position=eq10_3[1][6:8]),
+                  run_time=1.5)
         self.wait()
 
 class MixedExp(Scene):
