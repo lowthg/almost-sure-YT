@@ -5,9 +5,10 @@ from algan import *
 import manim as mn
 import scipy as sp
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO
-from scipy.fft import fft, ifft, fftfreq
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
+from manim import MathTex, VGroup
 
+from general.integratepowers import xrange, xvals
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -16,6 +17,26 @@ LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
 HD2 = RenderSettings((1920, 1080), 15)
+
+def create_shader(p):
+    surf = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+    fill_mask = surf.get_descendants()[1].color[:, :, -1:].clone()
+    mesh_mask = 1 - fill_mask
+    col0 = p.color.clone()
+    col_up = torch.tensor([1, .6, 0.])
+    col_dn = INDIGO[:3]
+
+    def shader(vals):  # vals of shape (1, n)
+        nonlocal fill_mask, mesh_mask, col0, col_up, col_dn
+        col = col0.clone()
+        shade_up = torch.pow(((vals - 0.05) * 4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0., 1).unsqueeze(-1)
+        col[..., :3] = fill_mask * shade_up * col_up \
+                       + fill_mask * shade_down * col_dn \
+                       + fill_mask * (1 - shade_up - shade_down) * col[:, :, :3] \
+                       + mesh_mask * col[..., :3]
+        return col
+    return shader
 
 def f0(t):  # flat to round Gaussian
     params = gauss1d_std(scale=1.)
@@ -150,6 +171,11 @@ def f17(t): # superposition_to_center
     params = gauss_scale(params, 1./gauss1d_norm(params))
     return [(params, 1.)]
 
+def f18(t):  # round Gaussian shift in P
+    params = gauss1d_std(scale=2.)
+    params = gauss1d_p_shift(params, 3.5 * t)
+    return [(params, 1.)]
+
 def g1(t):
     params = gauss1d_std(scale=1)
     eps = 0.05
@@ -218,7 +244,7 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True)
         if spawn:
             surf.spawn()
 
-    return origin, right, up, out, p, x, y, shape, Group(txt1, txt2)
+    return origin, right, up, out, p, x, y, shape, Group(txt1, txt2, ax1)
 
 def setup_wave(xrange=(-5., 5.), npts=640):
     xmin, xmax = xrange
@@ -242,6 +268,12 @@ def set_wave(p, xvals, vals, vals1, origin, right, up):
     yvals = torch.linspace(0., 1., 4)
     n = len(xvals)
     locx = p.location.clone()
+    # print(xvals.shape)
+    # print(vals.shape)
+    # print(yvals.shape)
+    # print(n)
+    # print((xvals.repeat_interleave(4).view(1, -1, 1) * right).shape)
+    # print(((vals.view(n, 1) * yvals.view(1, 4)).reshape(1, n*4, 1) * up).shape)
     locx[...,:] = (xvals.repeat_interleave(4).view(1, -1, 1) * right +
                     (vals.view(n, 1) * yvals.view(1, 4)).reshape(1, n*4, 1) * up + origin)
     colx = p.color.clone()
@@ -254,6 +286,54 @@ def set_wave(p, xvals, vals, vals1, origin, right, up):
 
 col_up = torch.tensor([1, .6, 0.])
 col_dn = INDIGO[:3]
+
+def wigner_intro(quality=LD, bgcol=BLACK, anim=1):
+    name = 'wigner_intro{}'.format(anim)
+    setup_cam()
+
+    xrange = (-5., 5.)
+    yrange = (-5., 5.)
+
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange)
+
+    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+    fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
+    mesh_mask = 1 - fill_mask
+
+    col0 = p.color.clone()
+    loc = p.location.clone()
+
+    col = col0.clone()
+
+    def set_frame(mixed_params):
+        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+
+        loc[...,2] = origin[2] + vals * out[2]
+        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
+        col[...,:3] = fill_mask * shade_up * col_up\
+                        + fill_mask * shade_down * col_dn\
+                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + mesh_mask * col0[...,:3]
+        print(col.shape)
+        print(x.shape)
+        if anim == 1:
+            mask = ((x-y*0.5) > 0.6).to(x.dtype)
+        else:
+            mask = ((x-y*0.5) <= 0.61).to(x.dtype)
+        col[..., 4] *= mask
+        p.set_non_recursive(location=loc.clone(), color=col.clone())
+
+    rate_func = rate_funcs.smooth
+
+    with Off():
+        cam = Scene.get_camera()
+        cam.move((origin - cam.get_center()) * 0.57 + cam.get_right_direction()*0.2 + out * 0.1)
+        ax.despawn()
+        set_frame(f9(0.))
+
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
 
 def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     name = 'wigner_wave{}'.format(anim) if show_wave else 'wigner_anim{}'.format(anim)
@@ -332,6 +412,9 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     elif anim == 27:
         run_time = 4.
         f = f17
+    elif anim == 28:
+        run_time=2.
+        f = f18
     elif anim == -1:
         run_time=0.2
         f = g1
@@ -529,6 +612,73 @@ def time_evolution(psi, V, dt=1., dx=0.1, mass=1.):
     psi = torch.exp(-1j * V * dt) * psi  # Evolve due to potential
     return psi
 
+def make_pendulum_solver(
+    x_vals,
+    p_vals,
+    a, b, k, speed,
+    dt=0.005,          # leapfrog step — tune for accuracy vs speed
+):
+    # Current state (mutable)
+    X = x_vals
+    P = p_vals
+    t_current = 0.0
+
+    def step_to(t_target):
+        nonlocal X, P, t_current
+        # Leapfrog (Störmer-Verlet): symplectic, 2nd order, O(n) memory
+        # Half-kick → full drift → half-kick
+        ndt = math.ceil((t_target-t_current)/dt)
+        if ndt > 0:
+            h = (t_target - t_current) / ndt * speed
+            h0 = h / 2
+            for i in range(ndt):
+                P -= h0 * (k * torch.sin(b * X))   # half kick
+                X += h * (P / a)                        # full drift
+                h0 = h
+            P -= 0.5 * h * (k * torch.sin(b * X))  # half kick
+            t_current += t_target - t_current
+
+    return step_to
+
+def pendulum(quality=LD, bgcol=BLACK, anim=1):
+    xrange = (-5., 5.)
+    prange = (-5., 5.)
+    origin, right, up, out, p, x_vals, p_vals, shape, txt = setup_surf(xrange, prange, spawn=True)
+    setup_cam()
+
+    speed = PI
+    b = 1/3.5 * PI/3
+
+    solver = make_pendulum_solver(x_vals, p_vals, 1., b, 1./ b, -speed, dt=0.05)
+    def psi(x: torch.tensor, p: torch.tensor):
+        return torch.exp(-(x+3.5)*(x+3.5) - p*p ) / PI
+
+    if 2 <= anim <= 9:
+        start_time = (anim - 2) * 2
+        run_time = 2.
+        rate_func = rate_funcs.identity
+    elif anim == 10:
+        start_time = 15.5
+        run_time=1.
+        rate_func = lambda t: t * ( 1 - t/2)
+
+    loc = p.location.clone()
+    shader = create_shader(p)
+
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
+        t1 = frame.u * run_time + start_time
+        solver(t1)
+        vals = psi(x_vals, p_vals)
+        loc[...,2] = vals * out[2] + origin[2]
+        with frame.context:
+            # p.set_non_recursive(location=loc)
+            p.set_non_recursive(location=loc, color=shader(vals))
+
+    loc[...,2] = psi(x_vals, p_vals) * out[2] + origin[2]
+
+    name = r'pendulum{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
 class WaveEvolution:
     def __init__(self, xrange=(-5., 5.), prange=(-5., 5.), npts=639, n_extend_left=200, n_extend_right=200,
                  n_scale=1, dt=0.001, mass=1., speed=PI):
@@ -640,7 +790,6 @@ class WaveEvolution:
 
         # Normalize the wavefunction
         self.psi /= np.linalg.norm(self.psi) * np.sqrt(self.dx1)
-
 
 def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
     evolver = WaveEvolution()
@@ -799,16 +948,114 @@ def barrier(quality=LD, bgcol=BLACK, anim=1):
     name = r'potential_barrier{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def gaussdensity(quality=LD, bgcol=BLACK, anim=1):
+    npts=639
+    xrange = (-1.85,1.85)
+    xvals = torch.linspace(xrange[0], xrange[1], npts)
+
+    px, xx, yx = setup_wave(npts=npts, xrange=xrange)
+    print(xvals.shape)
+    psi = torch.exp(-xvals*xvals + 0j)
+    right=RIGHT*2
+    out = UP*1.2
+    origin = ORIGIN + IN*0.1
+
+    xmin1, xmax1 = (xrange[0], xrange[1]*1.05)
+    # xmin1 *=0.3
+    # xmax1 *= 0.3
+    ymax1 = 1.1
+    xlen = (xmax1 - xmin1) * right[0].item()
+    ymax1 = 1.2
+    ylen = ymax1 * out[1].item()
+    print(xmin1, xmax1, ymax1, xlen, ylen)
+    ax = mn.Axes(x_range=[xmin1, xmax1], y_range=[0, ymax1], x_length=xlen, y_length=ylen,
+              axis_config={'color': mn.WHITE, 'stroke_width': 5, 'include_ticks': False,
+                           "tip_width": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           "tip_height": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           },
+              ).set_opacity(0.8)
+    ax.shift(-ax.coords_to_point(0, 0))
+    mn.MathTex.set_default(font_size=30)
+    eq1 = mn.MathTex(r'x').move_to(ax.x_axis.get_right() + mn.RIGHT*0.05, aligned_edge=LEFT)
+    eq2 = mn.MathTex(r'\psi(x)').move_to(ax.y_axis.get_top() + mn.RIGHT*0.1, aligned_edge=LEFT)
+    ax = ManimMob(VGroup(ax, eq1, eq2))
+
+    cam = Scene.get_camera()
+    with Off():
+        cam.set_distance_to_screen(100)
+        set_wave(px, xvals, psi.abs() ** 2, psi, origin, right, out)
+        ax.spawn()
+
+    run_time=2.
+
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.smooth):
+        with frame.context:
+            p = frame.u * PI * 2
+            psi = torch.exp(-xvals * xvals + xvals * p * 1j)
+            set_wave(px, xvals, psi.abs() ** 2, psi, origin, right, out)
+
+    Scene.wait(0.1)
+
+    name = 'gauss_density{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+def colourwheel(quality=LD, bgcol=BLACK):
+    n = 401
+    xmax = 1.5
+    xsize = 1.2
+    surf = Surface(grid_height=n, grid_width=n)
+    p = surf.get_descendants()[1]
+    loc = p.location.clone()
+    col = p.color
+    vals = (loc[0,...,0] + loc[0,...,1] * 1j) * xmax
+    for i in range(len(vals)):
+        val1 = abs(vals[i].item())
+        lightness = min( val1 * 0.3, 0.8)
+        col[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals[i].item()) / (2 * PI) + 0.5, lightness, 0.85)])
+        if val1 > 1.5:
+            col[0, i, 4] = 0#max(1 + 10 * (1.4 - val1), 0)
+
+    ax = mn.Axes(x_range=[-xmax, xmax * 1.1], y_range=[-xmax, xmax * 1.1], x_length=xsize * 2.2, y_length=xsize * 2.2,
+              axis_config={'color': mn.WHITE, 'stroke_width': 5, 'include_ticks': False,
+                           "tip_width": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           "tip_height": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           },
+              ).set_opacity(0.6)
+    ax.shift(-ax.coords_to_point(0, 0) + mn.IN * 0.05)
+    eq = mn.MathTex(r'1', r'-1', r'i', r'-i', font_size=30, stroke_width=2)
+    ticks = [ax.x_axis.get_tick(1), ax.x_axis.get_tick(-1), ax.y_axis.get_tick(1), ax.y_axis.get_tick(-1)]
+    eq[0].next_to(ticks[0], mn.UP, buff=0.05)
+    eq[1].next_to(ticks[1], mn.UP, buff=0.05)
+    eq[2].next_to(ticks[2], mn.RIGHT, buff=0.05)
+    eq[3].next_to(ticks[3], mn.RIGHT, buff=0.05)
+    eq.shift(mn.IN*0.05)
+    eq2 = MathTex(r'\mathbb C', stroke_width=2, font_size=40).move_to(ax.coords_to_point(1., 1.) + mn.IN*0.05)
+    ax = ManimMob(VGroup(ax, *ticks, eq, eq2))
+
+    cam = Scene.get_camera()
+    with Off():
+        cam.set_distance_to_screen(100)
+        surf.spawn()
+        ax.spawn()
+        p.set_non_recursive(color=col.clone(), location=loc * xsize)
+
+    render_to_file('colourwheel', render_settings=quality, background_color=bgcol)
+
 if __name__ == "__main__":
     g1(0.)
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    # for anim in [8]:
-    #     wigner_anim(quality=LD, bgcol=BLACK, anim=anim, show_wave=True)
+    wigner_anim(quality=HD, bgcol=BLACK, anim=28, show_wave=True)
     # for anim in [13]:
     #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
     # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
-    barrier(quality=HD, bgcol=TRANSPARENT, anim=4)
-    # barrier(quality=HD, bgcol=BLACK, anim=4)
+    # barrier(quality=HD, bgcol=TRANSPARENT, anim=4)
+    # for i in range(2, 10):
+    # for i in [10]:
+    #     pendulum(quality=HD, bgcol=TRANSPARENT, anim=i)
+    # wigner_intro(HD, bgcol=TRANSPARENT, anim=1)
+    # wigner_intro(HD, bgcol=TRANSPARENT, anim=2)
+    # gaussdensity(HD, bgcol=TRANSPARENT, anim=2)
+    # colourwheel(HD, bgcol=TRANSPARENT)
