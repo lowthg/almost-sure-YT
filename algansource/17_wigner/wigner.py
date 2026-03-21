@@ -7,6 +7,7 @@ import scipy as sp
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 from manim import MathTex, VGroup
+from sympy.physics.vector.printing import params
 
 from general.integratepowers import xrange, xvals
 
@@ -171,9 +172,40 @@ def f17(t): # superposition_to_center
     params = gauss_scale(params, 1./gauss1d_norm(params))
     return [(params, 1.)]
 
-def f18(t):  # round Gaussian shift in P
+def f18(t):  # stretch Gaussian shift in P
     params = gauss1d_std(scale=2.)
     params = gauss1d_p_shift(params, 3.5 * t)
+    return [(params, 1.)]
+
+def f19(t): # chirp to cat
+    params = gauss1d_std(scale=math.exp((1-t)*math.log(2)))
+    params = gauss_mult(params, [(-0.4j * (1-t), 0, 0, 0, 0, 1.)])
+    shift = 3*t
+    params = gauss_shift(params, shift)
+    params = gauss1d_p_shift(params, shift)
+    params += gauss_reflect(params)
+    params = gauss_scale(params, 1./gauss1d_norm(params))
+    return [(params, 1.)]
+
+def f20(t): # cat rotate to x
+    params = gauss1d_std(scale=1)
+    params = gauss_shift(params, 3)
+    params = gauss1d_p_shift(params, 3*(1-t))
+
+    params += gauss_reflect(params)
+    params = gauss_scale(params, 1./gauss1d_norm(params))
+    return [(params, 1.)]
+
+def f21(t): # cat to squeeze-stretch
+    params = gauss1d_std(scale=math.exp(t * math.log(2)))
+    params2 = gauss1d_std(scale=math.exp(-t * math.log(2)))
+    params = gauss_shift(params, 3 * (1-t) )
+    params = gauss1d_p_shift(params, 3 * (1-t) )
+    params2 = gauss_shift(params2, -3 * (1-t) )
+    params2 = gauss1d_p_shift(params2, -3 * (1-t) )
+    params2 = gauss_scale(params2, np.exp(1j * PI * t))
+    params += params2
+    params = gauss_scale(params, 1./gauss1d_norm(params))
     return [(params, 1.)]
 
 def g1(t):
@@ -355,6 +387,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
 
     rate_func = rate_funcs.smooth
     part = 1
+    smooth1 = smooth2 = 0.
 
     if anim == 0:
         f = f0
@@ -415,6 +448,40 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     elif anim == 28:
         run_time=2.
         f = f18
+    elif anim == 29:
+        run_time=2.
+        f = f19
+    elif anim == 30:
+        run_time=2.
+        f = f20
+    elif anim == 31:
+        f = f15
+        part = 8
+    elif 32 <= anim <= 36:
+        f = lambda t: f16(0.)
+        with Off():
+            cam = Scene.get_camera()
+            cam.orbit_around_point(origin, -30 * DEGREES, cam.get_right_direction())
+        if anim == 32:
+            smooth1 = 0.
+            smooth2 = 0.1
+            run_time = 1.
+        if anim == 33:
+            smooth1 = 0.1
+            smooth2 = 0.5
+            run_time = 3.
+        if anim == 34:
+            smooth1 = 0.5
+            smooth2 = 0.
+            run_time = 1.
+        if anim == 35:
+            run_time = 2.
+            f = f21
+        if anim == 36:
+            run_time = 3.
+            smooth1 = 0.
+            smooth2 = 0.4
+            f = lambda t: f21(1.)
     elif anim == -1:
         run_time=0.2
         f = g1
@@ -432,9 +499,13 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         pvals = torch.linspace(ymin, ymax, npts)
 
 
-
-    def set_frame(mixed_params):
+    def set_frame(mixed_params, smooth):
         vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+        if smooth > 0.:
+            assert len(mixed_params) == 1
+            (params, a) = mixed_params[0]
+            params2 = gauss_smooth(gauss_wigner(params, params), smooth, smooth)
+            vals = gauss2d_calc(params2, x, y).real * a
 
         loc[...,2] = origin[2] + vals * out[2]
         shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
@@ -479,20 +550,28 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
                 cam.orbit_around_point(origin, -70*DEGREES, cam.get_right_direction())
             with Sync(run_time=2):
                 cam.orbit_around_point(origin, 130*DEGREES, cam.get_right_direction())
-        else:
+        elif part == 3:
             with Off():
                 cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
             with Sync(run_time=1):
                 cam.orbit_around_point(origin, -60*DEGREES, cam.get_right_direction())
+        elif part == 4:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, -30*DEGREES, cam.get_right_direction())
+
+    smooth = 0.
 
     if part == 1:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
             print(frame.index, frame.time, frame.dt)
+            if smooth1 > 0 or smooth2 > 0:
+                smooth = smooth2 * frame.u + smooth1 * (1-frame.u)
+                smooth *= smooth
             with frame.context:
-                set_frame(f(frame.u))
+                set_frame(f(frame.u), smooth)
     else:
         with Off():
-            set_frame(f(1.))
+            set_frame(f(1.), smooth)
         cam: Camera = Scene.get_camera()
         if part == 2: move_view(cam, 1)
         if part == 3: move_view(cam, 2)
@@ -500,6 +579,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         if part == 5: move_view(cam, 1)
         if part == 6: move_view(cam, 2)
         if part == 7: move_view(cam, 3)
+        if part == 8: move_view(cam, 4)
 
     Scene.wait(1.1/quality.frames_per_second)
 
@@ -1041,13 +1121,51 @@ def colourwheel(quality=LD, bgcol=BLACK):
 
     render_to_file('colourwheel', render_settings=quality, background_color=bgcol)
 
+def wigner_smooth(quality=LD, bgcol=BLACK, anim=1):
+    name = 'wigner_smooth{}'.format(anim)
+    setup_cam()
+
+    xrange = (-5., 5.)
+    yrange = (-5., 5.)
+
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange)
+
+    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+    fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
+    mesh_mask = 1 - fill_mask
+
+    col0 = p.color.clone()
+    loc = p.location.clone()
+
+    col = col0.clone()
+
+    def set_frame(mixed_params):
+        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+
+        loc[...,2] = origin[2] + vals * out[2]
+        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
+        col[...,:3] = fill_mask * shade_up * col_up\
+                        + fill_mask * shade_down * col_dn\
+                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + mesh_mask * col0[...,:3]
+        p.set_non_recursive(location=loc.clone(), color=col.clone())
+
+    # rate_func = rate_funcs.smooth
+
+    with Off():
+        set_frame(f16(0.))
+
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
 if __name__ == "__main__":
     g1(0.)
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    wigner_anim(quality=HD, bgcol=BLACK, anim=28, show_wave=True)
+    wigner_anim(quality=HD, bgcol=BLACK, anim=36)
     # for anim in [13]:
     #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
     # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
