@@ -208,6 +208,14 @@ def f21(t): # cat to squeeze-stretch
     params = gauss_scale(params, 1./gauss1d_norm(params))
     return [(params, 1.)]
 
+def f22(t):  # stretched plus squeezed to standard gauss
+    params1 = gauss1d_std(scale=2*math.exp(-t*math.log(2)))
+    phase = np.exp((1-t) * PI * 1j)
+    params2 = gauss_scale(gauss1d_std(scale=0.5*math.exp(t*math.log(2))), phase)
+    params = params1 + params2
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
 def g1(t):
     params = gauss1d_std(scale=1)
     eps = 0.05
@@ -457,7 +465,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     elif anim == 31:
         f = f15
         part = 8
-    elif 32 <= anim <= 36:
+    elif 32 <= anim <= 37:
         f = lambda t: f16(0.)
         with Off():
             cam = Scene.get_camera()
@@ -482,12 +490,19 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
             smooth1 = 0.
             smooth2 = 0.4
             f = lambda t: f21(1.)
+        elif anim == 37:
+            run_time=1.
+            f = f21
+            part = 9
+    elif anim == 38:
+        run_time = 2.5
+        f = f22
     elif anim == -1:
         run_time=0.2
         f = g1
 
-    if part > 1:
-        show_wave = False
+    # if part > 1:
+    #     show_wave = False
 
     if show_wave:
         name = 'wigner_wave{}'.format(anim)
@@ -558,6 +573,9 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         elif part == 4:
             with Sync(run_time=1):
                 cam.orbit_around_point(origin, -30*DEGREES, cam.get_right_direction())
+        elif part == 5:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
 
     smooth = 0.
 
@@ -580,6 +598,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         if part == 6: move_view(cam, 2)
         if part == 7: move_view(cam, 3)
         if part == 8: move_view(cam, 4)
+        if part == 9: move_view(cam, 5)
 
     Scene.wait(1.1/quality.frames_per_second)
 
@@ -1165,7 +1184,7 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    wigner_anim(quality=HD, bgcol=BLACK, anim=36)
+    wigner_anim(quality=HD, bgcol=BLACK, anim=38, show_wave=True)
     # for anim in [13]:
     #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
     # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
