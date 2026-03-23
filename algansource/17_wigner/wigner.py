@@ -236,7 +236,8 @@ def setup_cam():
         light.orbit_around_point(ORIGIN, -90, axis=OUT)
         light.move(UP*4)
 
-def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True):
+def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
+               colors=None, stroke_color=RED_E, signal_vars=False):
     xmin, xmax = xrange
     ymin, ymax = yrange
     zmin, zmax = zrange
@@ -254,8 +255,9 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True)
     right = torch.tensor(ax.coords_to_point(1, 0), dtype=ORIGIN.dtype) - origin
     up = torch.tensor(ax.coords_to_point(0, 1), dtype=ORIGIN.dtype) - origin
     out = torch.tensor(ax.coords_to_point(0, 0, 1), dtype=ORIGIN.dtype) - origin
-    txt1 = mn.MathTex(r'X', stroke_width=2, font_size=60).move_to(ax.coords_to_point(xmax * 1.1, 0))
-    txt2 = mn.MathTex(r'P', stroke_width=2, font_size=60).move_to(ax.coords_to_point(0, ymax * 1.15))
+    eqstr = [r't', r'\omega'] if signal_vars else [r'X', r'P']
+    txt1 = mn.MathTex(eqstr[0], stroke_width=2, font_size=60).move_to(ax.coords_to_point(xmax * 1.1, 0))
+    txt2 = mn.MathTex(eqstr[1], stroke_width=2, font_size=60).move_to(ax.coords_to_point(0, ymax * 1.15))
     txt1.rotate(-PI / 2, mn.RIGHT)
     txt2.rotate(-PI / 2, mn.RIGHT)
     txt2.rotate(PI / 2, mn.OUT)
@@ -264,11 +266,12 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True)
     txt2 = ManimMob(txt2)
     Group(*ax1.submobjects[:2], txt1, txt2).move(IN*0.11)
 
-    colors = [
-        Color(mn.RED_D.to_rgb() * 0.5 / .8),
-        Color(mn.RED_E.to_rgb() * 0.5 / .8)
-    ]
-    surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=RED_E,
+    if colors is None:
+        colors = [
+            Color(mn.RED_D.to_rgb() * 0.5 / .8),
+            Color(mn.RED_E.to_rgb() * 0.5 / .8)
+        ]
+    surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=stroke_color,
                            fill_opacity=0.9, stroke_opacity=1)
     shape = (surf.grid_width, surf.grid_height)
     p = surf.get_descendants()[1]
@@ -375,14 +378,14 @@ def wigner_intro(quality=LD, bgcol=BLACK, anim=1):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
+def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=False):
     name = 'wigner_wave{}'.format(anim) if show_wave else 'wigner_anim{}'.format(anim)
     setup_cam()
 
     xmin, xmax = xrange = (-5., 5.)
     ymin, ymax = yrange = (-5., 5.)
 
-    origin, right, up, out, p, x, y, _, _ = setup_surf(xrange, yrange)
+    origin, right, up, out, p, x, y, _, _ = setup_surf(xrange, yrange, signal_vars=signal_vars)
 
     surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
@@ -465,7 +468,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
     elif anim == 31:
         f = f15
         part = 8
-    elif 32 <= anim <= 37:
+    elif 32 <= anim <= 37 or anim == 39 or anim == 41:
         f = lambda t: f16(0.)
         with Off():
             cam = Scene.get_camera()
@@ -485,18 +488,28 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         if anim == 35:
             run_time = 2.
             f = f21
-        if anim == 36:
-            run_time = 3.
+        if anim == 36 or anim == 41:
+            run_time = 0.5
             smooth1 = 0.
             smooth2 = 0.4
             f = lambda t: f21(1.)
+            if anim == 41:
+                with Off():
+                    cam.move_to(cam.get_center()*1.4)
         elif anim == 37:
             run_time=1.
             f = f21
             part = 9
+        elif anim == 39:
+            smooth1 = 0.4
+            f = f21
+            part = 10
     elif anim == 38:
         run_time = 2.5
         f = f22
+    elif anim == 40:
+        run_time = 4.
+        f = f3
     elif anim == -1:
         run_time=0.2
         f = g1
@@ -576,8 +589,10 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         elif part == 5:
             with Sync(run_time=1):
                 cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
-
-    smooth = 0.
+        elif part == 6:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
+                set_frame(f0(1.), smooth2*smooth2)
 
     if part == 1:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
@@ -585,11 +600,13 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
             if smooth1 > 0 or smooth2 > 0:
                 smooth = smooth2 * frame.u + smooth1 * (1-frame.u)
                 smooth *= smooth
+            else: smooth = 0.
+
             with frame.context:
                 set_frame(f(frame.u), smooth)
     else:
         with Off():
-            set_frame(f(1.), smooth)
+            set_frame(f(1.), smooth1*smooth1)
         cam: Camera = Scene.get_camera()
         if part == 2: move_view(cam, 1)
         if part == 3: move_view(cam, 2)
@@ -599,6 +616,8 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False):
         if part == 7: move_view(cam, 3)
         if part == 8: move_view(cam, 4)
         if part == 9: move_view(cam, 5)
+        if part == 10: move_view(cam, 6)
+
 
     Scene.wait(1.1/quality.frames_per_second)
 
@@ -1147,9 +1166,19 @@ def wigner_smooth(quality=LD, bgcol=BLACK, anim=1):
     xrange = (-5., 5.)
     yrange = (-5., 5.)
 
-    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange)
+    colors = [
+        Color(mn.BLUE_D.to_rgb() * 0.5 / .8),
+        Color(mn.BLUE_E.to_rgb() * 0.5 / .8)
+    ]
 
-    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, colors=colors, stroke_color=BLUE_E)
+
+    with Off():
+        ax.despawn()
+
+    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0,
+                            # col1=BLUE_C, col2=BLUE_D, stroke_color=BLUE_C,
+                            add_to_scene=False)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
     mesh_mask = 1 - fill_mask
 
@@ -1158,22 +1187,37 @@ def wigner_smooth(quality=LD, bgcol=BLACK, anim=1):
 
     col = col0.clone()
 
-    def set_frame(mixed_params):
-        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+    if anim == 1:
+        smooth1 = 0.1
+        smooth2 = 0.5
+        run_time = 3.
+
+    rad = torch.sqrt(x * x + y * y)
+    col_up = torch.tensor([0, .6, 1.])
+
+    def set_frame(smooth):
+        var = smooth * smooth * 4
+        params = [(0.5/var, 0.5/var, 0, 0, 0, 0.3*math.pow(0.1/smooth, 0.3))]
+        vals = gauss2d_calc(params, x, y).real
 
         loc[...,2] = origin[2] + vals * out[2]
         shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
-        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
         col[...,:3] = fill_mask * shade_up * col_up\
-                        + fill_mask * shade_down * col_dn\
-                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + fill_mask * (1-shade_up) * col0[:,:,:3]\
                         + mesh_mask * col0[...,:3]
+        # col[...,4] = (1 - (rad-smooth*4)*10).clamp(0,1)
+        col[...,4] = (rad < smooth*4).to(col.dtype)
+
         p.set_non_recursive(location=loc.clone(), color=col.clone())
 
     # rate_func = rate_funcs.smooth
 
-    with Off():
-        set_frame(f16(0.))
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1):
+        smooth = frame.u * (smooth2-smooth1) + smooth1
+        with frame.context:
+            set_frame(smooth)
+
+    Scene.wait(0.1)
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
@@ -1184,7 +1228,7 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    wigner_anim(quality=HD, bgcol=BLACK, anim=38, show_wave=True)
+    wigner_anim(quality=LD, bgcol=BLACK, anim=41, show_wave=False, signal_vars=False)
     # for anim in [13]:
     #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
     # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
@@ -1196,3 +1240,4 @@ if __name__ == "__main__":
     # wigner_intro(HD, bgcol=TRANSPARENT, anim=2)
     # gaussdensity(HD, bgcol=TRANSPARENT, anim=2)
     # colourwheel(HD, bgcol=TRANSPARENT)
+    # wigner_smooth(quality=HD, bgcol=TRANSPARENT, anim=1)
