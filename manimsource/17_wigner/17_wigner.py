@@ -11,7 +11,7 @@ from sorcery import switch
 from torch.utils.jit.log_extract import run_test
 
 
-sys.path.append('../')
+sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
 
@@ -59,6 +59,11 @@ class LinearComb(Scene):
 class Latexx(Scene):
     def construct(self):
         eq = MathTex(r'x', font_size=80, stroke_width=2)
+        self.add(eq)
+
+class Latexm(Scene):
+    def construct(self):
+        eq = MathTex(r'm', font_size=90, stroke_width=8)
         self.add(eq)
 
 class Latexv(Scene):
@@ -1663,6 +1668,274 @@ class WignerNarration2(Scene):
         self.play(LaggedStart(mh.rtransform(txt2[:2], txt3[:2]), FadeIn(txt3[2]), lag_ratio=0.5))
         self.wait()
 
+class MomentumMV(Scene):
+    trcol = GREY
+    bgcol = BLACK
+
+    def __init__(self, *args, **kwargs):
+        config.background_color = self.trcol if config.transparent else self.bgcol
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=1.5)
+        eq1 = MathTex(r'v', r'=', r'\frac{P}{m}').set_z_index(1)
+        eq2 = MathTex(r'mv', r'=', r'P').set_z_index(1)
+        eq3 = MathTex(r'P', r'=', r'mv').set_z_index(1)
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.align_sub(eq3, eq3[1], eq1[1])
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=15)
+        eq2 = eq_shadow(eq2, bg_stroke_width=15)
+        eq3 = eq_shadow(eq3, bg_stroke_width=15)
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[1], eq2[1], eq1[0][0], eq2[0][1], eq1[2][0], eq2[2][0],
+                                eq1[2][2], eq2[0][0], run_time=1.4),
+                  FadeOut(eq1[2][1]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[0], eq3[2], eq2[2], eq3[0], eq2[1], eq3[1]))
+        self.wait()
+
+class FreeSolution(MomentumMV):
+    def construct(self):
+        MathTex.set_default(font_size=70, stroke_width=1.5)
+        eq1 = MathTex(r'\psi_t(x)', r'=', r'e^{-iP^2t/2m}', r'\psi(x)').set_z_index(1)
+        eq2 = MathTex(r'W_t(x,p)', r'=', r'W(x-pt/m,p)').set_z_index(1)
+        eq2.next_to(eq1, DOWN, buff=0.5)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=15)
+        eq2 = eq_shadow(eq2, bg_stroke_width=15)
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait()
+
+class ForceSolution(FreeSolution):
+    def construct(self):
+        MathTex.set_default(font_size=70, stroke_width=1.5)
+        eq1 = MathTex(r'P_t', r'=', r'P_0-Ft').set_z_index(1)
+        eq2 = MathTex(r'X_t', r'=', r'X_0+P_0t/m-Ft^2/2m').set_z_index(1)
+        eq2.next_to(eq1, DOWN, buff=0.5)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=13)
+        eq2 = eq_shadow(eq2, bg_stroke_width=13)
+
+        self.add(eq1, eq2)
+
+class HarmonicDef(FreeSolution):
+    def construct(self):
+        MathTex.set_default(font_size=70, stroke_width=1.5)
+        eq1 = MathTex(r'F', r'=', r'-kx').set_z_index(1)
+        eq2 = MathTex(r'V(x)', r'=', r'\frac12', r'kx^2').set_z_index(1)
+        mh.font_size_sub(eq2, 2, 60)
+        eq2.next_to(eq1, DOWN, buff=0.5)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=13)
+        eq2 = eq_shadow(eq2, bg_stroke_width=13)
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait()
+
+class ForceV(FreeSolution):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=1.5)
+        eq1 = MathTex(r'V(x)', r'=', r'-Fx').set_z_index(1)
+        eq1 = eq_shadow(eq1, bg_stroke_width=15)
+        self.add(eq1)
+
+class SmalltSHO(FreeSolution):
+    trcol = BLACK
+    bgcol = GREY
+    fill_op = 0.7
+
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'\psi_{t+\delta t}', r'=', r'e^{-iH\delta t}', r'\psi_t')
+        eq2 = MathTex(r'\psi_{t+\delta t}', r'=', r'e^{-i(P^2/2m+kX^2/2)\delta t}', r'\psi_t')
+        eq3 = MathTex(r'\psi_{t+\delta t}', r'\approx', r'e^{-iP^2\delta t/2m}', r'e^{-ikX^2\delta t/2}', r'\psi_t')
+        eq4 = MathTex(r'\psi_{t+\delta t}', r'\approx', r'e^{-iP^2\delta t/2}', r'e^{-iX^2\delta t/2}', r'\psi_t')
+        eq5 = MathTex(r'(m=k=1)').set_z_index(1)
+        eq6 = MathTex(r'W_{t+\delta t}(x,p)', r'\approx', r'W_t(x,p)').set_z_index(1)
+        eq7 = MathTex(r'W_{t+\delta t}(x,p)', r'\approx', r'W_t(x,p+x\delta t)').set_z_index(1)
+        eq8 = MathTex(r'W_{t+\delta t}(x,p)', r'\approx', r'W_t(x-p\delta t,p+x\delta t)').set_z_index(1)
+
+        gp = VGroup(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8).set_z_index(1)
+
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        mh.align_sub(eq3, eq3[1], eq1[1], coor_mask=UP)
+        mh.align_sub(eq4, eq4[1], eq3[1], coor_mask=UP)
+        eq5.next_to(eq4[2:-1], DOWN, buff=0.3)
+        eq6.next_to(eq4, DOWN, buff=0.3)
+        mh.align_sub(eq7, eq7[1], eq6[1], coor_mask=UP)
+        mh.align_sub(eq8, eq8[1], eq6[1], coor_mask=UP)
+
+        box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=self.fill_op,
+                                   corner_radius=0.15, buff=0.2)
+        VGroup(gp, box).to_edge(DOWN, buff=0.1)
+
+        self.add(eq1, box)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:3], eq2[2][:3], eq1[2][-2:], eq2[2][-2:],
+                                eq1[3], eq2[3], run_time=1.6),
+                  Succession(Wait(0.8), FadeIn(eq2[2][3], eq2[2][-3])),
+                  Succession(Wait(1.4), AnimationGroup(FadeOut(eq1[2][3]), FadeIn(eq2[2][4:-3]))))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq2[0], eq3[0], eq2[3], eq3[4],
+                                eq2[2][:3], eq3[2][:3], eq2[2][4:6], eq3[2][3:5], eq2[2][6:9], eq3[2][7:10],
+                                eq2[2][-2:], eq3[2][5:7], eq2[2][:3].copy(), eq3[3][:3],
+                                eq2[2][10:13], eq3[3][3:6], eq2[2][13:15], eq3[3][8:],
+                                eq2[2][-2:].copy(), eq3[3][6:8]),
+                  FadeOut(eq2[2][3], shift=mh.diff(eq2[2][4], eq3[2][2:4])*RIGHT),
+                  FadeOut(eq2[2][-3], shift=mh.diff(eq2[2][-4], eq3[3][-4])),
+                  mh.rtransform(eq2[1], eq3[1]),
+                                 run_time=1.8),
+                  FadeOut(eq2[2][9])
+                  )
+        self.wait(0.1)
+        self.play(FadeIn(eq5))
+        self.play(Succession(Wait(0.7), mh.rtransform(eq3[:2], eq4[:2], eq3[2][:-1], eq4[2][:],
+                                eq3[3][:3], eq4[3][:3], eq3[3][4:], eq4[3][3:], eq3[4], eq4[4])),
+                  FadeOut(eq3[2][-1], eq3[3][3]))
+        self.play(FadeOut(eq5))
+        self.play(FadeIn(eq6))
+        self.play(mh.rtransform(eq6[:2], eq7[:2], eq6[2][:6], eq7[2][:6], eq6[2][6:], eq7[2][10:]),
+                  Succession(Wait(0.7), AnimationGroup(mh.rtransform(eq4[3][5:7].copy(), eq7[2][8:10]),
+                                                       mh.stretch_replace(eq4[3][3].copy(), eq7[2][7]),
+                                                       FadeIn(eq7[2][6]))))
+        self.play(mh.rtransform(eq7[:2], eq8[:2], eq7[2][:4], eq8[2][:4], eq7[2][4:], eq8[2][8:]),
+                  Succession(Wait(0.7), AnimationGroup(mh.rtransform(eq4[2][5:7].copy(), eq8[2][6:8]),
+                                                       mh.stretch_replace(eq4[2][3].copy(), eq8[2][5]),
+                                                       FadeIn(eq8[2][4])))
+                  )
+        self.wait()
+
+class LatexPendh(MomentumMV):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=2)
+        eq1 = MathTex(r'h', r'=', r'\ell-\ell\cos x')
+        eq2 = MathTex(r'h', r'=', r'\ell(1-\cos x)')
+
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][0], eq2[2][0],
+                               eq1[2][1], eq2[2][3], eq1[2][3:], eq2[2][4:-1]),
+                  FadeOut(eq1[2][2], shift=mh.diff(eq1[2][3], eq2[2][4])+RIGHT*0.1),
+                  Succession(Wait(0.3), FadeIn(eq2[2][1:3], eq2[2][-1])))
+        self.wait()
+
+class LatexPendV(MomentumMV):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=2)
+        eq1 = MathTex(r'V(x)', r'=', r'mg', r'h')
+        eq2 = MathTex(r'V(x)', r'=', r'mg\ell', r'(1-\cos x)')
+        eq3 = MathTex(r'{\scriptstyle \frac12}', r'x^2')
+        eq4 = MathTex(r'V(x)', r'=', r'mg\ell', r'({\scriptstyle\frac12}x^2+{\scriptstyle\frac1{24} }x^4+\cdots)')
+
+        eq1.to_edge(LEFT)
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.align_sub(eq3, eq3[1][0], eq2[3][-2]).move_to(eq2[3], coor_mask=RIGHT)
+        mh.align_sub(eq4, eq4[1], eq2[1])
+        eq4[3][1:4].move_to(eq4[3][0], coor_mask=UP)
+        eq3[0].move_to(eq4[3][0], coor_mask=UP)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:], eq2[2][:-1]), FadeOut(eq1[3]))
+        self.wait(0.1)
+        self.add(eq2[3], eq2[2][-1])
+        self.wait(0.1)
+        self.play(FadeOut(eq2[3][1:-2]),
+                  Succession(Wait(0.5), mh.rtransform(eq2[3][-2], eq3[1][0])),
+                  Succession(Wait(0.8), FadeIn(eq3[0], eq3[1]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:3], eq4[:3], eq2[3][0], eq4[3][0], eq2[3][-1], eq4[3][-1],
+                                eq3[0][:], eq4[3][1:4], eq3[1][:], eq4[3][4:6], run_time=1.4),
+                  Succession(Wait(1), FadeIn(eq4[3][6:-1])))
+        self.wait()
+
+
+class LatexPendulum(MomentumMV):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=2)
+        eq1 = MathTex(r'V(x)', r'=', r'mg', r'h')
+        eq2 = MathTex(r'V(x)', r'=', r'mg\ell', r'(1-\cos x)')
+        eq3 = MathTex(r'{\scriptstyle \frac12}', r'x^2')
+        eq4 = MathTex(r'V(x)', r'=', r'mg\ell', r'({\scriptstyle\frac12}x^2+{\scriptstyle\frac1{24} }x^4+\cdots)')
+
+        eq5 = MathTex(r'h', r'=', r'\ell-\ell\cos x')
+        eq6 = MathTex(r'h', r'=', r'\ell(1-\cos x)')
+
+        mh.align_sub(eq1, eq1[1], mh.coords_to_point(0.31, 0.12))
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.align_sub(eq3, eq3[1][0], eq2[3][-2]).move_to(eq2[3], coor_mask=RIGHT)
+        mh.align_sub(eq4, eq4[1], eq2[1])
+        eq4[3][1:4].move_to(eq4[3][0], coor_mask=UP)
+        eq3[0].move_to(eq4[3][0], coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], mh.coords_to_point(0.8059, 0.382))
+
+        eq5_1 = eq5[2][0].copy().move_to(mh.coords_to_point(0.668, 0.769))
+        eq5_2 = eq5[2][-1].copy().move_to(mh.coords_to_point(0.53, 0.77))
+        eq5_3 = eq5[2][2:].copy().move_to(mh.coords_to_point(0.48, 0.69), aligned_edge=RIGHT)
+
+        self.play(FadeIn(eq5[0]), Succession(Wait(0.8), FadeIn(eq1)))
+        self.wait(0.1)
+        self.play(FadeIn(eq5_1))
+        self.play(FadeIn(eq5_2))
+        self.play(FadeIn(eq5_3))
+
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:], eq2[2][:-1]))
+        self.wait(0.1)
+        eq5_4 = eq5.copy().to_edge(RIGHT)
+        mh.align_sub(eq6, eq6[1], eq5_4[1]).to_edge(RIGHT)
+
+        self.play(mh.rtransform(eq5_1.copy(), eq5_4[2][0], eq5_3.copy(), eq5_4[2][2:],
+                                eq5[0], eq5_4[0]
+                                ),
+                  Succession(Wait(1.3), FadeIn(eq5_4[1], eq5_4[2][1])),
+                  run_time=2)
+        self.play(mh.rtransform(eq5_4[:2], eq6[:2], eq5_4[2][0], eq6[2][0],
+                                eq5_4[2][1], eq6[2][3], eq5_4[2][3:], eq6[2][4:-1]),
+                  FadeOut(eq5_4[2][2], shift=mh.diff(eq5_4[2][2], eq6[2][3:5])*RIGHT),
+                  FadeIn(eq6[2][1:3], eq6[2][-1])
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:], eq2[2][:2],
+                                eq6[2][0].copy(), eq2[2][-1], eq6[2][1:].copy(), eq2[3][:],
+                                run_time=2),
+                  Succession(Wait(1), FadeOut(eq1[3])))
+        self.wait(0.1)
+        self.play(FadeOut(eq2[3][1:-2]),
+                  Succession(Wait(0.5), mh.rtransform(eq2[3][-2], eq3[1][0])),
+                  Succession(Wait(0.8), FadeIn(eq3[0], eq3[1]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:3], eq4[:3], eq2[3][0], eq4[3][0], eq2[3][-1], eq4[3][-1],
+                                eq3[0][:], eq4[3][1:4], eq3[1][:], eq4[3][4:6], run_time=1.4),
+                  Succession(Wait(1), FadeIn(eq4[3][6:-1])))
+        self.wait()
+        return
+        eq5 = eq5_4
+        self.play(mh.rtransform(eq5[0], eq6[0]))
+        # self.add(eq2[3], eq2[2][-1])
+        self.wait(0.1)
+        self.play(FadeOut(eq2[3][1:-2]),
+                  Succession(Wait(0.5), mh.rtransform(eq2[3][-2], eq3[1][0])),
+                  Succession(Wait(0.8), FadeIn(eq3[0], eq3[1]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:3], eq4[:3], eq2[3][0], eq4[3][0], eq2[3][-1], eq4[3][-1],
+                                eq3[0][:], eq4[3][1:4], eq3[1][:], eq4[3][4:6], run_time=1.4),
+                  Succession(Wait(1.4), FadeIn(eq4[3][6:-1])))
+        self.wait()
+
 class Example(ThreeDScene):
     colors = [
         ManimColor(RED_D.to_rgb() * 0.5),
@@ -2364,7 +2637,6 @@ class STFTWindowStep(GaussSmooth):
                                    buff=0.15)
         self.add(box, gp)
 
-
 class STFTWindowStepEq(GaussSmooth):
     trcol = BLACK
     def construct(self):
@@ -2377,6 +2649,238 @@ class STFTWindowStepEq(GaussSmooth):
                                    fill_opacity=self.fill_op, corner_radius=0.15,
                                    buff=0.15)
         self.add(box, eq)
+
+class STFTConvolveEq(GaussSmooth):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=2)
+        eq1 = MathTex(r'W_\psi(t,\omega)')
+        eq2 = MathTex(r'\iint', r'W_\psi(t+s,\omega+z)', r'W_w(s,z)\,dsdz')
+
+        VGroup(eq1[0][0], eq2[2][0]).set_color(col_WVD)
+        VGroup(eq1[0][1], eq2[2][1]).set_color(col_psi)
+        VGroup(eq1[0][3], eq2[1][5], eq2[2][3], eq2[2][8]).set_color(col_x)
+        VGroup(eq1[0][5], eq2[1][9], eq2[2][5], eq2[2][10]).set_color(col_p)
+        VGroup(eq2[0], eq2[2][-2], eq2[2][-4]).set_color(col_op)
+
+        mh.rtransform.copy_colors = True
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=15)
+        eq2 = eq_shadow(eq2, bg_stroke_width=15)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[0][:4], eq2[1][:4], eq1[0][4:6], eq2[1][6:8], eq1[0][6], eq2[1][10],
+                                run_time=1.4),
+                  Succession(Wait(1), FadeIn(eq2[0], eq2[1][4:6], eq2[1][8:10], eq2[2]))
+                  )
+        self.wait()
+
+class STFTWEq(GaussSmooth):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=2)
+        eq1 = MathTex(r'W_w(t,\omega)')
+        VGroup(eq1[0][0]).set_color(col_WVD)
+        VGroup(eq1[0][1]).set_color(col_psi)
+        VGroup(eq1[0][3]).set_color(col_x)
+        VGroup(eq1[0][5]).set_color(col_p)
+        eq1 = eq_shadow(eq1, bg_stroke_width=15)
+        self.add(eq1)
+
+class Measurement(GaussSmooth):
+    trcol = BLACK
+    def construct(self):
+        MathTex.set_default(font_size=65, stroke_width=1.5)
+        eq1 = Tex(r'\sf particle state ', r'$\psi$', font_size=70)
+        eq2 = Tex(r'\sf different state ', r'$\phi$', font_size=70)
+        eq3 = MathTex(r'{\sf probability\ amplitude\ }',  r'=', r'\langle\phi\vert\psi\rangle', font_size=60)
+        eq4 = MathTex(r'{\sf probability\ amplitude\ }',  r'=', r'\int\phi(x)^*\psi(x)\,dx', font_size=60)
+        eq5 = MathTex(r'{\sf probability\ amplitude\ }',  r'=', r'\int\psi(x)\phi(x)^*\,dx', font_size=60)
+        eq6 = MathTex(r'{\sf probability\ }', r' = ', r'\lvert\langle\phi\vert\psi\rangle\rvert^2')
+        eq7 = MathTex(r'{\sf probability\ }', r' = ', r'2\pi', r'\iint W_\psi(x,p)W_\phi(x,p)\,dxdp')
+        eq8 = MathTex(r'\rho', r'(x,p)')
+        eq9 = MathTex(r'{\sf states\ }', r'\phi_{x,p}(y)', r'=', r'e^{ipy}\phi(y-x)', font_size=60)
+        eq10 = MathTex(r'{\sf probability\ amplitude\ }',  r'=', r'\int\psi(y)\phi_{x,p}(y)^*\,dy', font_size=60)
+        eq11 = MathTex(r'{\sf probability\ amplitude\ }',  r'=', r'\int\psi(y)\phi(y-x)^*e^{-ipy}\,dy', font_size=60)
+        eq12 = MathTex(r'{\sf probability}', r'=', r'2\pi\!\!', r'\iint\! W_\psi(x+y,p+q)W_\phi(p,q)\,dydq', font_size=60)
+        eq13 = MathTex(r'{\sf prob}(x,p)', r'=', r'2\pi\!\!', r'\iint\! W_\psi(x+y,p+q)W_\phi(p,q)\,dydq', font_size=60)
+
+        eq2.next_to(eq1, DOWN, buff=0.15)
+        eq3.next_to(eq2, DOWN, buff=0.45)
+        mh.align_sub(eq4, eq4[1], eq3[1], coor_mask=UP)
+        mh.align_sub(eq5, eq5[1], eq4[1])
+        eq6.move_to(VGroup(eq1, eq2), coor_mask=UP)
+        mh.align_sub(eq7, eq7[1], eq6[1], coor_mask=UP)
+        mh.align_sub(eq8, eq8[1], eq7[3][11:16])
+        eq8[0].move_to(eq7[3][9:11], coor_mask=RIGHT)
+        mh.align_sub(eq9, eq9[2], eq7[1], coor_mask=UP)
+        mh.align_sub(eq10, eq10[1], eq5[1], coor_mask=UP)
+        mh.align_sub(eq11, eq11[1], eq10[1], coor_mask=UP)
+        mh.align_sub(eq12, eq12[1], eq9[1], coor_mask=UP)
+        mh.align_sub(eq13, eq13[1], eq12[1], coor_mask=UP)
+
+        gp = VGroup(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9, eq10, eq11, eq12, eq13).set_z_index(5)
+        box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=self.fill_op,
+                                   corner_radius=0.15, buff=0.2)
+
+        VGroup(box, gp).to_edge(DOWN, buff=0.1)
+
+        self.add(box, eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait(0.1)
+        eq3_1 = eq3[0].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(FadeIn(eq3_1))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3_1, eq3[0]), Succession(Wait(0.4), FadeIn(eq3[1:])))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq3[:2], eq4[:2], eq3[2][1], eq4[2][1], eq3[2][3], eq4[2][6]),
+                  mh.fade_replace(eq3[2][0], eq4[2][0], coor_mask=RIGHT),
+                  mh.fade_replace(eq3[2][-1], eq4[2][-2:]),
+                                 run_time=1.5),
+                  FadeOut(eq3[2][2]),
+                  Succession(Wait(0.8), FadeIn(eq4[2][2:6], eq4[2][7:10], run_time=1)),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[:2], eq5[:2], eq4[2][0], eq5[2][0], eq4[2][1:6], eq5[2][5:10],
+                                eq4[2][6:10], eq5[2][1:5], eq4[2][10:], eq5[2][10:]),
+                  run_time=1.3)
+        self.wait(0.1)
+        self.play(FadeOut(eq1, eq2))
+        self.play(FadeIn(eq6))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq6[:2], eq7[:2],
+                                eq6[2][2], eq7[3][10], eq6[2][4], eq7[3][3]),
+                  mh.fade_replace(eq6[2][:2], eq7[3][:2], coor_mask=RIGHT),
+                  mh.fade_replace(eq6[2][-3:], eq7[3][-4:], coor_mask=RIGHT),
+                                 run_time=1.6),
+                  Succession(Wait(1), FadeIn(eq7[3][2], eq7[3][4:10], eq7[3][11:-4], eq7[2])),
+                  FadeOut(eq6[2][3])
+                  )
+        self.wait(0.1)
+        self.play(FadeOut(eq7[3][9:11]), FadeIn(eq8[0]))
+        self.wait(0.1)
+        self.play(FadeOut(eq7[:3], eq7[3][:9], eq7[3][11:], eq8[0]))
+        self.wait(0.1)
+        self.play(FadeIn(eq9))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[:2], eq10[:2], eq5[2][:3], eq10[2][:3],
+                                eq5[2][4:6], eq10[2][4:6], eq5[2][6], eq10[2][9],
+                                eq5[2][8:11], eq10[2][11:14]),
+                  mh.fade_replace(eq5[2][3], eq10[2][3], coor_mask=RIGHT),
+                  mh.fade_replace(eq5[2][7], eq10[2][10], coor_mask=RIGHT),
+                  mh.fade_replace(eq5[2][-1], eq10[2][-1], coor_mask=RIGHT),
+                  Succession(Wait(0.8), FadeIn(eq10[2][6:9]))
+                  )
+        self.play(AnimationGroup(mh.rtransform(eq10[:2], eq11[:2], eq10[2][:6], eq11[2][:6],
+                                eq10[2][9:11], eq11[2][6:8], eq10[2][11:13], eq11[2][10:12],
+                                eq10[2][-2:], eq11[2][-2:]),
+                  FadeOut(eq10[2][6:9], shift=mh.diff(eq10[2][5], eq11[2][5])),
+                  mh.rtransform(eq9[3][4:].copy(), eq11[2][5:11]),
+                  run_time=2),
+                  Succession(Wait(1.8), AnimationGroup(
+                      mh.rtransform(eq9[3][0].copy(), eq11[2][12],
+                                    eq9[3][1:4].copy(), eq11[2][14:17]),
+                      FadeIn(eq11[2][13], shift=mh.diff(eq9[3][1], eq11[2][14])),
+                  run_time=2))
+                  )
+        self.play(FadeOut(eq9), FadeIn(eq12), run_time=1.5)
+        self.wait(0.1)
+        eq13.move_to(box)
+        shift = mh.diff(eq12[0][:4], eq13[0][:4])
+        self.play(FadeOut(eq11),
+                  AnimationGroup(
+                  mh.rtransform(eq12[1:], eq13[1:], eq12[0][:4], eq13[0][:4]),
+                  FadeOut(eq12[0][4:], shift=shift),
+                  FadeIn(eq13[0][4:], shift=shift),
+                  run_time=2))
+
+        self.wait()
+
+class Dynamics(GaussSmooth):
+    trcol = BLACK
+
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=70)
+        eq1 = MathTex(r'i\,d\psi(x)/dt', r'=', r'H\psi(x)')
+        eq2 = MathTex(r'H', r'=', r'{\sf Hamiltonian\ operator}')
+        eq3 = MathTex(r'H', r'=', r'P^2/2m + V(x)')
+        eq4 = MathTex(r'H', r'=', r'P^2/2m', r'=', r'\frac1{2m}',r'\partial^2/\partial x^2')
+        mh.font_size_sub(eq4, 4, 60)
+
+        eq2.next_to(eq1, DOWN, buff=0.5)
+        mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=UP)
+        mh.align_sub(eq4, eq4[1], eq3[1], coor_mask=UP)
+
+        gp = VGroup(eq1, eq2, eq3, eq4).set_z_index(1)
+        box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=self.fill_op,
+                                   corner_radius=0.15, buff=0.2)
+        VGroup(box, gp).to_edge(DOWN, buff=0.1)
+
+        self.add(box, eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
+        self.wait(0.1)
+        self.play(Succession(Wait(0.5), mh.rtransform(eq2[:2], eq3[:2])),
+                  FadeOut(eq2[2]), FadeIn(eq3[2][:-3]))
+        self.wait(0.1)
+        self.play(FadeIn(eq3[2][-3:]))
+        self.wait(0.1)
+        self.play(FadeOut(eq3[2][-5:]),
+                  # Succession(Wait(0.5), VGroup(eq3[:2], eq3[2][:-5]).animate.move_to(ORIGIN, coor_mask=RIGHT))
+                             )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[2][:5], eq4[2][:], run_time=1.3),
+                  Succession(Wait(0.6), FadeIn(eq4[3:])))
+        self.wait()
+
+
+class BarrierV(GaussSmooth):
+    trcol = BLACK
+
+    def construct(self):
+        xmax = 1.
+        B = 0.3
+        ax = Axes(x_range=[-xmax, xmax * 1.1], y_range=[0, 1.15], x_length=6, y_length=2,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "shade_in_3d": True,
+                               },
+                  ).set_z_index(1)
+        eq1 = MathTex(r'x', font_size=40).set_z_index(1)
+        eq1.next_to(ax.x_axis.get_right(), UL, buff=0.2)
+        # eq2 = MathTex(r'V(t)', font_size=50, stroke_width=1.5).set_z_index(10)
+        # eq2.move_to(ax.coords_to_point(0.2, 0.8))
+
+        p0, p1 = (ax.coords_to_point(0, 1), ax.coords_to_point(B, 1))
+        q0, q1 = (ax.coords_to_point(-1, 0), ax.coords_to_point(0, 0))
+        r0, r1 = (ax.coords_to_point(B, 0), ax.coords_to_point(1, 0))
+        line1 = Line(p0, p1, stroke_width=6, stroke_color=BLUE).set_z_index(2)
+        line2 = Line(q0, q1, stroke_width=6, stroke_color=BLUE).set_z_index(2)
+        line3 = Line(r0, r1, stroke_width=6, stroke_color=BLUE).set_z_index(2)
+        rect = Rectangle(width=(p1 - p0)[0], height=(p0 - q1)[1],
+                         stroke_width=0, stroke_opacity=0, fill_color=BLUE, fill_opacity=0.5)
+        rect.next_to(ax.coords_to_point(0, 0), UR, buff=0).set_z_index(1.5)
+        VGroup(line2, line3).shift(UP * 0.04)
+        # eq3 = MathTex(r'0', font_size=60, stroke_width=2)[0].set_z_index(11)
+        eq4 = MathTex(r'B', font_size=60, stroke_width=2)[0].set_z_index(11)
+        # eq3.next_to(q1, direction=UP, buff=0.2)
+        eq4.next_to(r0, UP, buff=0.2)
+
+        graph = VGroup(ax, eq1, line1, line2, line3, rect, eq4)
+
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq = MathTex(r'V(x)', r'=', r'\begin{cases}'
+                                    r'h,&{\sf if\ }0\le x \le B\\'
+                                    r'0,&{\sf otherwise}'
+                                    r'\end{cases}').set_z_index(1)
+
+        gp = VGroup(eq, graph).arrange(RIGHT, buff=-0.5, center=True, aligned_edge=DOWN)
+
+        box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                   fill_opacity=self.fill_op, corner_radius=0.15,
+                                   buff=0.15)
+        self.add(box, gp)
+
 
 """
 integral exp(-ax^2+bx) dx
