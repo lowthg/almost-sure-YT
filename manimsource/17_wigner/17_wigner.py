@@ -436,7 +436,7 @@ class WignerTranslate(WignerDensity):
         fs1 = 65
         eq1 = MathTex(r'\tilde\psi(x)', r'=', r'\psi(x+y)', font_size=fs1)
         eq2 = MathTex(r'\widetilde W(x,p)', r'=', r'\frac1{2\pi}', r'\int\tilde\psi', r'\left(x-\frac v2\right)^*', r'\tilde\psi',
-                      r'\left(x+\frac v2\right)', r'e^{-ipv}\,dx')
+                      r'\left(x+\frac v2\right)', r'e^{-ipv}\,dv')
         mh.font_size_sub(eq2, 2, 45)
         mh.font_size_sub(eq2, 4, 45)
         mh.font_size_sub(eq2, 6, 45)
@@ -488,6 +488,28 @@ class WignerTranslate(WignerDensity):
         eq21 = MathTex(r'e^{-i(p-2ax)v}')
         eq22 = MathTex(r'\widetilde W(x,p)', r'=', r'W(x,p-2ax)')
         eq23 = Tex(r'\sf expanding squares', r'$x^2$', r' and ', r'$v^2$', r' terms cancel')
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][:2], eq1[2][0], eq2[3][1:3], eq2[5]).set_color(col_psi)
+        VGroup(eq2[0][:2], eq4[2][0], eq15[2][0], eq9[2][0], eq22[2][0]).set_color(col_WVD)
+        VGroup(eq1[0][3], eq1[2][2], eq1[2][4], eq2[0][3], eq2[4][1], eq2[4][3], eq2[7][4], eq2[7][-1],
+               eq6[4][5], eq6[7][4], eq6[7][-1], eq7[1][0], eq7[1][-1], eq10[2][3], eq23[1][0], eq23[3][0],
+               eq22[2][-2]).set_color(col_x)
+        VGroup(eq2[0][-2], eq2[-1][-4], eq4[2][-2], eq6[-1][-5], eq10[2][2]).set_color(col_p)
+        VGroup(eq5[2][-1], eq5[3][2], eq7[1][2], eq16[2][2]).set_color(col_var)
+        VGroup(eq2[-1][0], eq2[2][-1], eq6[-1][0], eq10[2][0]).set_color(col_special)
+        VGroup(eq2[2][0], eq2[2][-2], eq2[4][5], eq6[4][7], eq16[2][-1], eq23[1][1], eq23[3][1],
+               eq20[0][1], eq22[2][-4]).set_color(col_num)
+        VGroup(eq2[2][1], eq2[4][4], eq6[4][6], eq5[2][:-1], eq2[3][0], eq2[-1][-2],
+               eq6[3][0], eq6[-1][-2], eq11[3][0], eq17[3][0]).set_color(col_op)
+        VGroup(eq2[4][-1], eq2[-1][2], eq6[4][-1], eq6[-1][2], eq10[2][1]).set_color(col_i)
+
+        mh.copy_colors_eq(eq2[0], eq6[0], eq2[0], eq15[0], eq2[0], eq22[0])
+        mh.copy_colors_eq(eq2[4][:-1], eq2[6][:], eq6[4][:-1], eq6[6][:], eq2[4], eq17[4], eq2[6], eq17[6],
+                          eq2[6], eq17[3][5:-2], eq2[6], eq17[5][3:-2], eq2[-1], eq17[-1],
+                          eq2[4], eq11[4], eq2[6], eq11[6], eq2[6], eq11[3][5:-1], eq2[6], eq11[5][3:-1],
+                          eq2[-1], eq11[-1])
+        mh.copy_colors_eq(eq2[2], eq6[2], eq2[2], eq11[2], eq6[2], eq17[2])
 
 
         eq2.to_edge(DOWN, buff=0.4)
@@ -698,7 +720,9 @@ class WignerTranslate(WignerDensity):
                           ),
                   )
         self.wait(0.1)
-        self.play(mh.rtransform(eq10[:2], eq16[:2], eq10[2][:], eq16[2][:-1], eq10[3], eq16[3]),
+        self.play(mh.rtransform(eq10[:2], eq16[:2], eq10[2][:-2], eq16[2][:-3], eq10[2][-1], eq16[2][-2],
+                                eq10[3], eq16[3]),
+                  mh.rtransform(eq10[2][-2], eq16[2][-3], copy_colors=False),
                   FadeIn(eq16[2][-1], shift=mh.diff(eq10[2][-1], eq16[2][-2])),
                   FadeOut(eq15))
         self.wait(0.1)
