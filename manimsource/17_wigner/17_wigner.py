@@ -8,23 +8,12 @@ import scipy as sp
 from matplotlib.font_manager import font_scalings
 from numpy.random.mtrand import Sequence
 from sorcery import switch
+from sympy.physics.quantum.gate import CGate
 from torch.utils.jit.log_extract import run_test
-
 
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
-
-col_psi = (RED-WHITE)*0.8 + WHITE
-col_x = (BLUE-WHITE)*0.7 + WHITE
-col_p = (GREEN-WHITE)*0.9 + WHITE
-col_num = (TEAL_E - WHITE) * 0.5 + WHITE
-col_special = (PURPLE - WHITE) * 0.25 + (TEAL_E - WHITE) * 0.25 + WHITE
-col_i = (YELLOW - WHITE) * 0.3 + WHITE
-col_WVD = (ORANGE-WHITE)*0.9 + WHITE
-col_op = (PURPLE-WHITE) * 0.5 + WHITE
-col_var = col_special
-col_eq = (col_op+WHITE)*0.5
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -74,18 +63,31 @@ class Latexv(Scene):
 class LatexPsix(Scene):
     def construct(self):
         eq = MathTex(r'\psi(x)', font_size=80, stroke_width=2)
+        eq[0][0].set_color(col_psi)
+        eq[0][2].set_color(col_x)
         self.add(eq)
 
 class LatexPsiFT(Scene):
     def construct(self):
         eq = MathTex(r'\widehat\psi(p)', r'=', r'\frac1{\sqrt{2\pi} }', r'\int\psi(x)e^{-ipx}\,dx', font_size=60, stroke_width=2)
         mh.font_size_sub(eq, 2, 50)
+        VGroup(eq[0][:2], eq[3][1]).set_color(col_psi)
+        VGroup(eq[3][-1], eq[3][-3], eq[3][3]).set_color(col_x)
+        VGroup(eq[0][3], eq[3][-4]).set_color(col_p)
+        VGroup(eq[2][-1]).set_color(col_special)
+        VGroup(eq[2][0], eq[2][-2]).set_color(col_num)
+        VGroup(eq[2][1:-2], eq[3][0], eq[3][-2]).set_color(col_op)
+        eq[3][5].set_color(col_special)
+        eq[3][7].set_color(col_i)
         eq = eq_shadow(eq)
         self.add(eq)
 
 class LatexWxp(Scene):
     def construct(self):
         eq = MathTex(r'W(x,p)', font_size=60, stroke_width=2)
+        eq[0][0].set_color(col_WVD)
+        eq[0][2].set_color(col_x)
+        eq[0][4].set_color(col_p)
         eq = eq_shadow(eq)
         self.add(eq)
 
@@ -252,6 +254,16 @@ class WaveFunction(FourierTomography):
 
         VGroup(eq1, eq2, eq3, eq4, eq5).set_z_index(1)
 
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0], eq2[0][1]).set_color(col_psi)
+        VGroup(eq1[1][1], eq1[1][3], eq4[2][-2], eq4[2][-3], eq4[3][0]).set_color(col_special)
+        VGroup(eq1[1][2], eq2[0][0], eq2[0][-2], eq3[0], eq3[2][0], eq4[2][1:-4]).set_color(col_op)
+        VGroup(eq2[0][-1], eq2[2][-1], eq3[3], eq4[2][0], eq4[2][-1], eq4[2][-4], eq4[3][-1], eq4[3][-3], eq4[3][3],
+               eq5[2][2]).set_color(col_num)
+        VGroup(eq2[2]).set_color(col_txt)
+        VGroup(eq2[0][3], eq4[3][2], eq3[2][1]).set_color(col_x)
+        VGroup(eq4[2][-2], eq4[3][-2]).set_color(col_var)
+
         eq2.next_to(eq1, DOWN, buff=0.5)
         VGroup(eq1, eq2).move_to(box)
         mh.align_sub(eq3, eq3[1], eq2[0])
@@ -294,6 +306,9 @@ class WaveFunction(FourierTomography):
         scale=1.1
         eq6 = MathTex(r'\psi(x)', r'=', r'\frac1{\sqrt[4]{2\pi\sigma^2} }', r'e^{-\frac{x^2}{4\sigma^2}+ipx')
         mh.font_size_sub(eq6, 2, 50).scale(scale)
+        eq6[3][-3].set_color(col_i)
+        eq6[3][-2].set_color(col_p)
+        eq6[3][-1].set_color(col_x)
 
         box2 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0,
                          fill_color=BLACK, fill_opacity=1)
@@ -791,6 +806,21 @@ class WignerDensity2(LinearComb):
         eq13 = MathTex(r'{\sf if\ }', r'\psi(x)', r'\sim', r'e^{-\frac12ax^2}', font_size=80)
         eq14 = MathTex(r'{\sf then\ }', r'W(x,p)', r'\sim', r'e^{-ax^2-p^2/a}')
 
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[2][0], eq1[2][-3], eq1[3][7], eq1[3][16], eq13[3][2], eq13[3][4], eq13[3][-1],
+               eq4[2][12], eq4[2][26], eq14[3][4], eq14[3][-3], eq8[3][-3], eq7[3][7]).set_color(col_num)
+        VGroup(eq1[0][2], eq1[3][3], eq1[3][5], eq1[3][12], eq1[3][14], eq1[3][-5], eq1[3][-1],
+               eq13[3][-2], eq13[1][2], eq14[3][3]).set_color(col_x)
+        VGroup(eq1[3][-6], eq8[3][2], eq1[0][4], eq14[3][6]).set_color(col_p)
+        VGroup(eq1[3][1], eq1[3][10], eq13[1][0]).set_color(col_psi)
+        VGroup(eq1[2][-2:], eq1[3][-9], eq13[3][0], eq8[3][0], eq14[3][0],
+               ).set_color(col_special)
+        VGroup(eq13[3][-3], eq14[3][-1], eq14[3][2], eq8[3][-1]).set_color(col_var)
+        VGroup(eq1[2][1], eq1[3][0], eq1[3][-2], eq1[3][-3], eq13[3][3], eq1[3][-4]).set_color(col_op)
+        VGroup(eq1[0][0]).set_color(col_WVD)
+        VGroup(eq1[3][9], eq1[3][-7], eq2[3][-5]).set_color(col_i)
+        mh.copy_colors_eq(eq1[0], eq14[1])
+
         mh.align_sub(eq1, eq1[1], eq2[1], coor_mask=UP)
         eq13.next_to(eq2, DOWN, buff=1)
         eq14.next_to(eq13, DOWN, buff=1)
@@ -811,6 +841,7 @@ class WignerDensity2(LinearComb):
                   mh.stretch_replace(eq1[3][-7], eq2[3][-5]),
                   FadeOut(eq1[2][-1], eq1[3][-4:-2]))
         self.wait(0.1)
+        mh.copy_colors_eq(eq2, gp1[0])
         self.play(mh.transform(eq2, gp1[0]),
                   Succession(Wait(0.6), FadeIn(eq13)), run_time=1.8)
         self.wait(0.1)
@@ -1553,6 +1584,13 @@ class WignerNarration(Scene):
 
         txt21 = Tex(r'\sf superposition:', r' $\psi(x) \sim \psi_1(x)+\psi_2(x)$')
         txt22 = Tex(r'\sf phase shift:', r' $\psi(x)\sim \psi_1(x) + e^{ia}\psi_2(x)$')
+
+        mh.rtransform.copy_colors = True
+        VGroup(txt1[1][0], txt2[1][0], txt2[1][5], txt4[1][0], txt4[1][9], txt6[1][0], txt6[1][5],
+               txt10[1][0], txt10[1][-4], txt13[1][0], txt13[1][5], txt13[1][11], txt16[0][5],
+               txt17[0][11], txt17[0][13], txt18[0][19], txt19[0][9], txt19[0][14],
+               txt21[1][0], txt21[1][5], txt21[1][11]).set_color(col_psi)
+        VGroup(txt17[0][14]).set_color(col_i)
 
         w = 8
         txts = [txt1, txt2, txt3, txt4, txt5, txt6, txt7, txt8, txt9, txt10,
@@ -2922,6 +2960,50 @@ class ClassicalvsQM(GaussSmooth):
         eq16 = MathTex(r'\frac1{2\pi}', r'\int\left(', r'V(u)', r'\psi(u)^*', r'\psi(v)',
                        r'-', r'\psi(u)^*', r'V(v)', r'\psi(v)', r'\right)', r'ie^{-ipy}', r'dy', font_size=60)
         mh.font_size_sub(eq16, 0, 50)
+        eq17 = MathTex(r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'\left(', r'V(u)',
+                       r'-', r'V(v)', r'\right)', r'ie^{-ipy}', r'dy', font_size=60)
+        mh.font_size_sub(eq17, 0, 50)
+        # eq18 = MathTex(r'\frac{dW(x,p)}{dt}', r'=', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'\left(', r'V(u)',
+        #                r'-', r'V(v)', r'\right)', r'ie^{-ipy}', r'dy', font_size=60)
+        # mh.font_size_sub(eq18, 2, 50)
+        eq18 = MathTex(r'V(u)-V(v)', r'\approx', r'V^\prime(x)(u-v)', font_size=60)
+        eq19 = MathTex(r'V(u)-V(v)', r'\approx', r'V^\prime(x)(-y)', font_size=60)
+        eq20 = MathTex(r'\frac{dW(x,p)}{dt}', r'=', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'V^\prime(x)',
+                       r'(-iy)e^{-ipy}', r'dy', font_size=60)
+        mh.font_size_sub(eq20, 2, 50)
+        eq21 = MathTex(r'\frac{dW(x,p)}{dt}', r'\approx', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'V^\prime(x)',
+                       r'(-iy)e^{-ipy}', r'dy', font_size=60)
+        mh.font_size_sub(eq21, 2, 50)
+        eq22 = MathTex(r'\frac{\partial}{\partial p}', r'e^{-ipy}', r'=', r'-iye^{-ipy}', font_size=60)
+        mh.font_size_sub(eq22, 0, 50)
+        eq23 = MathTex(r'\frac{dW(x,p)}{dt}', r'\approx', r'\frac{\partial}{\partial p}', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)',
+                       r'e^{-ipy}', r'dy',  r'\,V^\prime(x)', font_size=60)
+        mh.font_size_sub(eq23, 2, 50)
+        mh.font_size_sub(eq23, 3, 50)
+        eq24 = MathTex(r'W(x,p)', font_size=60)
+        eq25 = MathTex(r'\frac{dW(x,p)}{dt}', r'\approx', r'\frac{\partial W(x,p)}{\partial p}',
+                       r'\,V^\prime(x)', font_size=60)
+        eq26 = MathTex(r'V(u)-V(v)', r'=', r'-V^\prime(x)y', r'-', r'{\frac1{24} }',
+                       r'V^{\prime\prime\prime}(x)y^3', r'-\cdots', font_size=60)
+        mh.font_size_sub(eq26, 4, 45)
+        eq26[4][0].shift(DOWN*0.1)
+        eq27 = MathTex(r'\frac{dW(x,p)}{dt}', r'=', r'\frac{\partial W(x,p)}{\partial p}',
+                       r'+', r'\frac1{2\pi}', r'\int\psi(u)^*\psi(v)', r'\frac1{24}',
+                       r'V^{\prime\prime\prime}(x)', r'(-iy^3)', r'e^{-ipy}\,dy',
+                       r'+\cdots', font_size=60)
+        mh.font_size_sub(eq27, 4, 50)
+        mh.font_size_sub(eq27, 6, 50)
+        eq28 = MathTex(r'\frac{\partial^3}{\partial p^3}', font_size=50)
+        eq29 = MathTex(r'{}-', r'\frac1{24}', r'\frac{\partial^3}{\partial p^3}', r'\frac1{2\pi}', r'\int\psi(u)^*\psi(v)',
+                       r'e^{-ipy}\,dy', r'\,V^{\prime\prime\prime}(x)',
+                       r'+\cdots', font_size=60)
+        mh.font_size_sub(eq29, 1, 50)
+        mh.font_size_sub(eq29, 2, 50)
+        mh.font_size_sub(eq29, 3, 50)
+        eq30 = MathTex(r'{}-', r'\frac1{24}', r'\frac{\partial^3 W(x,p)}{\partial p^3}', r'V^{\prime\prime\prime}(x)',
+                       r'+\cdots', font_size=60)
+        eq31 = MathTex(r'\frac{\hbar^2}{24}', font_size=60)
+        # mh.font_size_sub(eq30, 1, 55)
 
         mh.align_sub(eq2, eq2[1], eq1[0]).next_to(eq1, RIGHT, buff=1.5)
         VGroup(eq1, eq2).move_to(ORIGIN)
@@ -2948,6 +3030,12 @@ class ClassicalvsQM(GaussSmooth):
         mh.align_sub(eq14, eq14[1], eq13[1])
         mh.align_sub(eq15, eq15[4], eq11[6]).move_to(ORIGIN, coor_mask=RIGHT)
         mh.align_sub(eq16, eq16[4], eq11[6]).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq17, eq17[4], eq11[6]).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq18, eq18[1], eq14[1]).move_to(ORIGIN, coor_mask=RIGHT).to_edge(RIGHT)
+        mh.align_sub(eq19, eq19[1], eq18[1])
+        mh.align_sub(eq20, eq20[-2][2], eq17[-2][0])
+        eq21.move_to(eq20).move_to(ORIGIN, coor_mask=RIGHT)
+        eq22.move_to(mh.pos(DOWN*0.2))
 
         self.add(eq1)
         self.wait(0.1)
@@ -2988,8 +3076,8 @@ class ClassicalvsQM(GaussSmooth):
                                 eq7[7], eq10[8], eq10_2, eq10[9], eq7[9], eq10[10],
                                 eq7[10:], eq10[11:], eq7[1:4], eq10[1:4]),
                   eq7[0].animate.align_to(eq10[0], RIGHT),
-                  eq8.animate.to_edge(DOWN, buff=0.2).scale(0.9).set_opacity(0.8),
-                  eq9.animate.to_edge(DOWN, buff=0.2).scale(0.9).set_opacity(0.8),
+                  eq8.animate.to_edge(DOWN, buff=0.2).scale(0.9).set_opacity(0.65),
+                  eq9.animate.to_edge(DOWN, buff=0.2).scale(0.9).set_opacity(0.65),
                   )
         self.wait(0.1)
         self.play(mh.rtransform(eq7[0][:6], eq10[0][1:7]),
@@ -3040,11 +3128,105 @@ class ClassicalvsQM(GaussSmooth):
                   mh.rtransform(eq12[6][0], eq15[8][0]),
                   FadeOut(eq12[2][1]),
                   run_time=1.3)
-        self.play(mh.transform(eq15[:2], eq16[:2], eq15[2][2:6], eq16[3][:4], eq15[2][7], eq16[3][4], eq15[3], eq16[4]),
-                  FadeOut(eq15[2][0], eq15[2][6]),
-                  mh.fade_replace(eq15[2][1], eq16[2][0]),
-                  FadeIn(eq16[2][1:])
+        self.play(FadeOut(eq15[2][0], eq15[2][6]),
+                  mh.rtransform(eq15[:2], eq16[:2], eq15[2][2:6], eq16[3][:4], eq15[2][7], eq16[3][4],
+                               eq15[3], eq16[4], run_time=1.3),
+                  mh.fade_replace(eq15[2][1], eq16[2][0], run_time=1.3),
+                  Succession(Wait(0.3), FadeIn(eq16[2][1:]))
                   )
+        self.play(mh.rtransform(eq15[4:6], eq16[5:7], eq15[6][1:], eq16[8][:], eq15[7:], eq16[9:], run_time=1.3),
+                  mh.fade_replace(eq15[6][0], eq16[7][0], run_time=1.3),
+                  Succession(Wait(0.3), FadeIn(eq16[7][1:]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq16[0], eq17[0], eq16[1][0], eq17[1][0], eq16[1][1], eq17[4][0],
+                                eq16[2], eq17[5], eq16[3:5], eq17[2:4], eq16[5], eq17[6], eq16[7], eq17[7],
+                                eq16[9:], eq17[8:]),
+                  mh.rtransform(eq16[6], eq17[2], eq16[8], eq17[3]),
+                  run_time=1.5
+                  )
+        self.wait(0.1)
+        # self.play(mh.rtransform(eq17[:], eq18[2:], eq11[:2], eq18[:2]), FadeOut(eq14), run_time=1.4)
+        self.play(FadeOut(eq14), FadeIn(eq18))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq18[:2], eq19[:2], eq18[2][:6], eq19[2][:6], eq18[2][-1], eq19[2][-1]),
+                  FadeOut(eq18[2][6:-1]),
+                  FadeIn(eq19[2][6:-1]),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq17[-1], eq20[-1], eq17[-2][1:], eq20[-2][5:], eq17[-2][0], eq20[-2][2],
+                                eq19[2][:5].copy(), eq20[6][:], eq19[2][5:7].copy(), eq20[7][:2],
+                                eq19[2][-2:].copy(), eq20[7][3:5]),
+                  FadeOut(eq17[4:9]),
+                  run_time=1.4)
+        self.play(mh.rtransform(eq20[6:], eq21[6:], eq17[:4], eq21[2:6], eq11[:2], eq21[:2]))
+        self.wait(0.1)
+
+        eq19.generate_target().next_to(line1, DOWN, coor_mask=UP).set_opacity(0.65)
+        eq21.generate_target().next_to(eq19.target, DOWN, coor_mask=UP, buff=0.35)
+        eq22.next_to(eq21.target, DOWN).shift(RIGHT*2)
+        self.play(MoveToTarget(eq19), MoveToTarget(eq21), Succession(Wait(0.5), FadeIn(eq22)))
+        self.wait(0.1)
+        eq22_1 = mh.align_sub(eq22[0].copy(), eq22[0][1], eq21[-2][1]).move_to(eq21[-2][:5])
+        self.play(mh.rtransform(eq22[0].copy(), eq22_1, run_time=1.4),
+                  Succession(Wait(0.4), AnimationGroup(FadeOut(eq21[-2][:5]),
+                                                       eq22.animate.set_opacity(0.)))) # fade out completely
+        self.wait(0.1)
+
+        mh.align_sub(eq23, eq23[1], eq21[1], coor_mask=UP)
+        eq24.move_to(eq23[3:-1]).align_to(eq23[9], DOWN)
+        mh.align_sub(eq25, eq25[1], eq23[1])
+        mh.align_sub(eq26, eq26[1], eq19[1]).to_edge(RIGHT)
+        mh.align_sub(eq27, eq27[0], eq25[0])
+        eq27[3:].next_to(eq25[:3], DOWN).to_edge(RIGHT, buff=0.1)
+        mh.align_sub(eq28, eq28[0][2], eq27[8][1]).move_to(eq27[8][2:5], coor_mask=RIGHT)
+        mh.align_sub(eq29, eq29[0], eq27[3]).to_edge(RIGHT, buff=0.1)
+        mh.align_sub(eq30, eq30[0], eq29[0]).align_to(eq27[2], LEFT).shift(DOWN*0.4)
+        eq31.move_to(eq30[1])
+        mh.align_sub(eq31, eq31[0][3:], eq30[1][2:])
+        eq24_1 = eq24.copy()
+        eq24.move_to(eq29[3:6]).align_to(eq29[6], DOWN)
+
+        eq23[2].set_z_index(10)
+        eq22_1.set_z_index(10)
+        eq21[6].set_z_index(9)
+        eq23[-1].set_z_index(9)
+        self.play(mh.rtransform(eq21[:2], eq23[:2], eq21[2:6], eq23[3:7], eq22_1, eq23[2],
+                                eq21[6], eq23[-1], eq21[7][5:], eq23[7][:], eq21[8], eq23[8]),
+                  run_time=1.8)
+        self.wait(0.1)
+        self.play(FadeOut(eq23[3:-1]), FadeIn(eq24_1), run_time=1.4)
+        self.play(mh.rtransform(eq23[:2], eq25[:2], eq23[2][0], eq25[2][0], eq24_1[0][:], eq25[2][1:7],
+                                eq23[2][1:], eq25[2][7:], eq23[-1], eq25[-1]), run_time=1.6)
+        self.wait(0.1)
+        self.play(VGroup(eq5[4][1:], eq5[5]).animate(run_time=2, rate_func=there_and_back_with_pause).set_opacity(1).scale(1.2))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq19[:2], eq26[:2], eq19[2][6], eq26[2][0], eq19[2][:5], eq26[2][1:6],
+                                eq19[2][7], eq26[2][6], run_time=1.7),
+                  VGroup(eq19[2][5], eq19[2][8]).animate(run_time=1.7).shift(mh.diff(eq19[2][7], eq26[2][6])).set_opacity(-1.5),
+                  Succession(Wait(0.7), FadeIn(eq26[3:]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq25[:3], eq27[:3]), FadeIn(eq27[3:]))
+        self.wait(0.1)
+        self.play(FadeOut(eq27[8][2:-1]), FadeIn(eq28))
+        self.wait(0.1)
+        eq29_1 = eq29[0][0].copy()
+        VGroup(eq27[6], eq29[1]).set_z_index(10)
+        self.play(mh.rtransform(eq27[4], eq29[3], eq27[5], eq29[4], eq27[6], eq29[1],
+                                eq28[0], eq29[2], eq27[8][1], eq29_1, eq27[7], eq29[6],
+                                eq27[9], eq29[5], eq27[-1], eq29[-1], run_time=1.7),
+                  mh.fade_replace(eq27[3], eq29[0], run_time=1.7),
+                  FadeOut(eq27[8][0], eq27[8][-1]))
+        self.remove(eq29_1)
+        self.wait(0.1)
+        self.play(FadeOut(eq8, eq9, eq26))
+        self.play(FadeOut(eq29[3:6]), FadeIn(eq24))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq29[:2], eq30[:2], eq29[2][:2], eq30[2][:2], eq24[0][:], eq30[2][2:8],
+                                eq29[2][2:], eq30[2][8:], eq29[6:], eq30[3:]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq30[1][1:], eq31[0][2:]), FadeOut(eq30[1][0]), FadeIn(eq31[0][:2]))
         self.wait()
 
 """
