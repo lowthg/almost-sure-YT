@@ -1590,7 +1590,18 @@ class WignerNarration(Scene):
                txt10[1][0], txt10[1][-4], txt13[1][0], txt13[1][5], txt13[1][11], txt16[0][5],
                txt17[0][11], txt17[0][13], txt18[0][19], txt19[0][9], txt19[0][14],
                txt21[1][0], txt21[1][5], txt21[1][11]).set_color(col_psi)
-        VGroup(txt17[0][14]).set_color(col_i)
+        VGroup(txt17[0][14], txt4[1][6], txt10[1][6], txt14[1][-7], txt16[0][-3], txt22[1][-7]).set_color(col_i)
+        VGroup(txt1[1][2], txt1[1][7], txt2[1][2], txt2[1][7], txt3[0][-1], txt4[1][2],
+               txt4[1][8], txt4[1][11], txt6[1][2], txt6[1][8], txt7[0][25], txt8[1][4],
+               txt10[1][2], txt10[1][8], txt10[1][12], txt13[1][2], txt13[1][8], txt13[1][14],
+               txt16[0][-1], txt17[0][-6], txt19[0][11], txt19[0][17], txt21[1][2],
+               txt21[1][8], txt21[1][14]).set_color(col_x)
+        VGroup(txt5[0][-1], txt7[0][-1], txt8[1][10], txt9[0][-1], txt11[0][-1]).set_color(col_p)
+        VGroup(txt1[1][-1], txt1[1][-3], txt6[1][-3], txt8[1][-3], txt8[1][-1], txt10[1][-5],
+               txt13[1][6], txt13[1][12], txt18[0][-3:-1], txt21[1][6], txt21[1][12]).set_color(col_num)
+        VGroup(txt1[1][5], txt4[1][5], txt10[1][5], txt14[1][-8], txt16[0][-4], txt22[1][-8]).set_color(col_special)
+        VGroup(txt2[1][-2], txt4[1][-6], txt10[1][-7], txt14[1][-6], txt16[0][-2], txt22[1][-6]).set_color(col_var)
+        VGroup(txt1[1][-2], txt8[1][:3], txt8[1][6:9], txt8[1][-2], txt18[0][-1]).set_color(col_op)
 
         w = 8
         txts = [txt1, txt2, txt3, txt4, txt5, txt6, txt7, txt8, txt9, txt10,
