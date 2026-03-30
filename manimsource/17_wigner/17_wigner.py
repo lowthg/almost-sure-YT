@@ -2002,6 +2002,16 @@ class WignerNarration2(Scene):
 
         txt1 = Tex(r'\sf simple harmonic motion: ', r'$V(x)=\frac12x^2$')
         txt2 = Tex(r'\sf pendulum: ', r'$V(x)\sim1-\cos x$', r'${}\approx\frac12x^2-\frac1{24}x^4$')
+
+        col_cos=PURPLE_A*0.8 + WHITE*0.2
+
+        mh.rtransform.copy_colors = True
+        VGroup(txt1[1][0]).set_color(col_op)
+        VGroup(txt1[1][2], txt1[1][-2], txt2[2][4], txt2[2][-2]).set_color(col_x)
+        VGroup(txt1[1][-5], txt1[1][-3], txt1[1][-1], txt2[1][5], txt2[2][1], txt2[2][3], txt2[2][5], txt2[2][-1], txt2[2][-4:-2], txt2[2][-6]).set_color(col_num)
+        VGroup(txt1[1][6], txt2[2][2], txt2[2][-5]).set_color(col_op)
+        txt2[1][-4:-1].set_color(col_cos)
+
         txt1 = eq_shadow(txt1, bg_stroke_width=20)
         txt2 = eq_shadow(txt2, bg_stroke_width=20)
         mh.align_sub(txt2, txt2[0][-1], txt1[0][-1], coor_mask=UP)
@@ -3367,6 +3377,11 @@ class BarrierV(GaussSmooth):
                                     r'0,&{\sf otherwise}'
                                     r'\end{cases}').set_z_index(1)
 
+        eq[0][0].set_color(col_op)
+        VGroup(eq[0][2], eq[2][7], eq1).set_color(col_x)
+        VGroup(eq[2][1], eq[2][9], eq4).set_color(col_var)
+        VGroup(eq[2][5], eq[2][10]).set_color(col_num)
+
         gp = VGroup(eq, graph).arrange(RIGHT, buff=-0.5, center=True, aligned_edge=DOWN)
 
         box = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
@@ -3389,8 +3404,8 @@ class ClassicalvsQM(GaussSmooth):
                       r'-\frac{\partial W}{\partial p}', r'\frac {dP}{dt}')
         eq4 = MathTex(r'\frac {dW(x,p)}{dt}', r'=',
                       r'-\frac{\partial W}{\partial x}', r'\frac{p}{m}',
-                      r'+\frac{\partial W}{\partial p}', r'V^\prime(x)')
-        eq6 = Tex(r'\sf classical:')
+                      r'+\frac{\partial W}{\partial p}', r'V^\prime(x)').set_z_index(1)
+        eq6 = Tex(r'\sf classical:').set_z_index(1)
         eq7 = MathTex(r'W(x,p)', r'=', r'\frac1{2\pi}', r'\int', r'\psi\big(', r'x-\frac y2', r'\big)^*', r'\psi\big(', r'x+\frac y2',
                       r'\big)', r'e^{-ipy}', r'dy')
         mh.font_size_sub(eq7, 5, 60)
@@ -3418,9 +3433,6 @@ class ClassicalvsQM(GaussSmooth):
         eq17 = MathTex(r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'\left(', r'V(u)',
                        r'-', r'V(v)', r'\right)', r'ie^{-ipy}', r'dy', font_size=60)
         mh.font_size_sub(eq17, 0, 50)
-        # eq18 = MathTex(r'\frac{dW(x,p)}{dt}', r'=', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'\left(', r'V(u)',
-        #                r'-', r'V(v)', r'\right)', r'ie^{-ipy}', r'dy', font_size=60)
-        # mh.font_size_sub(eq18, 2, 50)
         eq18 = MathTex(r'V(u)-V(v)', r'\approx', r'V^\prime(x)(u-v)', font_size=60)
         eq19 = MathTex(r'V(u)-V(v)', r'\approx', r'V^\prime(x)(-y)', font_size=60)
         eq20 = MathTex(r'\frac{dW(x,p)}{dt}', r'=', r'\frac1{2\pi}', r'\int', r'\psi(u)^*', r'\psi(v)', r'V^\prime(x)',
@@ -3460,6 +3472,43 @@ class ClassicalvsQM(GaussSmooth):
         eq31 = MathTex(r'\frac{\hbar^2}{24}', font_size=60)
         # mh.font_size_sub(eq30, 1, 55)
 
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        eq6.set_color(col_txt)
+        VGroup(eq7[0][0], eq3[2][2], eq3[4][2]).set_color(col_WVD)
+        VGroup(eq1[0][-1], eq2_1[2][-1], eq2_1[2][-5], eq3[2][-1], eq3[3][1],
+               eq7[0][2], eq7[5][0], eq7[5][2], eq7[-2][-1], eq7[-1][-1],
+               eq8[0], eq9[0], eq14[2][2], eq18[2][3], eq18[2][-4], eq18[2][-2], eq19[2][-2],
+               eq22[3][2], eq26[5][-4], eq26[5][-2], eq27[5][3], eq27[5][-2]).set_color(col_x)
+        VGroup(eq1[2][0], eq2_1[0][1], eq3[4][-1], eq3[5][1], eq7[0][-2], eq7[-2][3],
+               eq13[2][0], eq22[0][-1], eq28[0][-2]).set_color(col_p)
+
+        VGroup(eq1[0][0], eq1[0][2], eq2_1[0][0], eq2_1[0][3], eq2_1[2][1:3], eq2_1[2][-2], eq2[2][2],
+               eq3[0][0], eq3[0][-2], eq3[2][1], eq3[2][-2], eq3[3][0], eq3[3][-2], eq3[4][1], eq3[4][-2], eq3[5][0], eq3[5][-2],
+               eq7[3][0], eq7[-1][-2], eq7[5][-2], eq7[2][1], eq10[4][0], eq10[4][2],
+               eq12[2][3], eq12[6][1], eq13[0], eq14[2][0], eq18[2][:2], eq22[0][0], eq22[0][-2],
+               eq26[4][1], eq26[5][:4], eq28[0][0], eq28[0][-3], eq27[5][0]).set_color(col_op)
+
+        VGroup(eq7[4][0], eq7[7][0], eq27[5][1], eq27[5][6]).set_color(col_psi)
+
+        VGroup(eq7[2][0], eq7[2][-2], eq7[5][-1], eq13[2][1], eq13[2][-2],
+               eq26[4][0], eq26[4][-2:], eq26[5][-1], eq28[0][1], eq28[0][-1], eq31[0][1]).set_color(col_num)
+
+        VGroup(eq1[0][-2], eq1[2][-1], eq2_1[0][-1], eq3[0][-1], eq3[3][-1], eq3[5][-1], eq10[4][-1],
+               eq13[2][-1], eq31[0][0]).set_color(col_var)
+
+        VGroup(eq7[2][-2], eq7[-2][0]).set_color(col_special)
+
+        VGroup(eq7[-2][2], eq7[6][1], eq12[2][2], eq12[6][0], eq22[3][1]).set_color(col_i)
+
+        mh.copy_colors_eq(eq7[0][:], eq3[0][1:7])
+        mh.copy_colors_eq(eq7[5], eq7[8], eq7[5], eq8[2], eq7[5], eq9[2])
+        mh.copy_colors_eq(eq14[2], eq16[2], eq14[2], eq16[7], eq14[2][:], eq18[0][:4], eq14[2][:], eq18[0][-4:])
+        mh.copy_colors_eq(eq7[-2], eq22[1], eq7[-2][:], eq22[3][3:], eq3[0][1:7], eq24[0][:],
+                          eq26[4], eq27[6], eq26[5][:-2], eq27[7][:], eq26[5][-2:], eq27[8][3:5],
+                          eq7[-2][:], eq27[9][:-2], eq7[-1][:], eq27[9][-2:])
+        mh.copy_colors_eq(eq3[0], eq10[0], eq7[2], eq27[4])
+
         mh.align_sub(eq2, eq2[1], eq1[0]).next_to(eq1, RIGHT, buff=1.5)
         VGroup(eq1, eq2).move_to(ORIGIN)
         eq3.next_to(eq2, DOWN, coor_mask=UP, buff=1)
@@ -3467,8 +3516,9 @@ class ClassicalvsQM(GaussSmooth):
         mh.align_sub(eq2_1, eq2_1[1], eq2[1])
         mh.align_sub(eq4, eq4[1], eq3[1])
         eq5 = eq4.copy().scale(0.8).to_edge(UP)
-        line1 = Line(mh.pos(LEFT), mh.pos(RIGHT), stroke_width=5, stroke_color=WHITE)
-        line1.next_to(eq5, DOWN, buff=0.2, coor_mask=UP)
+        line1 = Rectangle(width=config.frame_width + 0.5, height=3, stroke_width=5, stroke_color=WHITE,
+                          fill_color=GREY*0.4).set_z_index(0.5)
+        line1.align_to(eq5, DOWN).shift(DOWN*0.2)
         eq6.next_to(eq5, LEFT, buff=0.6)
         VGroup(eq6, eq5, line1).set_opacity(0.65)
         VGroup(eq5, eq6).move_to(ORIGIN, coor_mask=RIGHT)
