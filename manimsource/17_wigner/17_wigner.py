@@ -2035,8 +2035,16 @@ class MomentumMV(Scene):
         eq1 = MathTex(r'v', r'=', r'\frac{P}{m}').set_z_index(1)
         eq2 = MathTex(r'mv', r'=', r'P').set_z_index(1)
         eq3 = MathTex(r'P', r'=', r'mv').set_z_index(1)
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[2][0]).set_color(col_p)
+        VGroup(eq1[2][2]).set_color(col_var)
+        VGroup(eq1[0][0]).set_color(col_x)
+
         mh.align_sub(eq2, eq2[1], eq1[1])
         mh.align_sub(eq3, eq3[1], eq1[1])
+
+
 
         eq1 = eq_shadow(eq1, bg_stroke_width=15)
         eq2 = eq_shadow(eq2, bg_stroke_width=15)
@@ -2056,6 +2064,15 @@ class FreeSolution(MomentumMV):
         MathTex.set_default(font_size=70, stroke_width=1.5)
         eq1 = MathTex(r'\psi_t(x)', r'=', r'e^{-iP^2t/2m}', r'\psi(x)').set_z_index(1)
         eq2 = MathTex(r'W_t(x,p)', r'=', r'W(x-pt/m,p)').set_z_index(1)
+
+        VGroup(eq1[0][0], eq1[3][0]).set_color(col_psi)
+        VGroup(eq2[0][0], eq2[2][0]).set_color(col_WVD)
+        VGroup(eq1[0][1], eq1[2][5], eq1[2][-1], eq2[0][1], eq2[2][5], eq2[2][7]).set_color(col_var)
+        VGroup(eq1[0][-2], eq1[3][2], eq2[0][3], eq2[2][2]).set_color(col_x)
+        VGroup(eq1[2][3], eq2[0][-2], eq2[2][4], eq2[2][-2]).set_color(col_p)
+        VGroup(eq1[2][0]).set_color(col_special)
+        VGroup(eq1[2][4], eq1[2][7]).set_color(col_num)
+        VGroup(eq1[2][2]).set_color(col_i)
         eq2.next_to(eq1, DOWN, buff=0.5)
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
 
@@ -2072,6 +2089,12 @@ class ForceSolution(FreeSolution):
         MathTex.set_default(font_size=70, stroke_width=1.5)
         eq1 = MathTex(r'P_t', r'=', r'P_0-Ft').set_z_index(1)
         eq2 = MathTex(r'X_t', r'=', r'X_0+P_0t/m-Ft^2/2m').set_z_index(1)
+
+        VGroup(eq1[0][0], eq1[2][0], eq2[2][3]).set_color(col_p)
+        VGroup(eq1[0][1], eq1[2][-2:], eq2[0][1], eq2[2][5], eq2[2][7], eq2[2][-6:-4], eq2[2][-1]).set_color(col_var)
+        VGroup(eq1[2][1], eq2[2][1], eq2[2][4], eq2[2][-4], eq2[2][-2]).set_color(col_num)
+        VGroup(eq2[0][0], eq2[2][0]).set_color(col_x)
+
         eq2.next_to(eq1, DOWN, buff=0.5)
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
 
@@ -2086,6 +2109,12 @@ class HarmonicDef(FreeSolution):
         eq1 = MathTex(r'F', r'=', r'-kx').set_z_index(1)
         eq2 = MathTex(r'V(x)', r'=', r'\frac12', r'kx^2').set_z_index(1)
         mh.font_size_sub(eq2, 2, 60)
+
+        VGroup(eq1[0], eq1[2][1], eq2[3][0]).set_color(col_var)
+        VGroup(eq1[2][2], eq2[0][2], eq2[3][1]).set_color(col_x)
+        VGroup(eq2[0][0], eq2[2][1]).set_color(col_op)
+        VGroup(eq2[2][0], eq2[2][2], eq2[3][-1]).set_color(col_num)
+
         eq2.next_to(eq1, DOWN, buff=0.5)
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
 
@@ -2101,6 +2130,11 @@ class ForceV(FreeSolution):
     def construct(self):
         MathTex.set_default(font_size=80, stroke_width=1.5)
         eq1 = MathTex(r'V(x)', r'=', r'-Fx').set_z_index(1)
+
+        VGroup(eq1[0][0]).set_color(col_op)
+        VGroup(eq1[0][2], eq1[2][2]).set_color(col_x)
+        VGroup(eq1[2][1]).set_color(col_var)
+
         eq1 = eq_shadow(eq1, bg_stroke_width=15)
         self.add(eq1)
 
@@ -2110,7 +2144,7 @@ class SmalltSHO(FreeSolution):
     fill_op = 0.7
 
     def construct(self):
-        MathTex.set_default(font_size=60, stroke_width=1.5)
+        MathTex.set_default(font_size=80, stroke_width=1.5)
         eq1 = MathTex(r'\psi_{t+\delta t}', r'=', r'e^{-iH\delta t}', r'\psi_t')
         eq2 = MathTex(r'\psi_{t+\delta t}', r'=', r'e^{-i(P^2/2m+kX^2/2)\delta t}', r'\psi_t')
         eq3 = MathTex(r'\psi_{t+\delta t}', r'\approx', r'e^{-iP^2\delta t/2m}', r'e^{-ikX^2\delta t/2}', r'\psi_t')
@@ -2121,6 +2155,19 @@ class SmalltSHO(FreeSolution):
         eq8 = MathTex(r'W_{t+\delta t}(x,p)', r'\approx', r'W_t(x-p\delta t,p+x\delta t)').set_z_index(1)
 
         gp = VGroup(eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8).set_z_index(1)
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq1[0][0], eq1[3][0]).set_color(col_psi)
+        VGroup(eq1[0][1], eq1[0][-1], eq1[2][-1], eq1[3][1], eq6[0][1], eq6[0][4], eq6[2][1],
+               eq2[2][8], eq2[2][10], eq5[0][1], eq5[0][3]).set_color(col_var)
+        VGroup(eq1[0][3], eq1[2][-3:-1], eq6[0][3]).set_color(col_op)
+        VGroup(eq1[2][2]).set_color(col_i)
+        VGroup(eq1[2][0]).set_color(col_special)
+        VGroup(eq2[2][4], eq6[0][-2], eq6[2][-2]).set_color(col_p)
+        VGroup(eq2[2][11], eq6[0][-4], eq6[2][-4]).set_color(col_x)
+        VGroup(eq2[2][5], eq2[2][7], eq2[2][12], eq2[2][14], eq5[0][-2]).set_color(col_num)
+        VGroup(eq6[0][0], eq6[2][0]).set_color(col_WVD)
 
         mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
         mh.align_sub(eq3, eq3[1], eq1[1], coor_mask=UP)
@@ -2225,6 +2272,16 @@ class LatexPendulum(MomentumMV):
 
         eq5 = MathTex(r'h', r'=', r'\ell-\ell\cos x')
         eq6 = MathTex(r'h', r'=', r'\ell(1-\cos x)')
+
+        col_cos = PURPLE_A * 0.8 + WHITE * 0.2
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0]).set_color(col_op)
+        VGroup(eq1[0][2], eq5[2][-1], eq4[3][11]).set_color(col_x)
+        VGroup(eq1[2:], eq5[2][0], eq5[2][2], eq5[0][0]).set_color(col_var)
+        VGroup(eq6[2][2], eq3[0][0], eq3[0][2], eq3[1][1], eq4[3][7], eq4[3][9:11], eq4[3][12]).set_color(col_num)
+        VGroup(eq3[0][1], eq4[3][8]).set_color(col_op)
+        VGroup(eq5[2][-4:-1]).set_color(col_cos)
 
         mh.align_sub(eq1, eq1[1], mh.coords_to_point(0.31, 0.12))
         mh.align_sub(eq2, eq2[1], eq1[1])
@@ -3231,6 +3288,16 @@ class Dynamics(GaussSmooth):
         eq3 = MathTex(r'H', r'=', r'P^2/2m + V(x)')
         eq4 = MathTex(r'H', r'=', r'P^2/2m', r'=', r'\frac1{2m}',r'\partial^2/\partial x^2')
         mh.font_size_sub(eq4, 4, 60)
+
+        mh.rtransform.copy_colors = True
+        eq2[2].set_color(col_txt)
+        VGroup(eq1[0][0]).set_color(col_i)
+        VGroup(eq1[0][2], eq1[2][1]).set_color(col_psi)
+        VGroup(eq1[0][4], eq1[2][-2], eq3[2][-2], eq4[5][-2]).set_color(col_x)
+        VGroup(eq1[0][8], eq3[2][4], eq4[4][-1]).set_color(col_var)
+        VGroup(eq1[0][1], eq1[0][-2], eq1[2][0], eq2[0], eq3[2][-4], eq4[5][0], eq4[5][3]).set_color(col_op)
+        VGroup(eq3[2][0]).set_color(col_p)
+        VGroup(eq3[2][1], eq3[2][3], eq4[4][0], eq4[4][2], eq4[5][1], eq4[5][-1]).set_color(col_num)
 
         eq2.next_to(eq1, DOWN, buff=0.5)
         mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=UP)
