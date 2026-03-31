@@ -4,12 +4,9 @@ import colorsys
 from algan import *
 import manim as mn
 import scipy as sp
-from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO
+from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 from manim import MathTex, VGroup
-from sympy.physics.vector.printing import params
-
-from general.integratepowers import xrange, xvals
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -216,6 +213,17 @@ def f22(t):  # stretched plus squeezed to standard gauss
     params = gauss_scale(params, 1. / gauss1d_norm(params))
     return [(params, 1.)]
 
+def f23(t):  # stretched plus unequal squeezed Gaussian phase shift
+    params = gauss1d_std(scale=3)
+    params1 = gauss_mult(params, [(-0.5j * t, 0, 0, 0, 0, 1.)])
+    params2 = gauss_mult(params, [(0.5j * t, 0, 0, 0, 0, 1.)])
+    phase = np.exp(0.5 * PI * 1j * 2)
+    params3 = gauss_scale(gauss1d_std(scale=0.33), phase)
+    params = params1 + params2 + params3
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
+
 def g1(t):
     params = gauss1d_std(scale=1)
     eps = 0.05
@@ -360,20 +368,27 @@ def wigner_intro(quality=LD, bgcol=BLACK, anim=1):
                         + mesh_mask * col0[...,:3]
         print(col.shape)
         print(x.shape)
-        if anim == 1:
-            mask = ((x-y*0.5) > 0.6).to(x.dtype)
-        else:
-            mask = ((x-y*0.5) <= 0.61).to(x.dtype)
-        col[..., 4] *= mask
+        if anim <= 2:
+            if anim == 1:
+                mask = ((x-y*0.5) > 0.6).to(x.dtype)
+            else:
+                mask = ((x-y*0.5) <= 0.61).to(x.dtype)
+            col[..., 4] *= mask
         p.set_non_recursive(location=loc.clone(), color=col.clone())
 
     rate_func = rate_funcs.smooth
 
     with Off():
         cam = Scene.get_camera()
-        cam.move((origin - cam.get_center()) * 0.57 + cam.get_right_direction()*0.2 + out * 0.1)
+        if anim <= 2:
+            cam.move((origin - cam.get_center()) * 0.57 + cam.get_right_direction()*0.2 + out * 0.1)
+        else:
+            cam.move(cam.get_center()*0.1)
         ax.despawn()
         set_frame(f9(0.))
+    if anim == 3:
+        with Seq(run_time=4, rate_func=rate_funcs.identity):
+            cam.orbit_around_point(origin, 90, IN)
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
@@ -385,7 +400,7 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
     xmin, xmax = xrange = (-5., 5.)
     ymin, ymax = yrange = (-5., 5.)
 
-    origin, right, up, out, p, x, y, _, _ = setup_surf(xrange, yrange, signal_vars=signal_vars)
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, signal_vars=signal_vars)
 
     surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
@@ -510,12 +525,15 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
     elif anim == 40:
         run_time = 4.
         f = f3
+    elif anim == 42:
+        run_time=3.5
+        f = f23
+        with Off():
+            ax.despawn()
+        rate_func = rate_funcs.identity
     elif anim == -1:
         run_time=0.2
         f = g1
-
-    # if part > 1:
-    #     show_wave = False
 
     if show_wave:
         name = 'wigner_wave{}'.format(anim)
@@ -799,14 +817,15 @@ def pendulum(quality=LD, bgcol=BLACK, anim=1):
 
 class WaveEvolution:
     def __init__(self, xrange=(-5., 5.), prange=(-5., 5.), npts=639, n_extend_left=200, n_extend_right=200,
-                 n_scale=1, dt=0.001, mass=1., speed=PI):
+                 n_scale=1, dt=0.001, mass=1., speed=PI, just_wave=False):
         xmin, xmax = self.xrange = xrange
         pmin, pmax = self.prange = prange
         self.npts = npts
         self.n_extend_left = n_extend_left
         self.n_extend_right = n_extend_right
         self.n_scale = 1
-        setup_cam()
+        if not just_wave:
+            setup_cam()
         npts1 = (npts + n_extend_left+n_extend_right-1)*n_scale+1
         i_x0 = n_extend_left * n_scale
         i_x1 = npts1 - n_extend_right * n_scale
@@ -814,13 +833,39 @@ class WaveEvolution:
         x_extend_right = (xmax - xmin) / (npts-1) * n_extend_right
         xmin1, xmax1 = (xmin - x_extend_left, xmax + x_extend_right)
 
-        origin, right, up, out, p, xsurf, y, shape, self.txt = setup_surf(xrange, prange, spawn=True)
+        origin, right, up, out, p, xsurf, y, shape, self.txt = setup_surf(xrange, prange, spawn=not just_wave)
         assert shape == (npts, npts)
 
-        self.col0 = p.color.clone()
-        surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
-        self.fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
-        self.mesh_mask = 1 - self.fill_mask
+        self.just_wave = just_wave
+        if just_wave:
+            self.col0 = self.fill_mask = self.mesh_mask = None
+            up = ORIGIN
+            ax = mn.Axes(x_range=(xmin, xmax*1.07), y_range=(0, 0.33), x_length=8, y_length=2,
+                         axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                      "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                      "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                      },
+                         )
+            ax.shift(-ax.coords_to_point(0, 0))
+            right = ax.coords_to_point(1,0)
+            out = ax.coords_to_point(0,1)
+            origin = torch.tensor(out * 0.002)
+            psi = mn.MathTex(r'\psi', stroke_width=2, font_size=60).move_to(ax.coords_to_point(0.4, 0.305)+mn.IN*0.1)
+            psi.set_color(col_psi)
+            ax = ManimMob(ax).move(IN*0.008)
+            psi = ManimMob(psi)
+            with Off():
+                cam = Scene.get_camera()
+                cam.set_distance_to_screen(100)
+                cam.move_to(cam.get_center()*1.5)
+                self.txt.despawn()
+                ax.spawn()
+                psi.spawn()
+        else:
+            self.col0 = p.color.clone()
+            surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+            self.fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
+            self.mesh_mask = 1 - self.fill_mask
 
         self.dt = dt
         self.speed = speed
@@ -841,7 +886,8 @@ class WaveEvolution:
 
     def create_wave(self):
         self.px, self.xx, self.yx = setup_wave(xrange=self.xrange, npts=self.npts)
-        self.pp, self.xp, self.yp = setup_wave(xrange=self.prange, npts=self.npts)
+        if not self.just_wave:
+            self.pp, self.xp, self.yp = setup_wave(xrange=self.prange, npts=self.npts)
 
     def evolve(self, time_inc):
         ndt = math.ceil(time_inc / self.dt)
@@ -864,7 +910,8 @@ class WaveEvolution:
             phase = np.exp(1j * np.outer(self.pvals, self.xvals1))
             psi_k = torch.tensor(phase @ psi.numpy()) * self.dx1 / math.sqrt(2*PI)
             set_wave(self.pp, self.pvals, psi_k.abs() ** 2, psi_k, origin + xmin * right, -up, out * 0.5)
-
+        if self.just_wave:
+            return
         p = self.p
         xmin1, xmax1 = self.xrange1
         i0, i1, n_scale = self.stride
@@ -909,7 +956,7 @@ class WaveEvolution:
         # Normalize the wavefunction
         self.psi /= np.linalg.norm(self.psi) * np.sqrt(self.dx1)
 
-def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
+def evolve_wave(quality=LD, bgcol=BLACK, anim=1, remove_extras=False):
     evolver = WaveEvolution()
 
     run_time = 1.
@@ -919,7 +966,7 @@ def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
     if anim == 1:
         start_time = 0.
         evolver.V = (evolver.xvals1)**2 * 0.5
-        run_time=4.
+        run_time = 2. if remove_extras else 4
     else:
         # pendulum
         eps = 1/3.5 * PI/3
@@ -937,7 +984,12 @@ def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
 
     evolver.set_gaussian(-3.5)
 
-    if part <= 2:
+    if remove_extras:
+        cam = Scene.get_camera()
+        with Off():
+            evolver.txt.despawn()
+            cam.move_to(cam.get_center()*1.2)
+    elif part <= 2:
         evolver.create_wave()
 
     t0 = 0.
@@ -960,33 +1012,55 @@ def evolve_wave(quality=LD, bgcol=BLACK, anim=1):
     name = r'evolve_wave{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
-def dynamics_simple(quality=LD, bgcol=BLACK, anim=1):
+def dynamics_simple(quality=LD, bgcol=BLACK, anim=1, just_wave=False):
     force = 0.
     n_extend_right=200
+    n_extend_left=200
     x0, p0 = (0., 0.)
-    run_time=2.
+    run_time = 1.
+    real_time = 1.
+    start_time = 0.
     if anim == 1:
         x0, p0 = (0., 0.)
+        n_extend_right = 1000
+        n_extend_left = 1000
+        run_time = 3.
+        real_time = 4
     elif anim == 2:
         x0, p0 = (-3.5, 3.5)
         n_extend_right=2000
-        run_time = 2
+        run_time = 3
+        real_time = 4
     elif anim == 3:
-        pass
-    elif anim == 4:
         x0, p0 = (-3.5, 3.5)
         force = 1.
-        n_extend_right=1000
-        n_extend_left=1000
+        n_extend_right=2000
+        n_extend_left=2000
+        run_time = 7.5
+        real_time = 10
+    elif anim == 4:
+        r = 3.5 / math.sqrt(2)
+        x0, p0 = (-r, r)
+        run_time = 4.6
+        real_time = 2*PI
+    elif anim == 5:
+        r = 3.5 / math.sqrt(2)
+        x0, p0 = (-r, r)
+        run_time = 4.6
+        real_time = 2*PI
+        start_time = 2*PI
 
+    speed = real_time / run_time
+    start_time /= speed
 
-    evolver = WaveEvolution(n_extend_right=n_extend_right, speed=3.)
+    evolver = WaveEvolution(n_extend_right=n_extend_right, n_extend_left=n_extend_left, speed=speed, just_wave=just_wave)
+    evolver.create_wave()
     evolver.set_gaussian(x0, p0)
     evolver.V = evolver.xvals1 * force
-
+    if 4 <= anim <= 5:  # SHM
+        evolver.V = (evolver.xvals1)**2 * 0.5
 
     t0 = 0.
-    start_time = 0.
     for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.identity):
         t1 = frame.u * run_time + start_time
         print(frame.index, frame.time)
@@ -997,24 +1071,56 @@ def dynamics_simple(quality=LD, bgcol=BLACK, anim=1):
     name = r'dynamics_simple{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def dynamics_reset(quality=LD, bgcol=BLACK, anim=1):
+    force = 0.
+    n_extend_right=200
+    n_extend_left=200
+    x0, p0 = (0., 0.)
+    run_time=1.
+    real_time = 0.
+    if anim == 1:
+        x0, p0 = (0., 0.)
+        n_extend_right = 1000
+        n_extend_left = 1000
+        real_time = 4
+        x1, p1 = (-3.5, 3.5)
+    elif anim == 2:
+        x0, p0 = (-3.5, 3.5)
+        n_extend_right=2000
+        real_time = 4
+        x1, p1 = (-3.5, 3.5)
+    elif anim == 3:
+        x0, p0 = (-3.5, 3.5)
+        force = 1.
+        n_extend_right=2000
+        n_extend_left=2000
+        real_time = 10
+        r = 3.5 / math.sqrt(2)
+        x1, p1 = (-r, r)
+
+    speed = 1.3
+    evolver = WaveEvolution(n_extend_right=n_extend_right, n_extend_left=n_extend_left, speed=speed)
+    evolver.set_gaussian(x0, p0)
+    evolver.V = evolver.xvals1 * force
+    evolver.create_wave()
+    with Off():
+        evolver.evolve(real_time/speed)
+    evolver.set_gaussian(x1, p1)
+    with Sync(run_time=run_time):
+        evolver.evolve(0.)
+
+    name = r'dynamics_reset{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
 def barrier(quality=LD, bgcol=BLACK, anim=1):
     n_extend_right = 2000 if anim == 4 else 200
     n_extend_left = 2000  #if anim == 4 or anim <= 1 else 200
     evolver = WaveEvolution(n_extend_left=n_extend_left, n_extend_right=n_extend_right, speed=1.5)
-    evolver.set_gaussian(-3.5, 3.5)
-    evolver.create_wave()
+    if anim > 0:
+        evolver.set_gaussian(-3.5, 3.5)
+        evolver.create_wave()
 
-    if anim == 1:
-        psi = evolver.psi.clone()
-        for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1., step=1,
-                                     rate_func=rate_funcs.smooth):
-            evolver.psi = psi * frame.u
-            print(frame.u)
-            with frame.context:
-                evolver.evolve(0.)
-        Scene.wait(0.1)
-    else:
-        x = evolver.xvals1
         x0 = 0.
         x1 = 2. if anim <= 3 else 0.15
         rect1 = Surface(grid_height=40, grid_width=40, color=GREY, opacity=0.4).set_shader(default_shader)
@@ -1032,7 +1138,7 @@ def barrier(quality=LD, bgcol=BLACK, anim=1):
         p1.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x0)
         p2.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x1)
         p3.location[..., :] = loc[..., :1] * up * pmax + loc[..., 1:2] * right * (x1 - x0) / 2 + (
-                    origin + out * 0.3 + right * (x0 + x1) / 2)
+                origin + out * 0.3 + right * (x0 + x1) / 2)
         line = Line(origin + right * x1 + out * 0.3 - up * pmax,
                     origin + right * x1 + out * 0.3 + up * pmax,
                     color=GREY, border_width=1, opacity=0.6)
@@ -1042,25 +1148,36 @@ def barrier(quality=LD, bgcol=BLACK, anim=1):
             rect3.spawn()
             line.spawn()
 
-        if anim == 3:
-            with Off():
-                evolver.evolve(0.)
-            dx1 = 0.15 - x1
-            x1 = 0.15
-            loc2 = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x1)
-            loc3 = loc[..., :1] * up * pmax + loc[..., 1:2] * right * (x1 - x0) / 2 + (origin + out * 0.3 + right * (x0 + x1) / 2)
-            with Sync(run_time=1.5):
-                p2.set_non_recursive(location=loc2)
-                p3.set_non_recursive(location=loc3)
-                line.move(right*dx1)
-        else:
-            evolver.V = ((x > 0) & (x < x1)).to(x.dtype) * 20.
-
-            run_time=4.
-
-            for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.identity):
+        if anim == 1:
+            psi = evolver.psi.clone()
+            for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1., step=1,
+                                         rate_func=rate_funcs.smooth):
+                evolver.psi = psi * frame.u
+                print(frame.u)
                 with frame.context:
-                    evolver.evolve(frame.du * run_time)
+                    evolver.evolve(0.)
+            Scene.wait(0.1)
+        else:
+            x = evolver.xvals1
+            if anim == 3:
+                with Off():
+                    evolver.evolve(0.)
+                dx1 = 0.15 - x1
+                x1 = 0.15
+                loc2 = loc[..., :1] * up * pmax + loc[..., 1:2] * out * .3 + (origin + right * x1)
+                loc3 = loc[..., :1] * up * pmax + loc[..., 1:2] * right * (x1 - x0) / 2 + (origin + out * 0.3 + right * (x0 + x1) / 2)
+                with Sync(run_time=1.5):
+                    p2.set_non_recursive(location=loc2)
+                    p3.set_non_recursive(location=loc3)
+                    line.move(right*dx1)
+            else:
+                evolver.V = ((x > 0) & (x < x1)).to(x.dtype) * 20.
+
+                run_time=4.
+
+                for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_funcs.identity):
+                    with frame.context:
+                        evolver.evolve(frame.du * run_time)
 
 
     name = r'potential_barrier{}'.format(anim)
@@ -1096,6 +1213,8 @@ def gaussdensity(quality=LD, bgcol=BLACK, anim=1):
     mn.MathTex.set_default(font_size=30)
     eq1 = mn.MathTex(r'x').move_to(ax.x_axis.get_right() + mn.RIGHT*0.05, aligned_edge=LEFT)
     eq2 = mn.MathTex(r'\psi(x)').move_to(ax.y_axis.get_top() + mn.RIGHT*0.1, aligned_edge=LEFT)
+    VGroup(eq1, eq2[0][2]).set_color(col_x)
+    eq2[0][0].set_color(col_psi)
     ax = ManimMob(VGroup(ax, eq1, eq2))
 
     cam = Scene.get_camera()
@@ -1221,6 +1340,63 @@ def wigner_smooth(quality=LD, bgcol=BLACK, anim=1):
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def spring(quality=LD, bgcol=BLACK, anim=1):
+    length = 1.5
+    r = 0.8
+    turns = 10.
+    right = cast_to_tensor(RIGHT) * r
+    up = cast_to_tensor(UP) * r
+    out = cast_to_tensor(IN)
+    print(OUT)
+    print(out)
+    def f(t):
+        o = cast_to_tensor(ORIGIN.clone())
+        s = t * turns
+        u = r
+        a = s-turns+0.5
+        if a > 0:
+            u *= max(1 - 4*a,0)
+            if s > 1:
+                o += max(a-0., 0) * out
+        s *= 2*PI
+        return o + (right * torch.sin(s) + up * torch.cos(s))*u + out * (2*t-1) * length
+
+    col = Color(SILVER.to_hex())
+    col2 = GOLD
+    # col[:3] *= 0.8
+    col2[:3] *= 0.8
+    pt = f(torch.tensor(1.)) + DOWN*0.5
+    pt2 = pt.clone()
+    ball = Sphere(radius=r*0.55, color=col2).move_to(pt).set_shader(basic_pbr_shader)
+    # ball = ManimMob(mn.Sphere(radius=r*0.5)).move_to(pt)
+
+    crv = ah.curve3d(f, npts=100, border_width=4., border_color=col).set_shader(basic_pbr_shader)
+    points = crv.control_points.location.clone()
+    pts = points.clone()
+    print(points.shape)
+
+    with Off():
+        cam: Camera = Scene.get_camera()
+        cam.set_distance_to_screen(100)
+        cam.set_euler_angles(100*DEGREES, 0*DEGREES, 0*DEGREES)
+        cam.move_to(cam.get_center()*1.45+IN*1)
+        light: PointLight = Scene.get_light_sources()[0]
+        light.orbit_around_point(ORIGIN, -120, axis=OUT)
+        light.move(UP*4)
+        crv.spawn()
+        ball.spawn()
+
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1.5, step=1, rate_func=rate_funcs.identity):
+        u = math.sin(frame.u * 2 * PI)
+        with frame.context:
+            pts[...,2] = (points[...,2] + length) * (1+u*0.3) - length
+            pt2[...,2] = (pt[...,2] + length) * (1+u*0.3) - length
+            crv.control_points.location = pts
+            ball.move_to(pt2)
+
+    render_to_file('spring', render_settings=quality, background_color=bgcol)
+
+
 
 if __name__ == "__main__":
     g1(0.)
@@ -1228,16 +1404,19 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    wigner_anim(quality=LD, bgcol=BLACK, anim=41, show_wave=False, signal_vars=False)
+    # wigner_anim(quality=HD, bgcol=BLACK, anim=42, show_wave=False, signal_vars=False)
     # for anim in [13]:
-    #     evolve_wave(quality=LD, bgcol=BLACK, anim=anim)
-    # dynamics_simple(quality=LD, bgcol=BLACK, anim=4)
-    # barrier(quality=HD, bgcol=TRANSPARENT, anim=4)
+    # evolve_wave(quality=LD, bgcol=BLACK, anim=1, remove_extras=True)
+    # dynamics_reset(quality=HD, bgcol=BLACK, anim=3)
+    # dynamics_simple(quality=HD, bgcol=TRANSPARENT, anim=1, just_wave=True)
+    # barrier(quality=HD, bgcol=TRANSPARENT, anim=1)
     # for i in range(2, 10):
     # for i in [10]:
     #     pendulum(quality=HD, bgcol=TRANSPARENT, anim=i)
     # wigner_intro(HD, bgcol=TRANSPARENT, anim=1)
-    # wigner_intro(HD, bgcol=TRANSPARENT, anim=2)
+    # wigner_intro(HD, bgcol=BLACK, anim=3)
     # gaussdensity(HD, bgcol=TRANSPARENT, anim=2)
     # colourwheel(HD, bgcol=TRANSPARENT)
     # wigner_smooth(quality=HD, bgcol=TRANSPARENT, anim=1)
+    spring(quality=HD, bgcol=TRANSPARENT)
+
