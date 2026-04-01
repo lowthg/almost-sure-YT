@@ -214,12 +214,27 @@ def f22(t):  # stretched plus squeezed to standard gauss
     return [(params, 1.)]
 
 def f23(t):  # stretched plus unequal squeezed Gaussian phase shift
-    params = gauss1d_std(scale=3)
+    scale = 2*math.exp(t*math.log(3/2))
+    params = gauss1d_std(scale=scale)
     params1 = gauss_mult(params, [(-0.5j * t, 0, 0, 0, 0, 1.)])
     params2 = gauss_mult(params, [(0.5j * t, 0, 0, 0, 0, 1.)])
-    phase = np.exp(0.5 * PI * 1j * 2)
-    params3 = gauss_scale(gauss1d_std(scale=0.33), phase)
+    phase = np.exp(0.5 * PI * 1j * t*4)
+    params3 = gauss_scale(gauss1d_std(scale=1/scale), phase*-2/(1+t))
     params = params1 + params2 + params3
+    params = gauss_scale(params, 1. / gauss1d_norm(params))
+    return [(params, 1.)]
+
+def f24(t):  # stretched plus squeezed Gaussian phase shift
+    s = 2.85 * t
+    params1 = gauss1d_std(scale=2)
+    params2 = gauss_scale(gauss1d_std(scale=0.5), -1.)
+    params1 = gauss_shift(params1, s)
+    params2 = gauss_shift(params2, -s)
+    params3 = gauss1d_p_shift(params1, -s)
+    params1 = gauss1d_p_shift(params1, s)
+    params4 = gauss1d_p_shift(params2, s)
+    params2 = gauss1d_p_shift(params2, -s)
+    params = params1 + params2 + params3 + params4
     params = gauss_scale(params, 1. / gauss1d_norm(params))
     return [(params, 1.)]
 
@@ -399,8 +414,14 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
 
     xmin, xmax = xrange = (-5., 5.)
     ymin, ymax = yrange = (-5., 5.)
+    # xmin, xmax = xrange = (-2., 2.)
+    # ymin, ymax = yrange = (-2., 2.)
 
     origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, signal_vars=signal_vars)
+    # with Off():
+    #     cam = Scene.get_camera()
+    #     cam.move_to(cam.get_center()*1.5+IN)
+    #     ax[:2].despawn()
 
     surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
@@ -530,7 +551,34 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
         f = f23
         with Off():
             ax.despawn()
-        rate_func = rate_funcs.identity
+        # rate_func = rate_funcs.identity
+    elif anim == 43:
+        part = 11
+        f = f23
+        with Off():
+            ax.despawn()
+    elif anim == 44:
+        part = 11
+        f = f8
+        with Off():
+            ax.despawn()
+    elif anim == 45:
+        part = 12
+        f = f23
+        with Off():
+            ax.despawn()
+    elif anim == 46:
+        part = 12
+        f = f23
+        cam = Scene.get_camera()
+        with Off():
+            ax.despawn()
+            cam.orbit_around_point(origin, 180 * DEGREES, OUT)
+    elif anim == 47:
+        run_time = 4.
+        f = f24
+        with Off():
+            ax.despawn()
     elif anim == -1:
         run_time=0.2
         f = g1
@@ -611,6 +659,12 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
             with Sync(run_time=1):
                 cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
                 set_frame(f0(1.), smooth2*smooth2)
+        elif part == 7:
+            with Sync(run_time=4):
+                cam.orbit_around_point(origin, 360*DEGREES, cam.get_right_direction())
+        elif part == 8:
+            with Sync(run_time=3):
+                cam.orbit_around_point(origin, 180*DEGREES, OUT)
 
     if part == 1:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
@@ -635,6 +689,9 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
         if part == 8: move_view(cam, 4)
         if part == 9: move_view(cam, 5)
         if part == 10: move_view(cam, 6)
+        if part == 11: move_view(cam, 7)
+        if part == 12: move_view(cam, 8)
+
 
 
     Scene.wait(1.1/quality.frames_per_second)
@@ -1404,7 +1461,8 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
-    # wigner_anim(quality=HD, bgcol=BLACK, anim=42, show_wave=False, signal_vars=False)
+    # wigner_anim(quality=HD, bgcol=BLACK, anim=45)
+    wigner_anim(quality=HD, bgcol=BLACK, anim=47)
     # for anim in [13]:
     # evolve_wave(quality=LD, bgcol=BLACK, anim=1, remove_extras=True)
     # dynamics_reset(quality=HD, bgcol=BLACK, anim=3)
@@ -1418,5 +1476,5 @@ if __name__ == "__main__":
     # gaussdensity(HD, bgcol=TRANSPARENT, anim=2)
     # colourwheel(HD, bgcol=TRANSPARENT)
     # wigner_smooth(quality=HD, bgcol=TRANSPARENT, anim=1)
-    spring(quality=HD, bgcol=TRANSPARENT)
+    # spring(quality=HD, bgcol=TRANSPARENT)
 
