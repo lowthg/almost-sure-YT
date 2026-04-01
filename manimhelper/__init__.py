@@ -9,6 +9,11 @@ import math
 def pos(dir=ORIGIN):
     return RIGHT * config.frame_x_radius * dir[0] + UP * config.frame_y_radius * dir[1]
 
+
+def coords_to_point(x, y):
+    return RIGHT * (x-0.5) * config.frame_width + UP * (y-0.5) * config.frame_height
+
+
 def align_sub(source, subobject, target, direction=ORIGIN, coor_mask=np.array([1, 1, 1]), **kwargs) -> Mobject:
     """
     move object to align subobject with target
@@ -30,15 +35,19 @@ def fade_replace(obj1: Mobject, obj2: Mobject, coor_mask=np.array([1, 1, 1]), **
     return FadeOut(obj1, shift=shift, **kwargs), FadeIn(obj2, shift=shift, **kwargs)
 
 
-def stretch_replace(*obj: Mobject, **kwargs):
+def stretch_replace(*obj: Mobject, copy_colors=None, **kwargs):
     """
     Fade out obj1 into obj2, stretching to fit
     For when the objects differ so that ReplacementTransform doesn't work
     """
+    if copy_colors is None:
+        copy_colors = stretch_replace.copy_colors
     obj1 = []
     obj2 = []
     for i in range(0, len(obj), 2):
         source, target = (obj[i], obj[i+1])
+        if copy_colors:
+            copy_colors_eq(source, target)
         w1 = source.width
         w2 = target.width
         h1 = source.height
@@ -49,6 +58,7 @@ def stretch_replace(*obj: Mobject, **kwargs):
         obj2 += [target, target2]
     return ReplacementTransform(VGroup(*obj1), VGroup(*obj2), **kwargs)
 
+stretch_replace.copy_colors = False
 
 def transform(*args, **kwargs):
     """
