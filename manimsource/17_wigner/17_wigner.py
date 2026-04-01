@@ -47,7 +47,7 @@ class LinearComb(Scene):
 
 class Latexx(Scene):
     def construct(self):
-        eq = MathTex(r'x', font_size=80, stroke_width=2)
+        eq = MathTex(r'x', font_size=80, stroke_width=2).set_color(col_x)
         self.add(eq)
 
 class Latexm(Scene):
@@ -143,6 +143,13 @@ class SlitEqn(Scene):
         eq4 = MathTex(r'x + \frac{p}{m}t', font_size=80, stroke_width=2)
         eq5 = MathTex(r'x + \frac{t}{m}p', font_size=80, stroke_width=2)
         VGroup(eq1, eq2).arrange(DOWN, buff=1.8, aligned_edge=RIGHT)
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1).set_color(col_x)
+        VGroup(eq4[0][2]).set_color(col_p)
+        VGroup(eq4[0][-2:], eq2).set_color(col_var)
+        eq2[0][0].set_color(YELLOW)
+        print(YELLOW.to_rgb())
 
         eq3.move_to(eq1).align_to(eq1, RIGHT).shift(DOWN*0.5)
         mh.align_sub(eq5, eq5[0][0], eq3[0][0]).align_to(eq1, RIGHT)
@@ -274,7 +281,7 @@ class WaveFunction(FourierTomography):
         VGroup(eq1[1][1], eq1[1][3], eq4[2][-2], eq4[2][-3], eq4[3][0]).set_color(col_special)
         VGroup(eq1[1][2], eq2[0][0], eq2[0][-2], eq3[0], eq3[2][0], eq4[2][1:-4]).set_color(col_op)
         VGroup(eq2[0][-1], eq2[2][-1], eq3[3], eq4[2][0], eq4[2][-1], eq4[2][-4], eq4[3][-1], eq4[3][-3], eq4[3][3],
-               eq5[2][2]).set_color(col_num)
+               eq5[2][2], eq5[3][-3]).set_color(col_num)
         VGroup(eq2[2]).set_color(col_txt)
         VGroup(eq2[0][3], eq4[3][2], eq3[2][1]).set_color(col_x)
         VGroup(eq4[2][-2], eq4[3][-2]).set_color(col_var)
@@ -1244,7 +1251,7 @@ class OperatorExp2(OperatorExp):
         eq8 = MathTex(r'\psi_t(x)', r'=', r'e^{it(uX+Pv)}', r'\psi(x)')
         eq9 = MathTex(r'\frac{\partial}{\partial t}', r'\psi_t(x)', r'=', r'i(uX+Pv)', r'\psi_t(x)')
         mh.font_size_sub(eq9, 0, 70)
-        eq9_1 = MathTex(r'\frac{\partial}{\partial t}', r'\psi_t(x)', r'=', r'i\Big(ux+v', r'\frac{\partial}{\partial x}', r'\Big)', r'\psi_t(x)')
+        eq9_1 = MathTex(r'\frac{\partial}{\partial t}', r'\psi_t(x)', r'=', r'\Big(iux+v', r'\frac{\partial}{\partial x}', r'\Big)', r'\psi_t(x)')
         mh.font_size_sub(eq9_1, 0, 70)
         mh.font_size_sub(eq9, 4, 70)
         eq10 = MathTex(r'\psi_t(x)', r'=', r'e^{itPv/2}', r'e^{ituX}', r'e^{itPv/2}', r'\psi(x)')
@@ -1256,7 +1263,7 @@ class OperatorExp2(OperatorExp):
         mh.font_size_sub(eq10_3, 2, 60)
         eq10_3 = VGroup(eq10_3[0], VGroup(*eq10_3[1][:], *eq10_3[2][:], *eq10_3[3][:]))
         eq11 = MathTex(r'\psi_t(x)', r'=', r'e^{itu(x+tv/2)}', r'\psi(x', r'+tv', r')')
-        mh.font_size_sub(eq11, 4, 60)
+        # mh.font_size_sub(eq11, 4, 60)
         VGroup(eq1, eq2, eq3, eq4, eq4_1, eq5, eq6, eq7, eq8, eq9, eq10, eq10_1, eq10_2, eq10_3, eq11).set_z_index(1)
 
         mh.rtransform.copy_colors = True
@@ -1359,12 +1366,12 @@ class OperatorExp2(OperatorExp):
         self.wait(0.1)
         self.play(FadeIn(eq9))
         self.wait(0.1)
-        self.play(mh.rtransform(eq9[:3], eq9_1[:3], eq9[3][2], eq9_1[3][2], eq9[3][0], eq9_1[3][0],
+        self.play(mh.rtransform(eq9[:3], eq9_1[:3], eq9[3][2], eq9_1[3][2], eq9[3][0], eq9_1[3][1],
                                 eq9[3][4], eq9_1[3][4], eq9[3][6], eq9_1[3][5],
                                 eq9[4], eq9_1[6]
                                 ),
                   mh.stretch_replace(eq9[3][3], eq9_1[3][3]),
-                  mh.stretch_replace(eq9[3][1], eq9_1[3][1]),
+                  mh.stretch_replace(eq9[3][1], eq9_1[3][0]),
                   mh.stretch_replace(eq9[3][-1], eq9_1[5]),
                   mh.fade_replace(eq9[3][5], eq9_1[4]),
                   run_time=1.5)
@@ -2417,6 +2424,7 @@ class Example(ThreeDScene):
         self.add(ax, txt1, txt2, surf)
         self.wait()
 
+
 class STFT(Scene):
     fill_op = 0.7
     bgcol = GREY
@@ -2840,16 +2848,18 @@ class Rho2(GaussSmooth):
 
 class SignalVars(GaussSmooth):
     def construct(self):
-        MathTex.set_default(stroke_width=4, font_size=80, color=RED)
+        MathTex.set_default(stroke_width=3, font_size=80, color=RED)
         eq1 = Tex(r'\sf position ', r'$x$', r' $\rightarrow$ ', r'time ', r'$t$')
         eq2 = Tex(r'\sf momentum ', r'$p$', r' $\rightarrow$ ', r'frequency ', r'$f$', r' or ', r'$\omega$')
         eq3 = Tex(r'\sf \underline{quantum theory}', color=PURPLE)
         eq4 = Tex(r'\sf \underline{signal processing}', color=PURPLE)
+        VGroup(eq1[1], eq1[4]).set_color(col_x)
+        VGroup(eq2[1], eq2[4], eq2[6]).set_color(col_p)
         mh.align_sub(eq2.next_to(eq1, DOWN), eq2[2], eq1[2], coor_mask=RIGHT)
-        eq1 = eq_shadow(eq1, bg_color=WHITE, fg_z_index=1, bg_stroke_width=6)
-        eq2 = eq_shadow(eq2, bg_color=WHITE, fg_z_index=1, bg_stroke_width=6)
-        eq3 = eq_shadow(eq3, bg_color=WHITE, fg_z_index=1, bg_stroke_width=6)
-        eq4 = eq_shadow(eq4, bg_color=WHITE, fg_z_index=1, bg_stroke_width=6)
+        eq1 = eq_shadow(eq1, bg_color=WHITE, fg_z_index=1, bg_stroke_width=5)
+        eq2 = eq_shadow(eq2, bg_color=WHITE, fg_z_index=1, bg_stroke_width=5)
+        eq3 = eq_shadow(eq3, bg_color=WHITE, fg_z_index=1, bg_stroke_width=5)
+        eq4 = eq_shadow(eq4, bg_color=WHITE, fg_z_index=1, bg_stroke_width=5)
         eq3.next_to(eq1[:2], UP).align_to(eq1[1], RIGHT)
         eq4.next_to(eq1[3:], UP).align_to(eq1[3], LEFT)
         VGroup(eq1, eq2, eq3, eq4).move_to(ORIGIN)
@@ -3296,7 +3306,7 @@ class Dynamics(GaussSmooth):
         eq1 = MathTex(r'i\,d\psi(x)/dt', r'=', r'H\psi(x)')
         eq2 = MathTex(r'H', r'=', r'{\sf Hamiltonian\ operator}')
         eq3 = MathTex(r'H', r'=', r'P^2/2m + V(x)')
-        eq4 = MathTex(r'H', r'=', r'P^2/2m', r'=', r'\frac1{2m}',r'\partial^2/\partial x^2')
+        eq4 = MathTex(r'H', r'=', r'P^2/2m', r'=', r'\frac{-1}{2m}',r'\partial^2/\partial x^2')
         mh.font_size_sub(eq4, 4, 60)
 
         mh.rtransform.copy_colors = True
@@ -3307,7 +3317,7 @@ class Dynamics(GaussSmooth):
         VGroup(eq1[0][8], eq3[2][4], eq4[4][-1]).set_color(col_var)
         VGroup(eq1[0][1], eq1[0][-2], eq1[2][0], eq2[0], eq3[2][-4], eq4[5][0], eq4[5][3]).set_color(col_op)
         VGroup(eq3[2][0]).set_color(col_p)
-        VGroup(eq3[2][1], eq3[2][3], eq4[4][0], eq4[4][2], eq4[5][1], eq4[5][-1]).set_color(col_num)
+        VGroup(eq3[2][1], eq3[2][3], eq4[4][1], eq4[4][3], eq4[5][1], eq4[5][-1]).set_color(col_num)
 
         eq2.next_to(eq1, DOWN, buff=0.5)
         mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=UP)
@@ -3499,7 +3509,7 @@ class ClassicalvsQM(GaussSmooth):
 
         VGroup(eq7[2][-2], eq7[-2][0]).set_color(col_special)
 
-        VGroup(eq7[-2][2], eq7[6][1], eq12[2][2], eq12[6][0], eq22[3][1]).set_color(col_i)
+        VGroup(eq7[-2][2], eq7[6][1], eq12[2][2], eq12[6][0], eq22[3][1], eq27[5][5]).set_color(col_i)
 
         mh.copy_colors_eq(eq7[0][:], eq3[0][1:7])
         mh.copy_colors_eq(eq7[5], eq7[8], eq7[5], eq8[2], eq7[5], eq9[2])
@@ -3519,6 +3529,7 @@ class ClassicalvsQM(GaussSmooth):
         line1 = Rectangle(width=config.frame_width + 0.5, height=3, stroke_width=5, stroke_color=WHITE,
                           fill_color=GREY*0.4).set_z_index(0.5)
         line1.align_to(eq5, DOWN).shift(DOWN*0.2)
+        eq5.shift(UP*0.1)
         eq6.next_to(eq5, LEFT, buff=0.6)
         VGroup(eq6, eq5, line1).set_opacity(0.65)
         VGroup(eq5, eq6).move_to(ORIGIN, coor_mask=RIGHT)
@@ -3734,11 +3745,58 @@ class ClassicalvsQM(GaussSmooth):
         self.play(mh.rtransform(eq30[1][1:], eq31[0][2:]), FadeOut(eq30[1][0]), FadeIn(eq31[0][:2]))
         self.wait()
 
-"""
-integral exp(-ax^2+bx) dx
-y = sqrt(a)x-b/2/sqrt(a)
-integral exp(-y^2+b^2/(4a)) dy / sqrt(a) = sqrt(pi/a) * exp(b^2/4a)
-"""
+class ExpXP(ClassicalvsQM):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=1.5)
+        eq1 = MathTex(r'e^{iuX}\psi(x)', r'=', r'e^{iux}\psi(x)')
+        eq2 = MathTex(r'e^{iPv}\psi(x)', r'=', r'\psi(x+v)')
+
+        VGroup(eq1[0][0]).set_color(col_special)
+        VGroup(eq1[0][1]).set_color(col_i)
+        VGroup(eq1[0][2]).set_color(col_p)
+        VGroup(eq1[0][3], eq1[0][6]).set_color(col_x)
+        VGroup(eq1[0][4]).set_color(col_psi)
+        mh.copy_colors_eq(eq1[0], eq2[0], eq1[0], eq1[2], eq1[0][4:7], eq2[2][:3], eq1[0][-2:], eq2[2][-2:])
+
+        eq2.next_to(eq1, DOWN, buff=0.5)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=RIGHT)
+        self.add(eq1, eq2)
+
+class Skews(Scene):
+    def construct(self):
+        pts = []
+        spacing = 1.
+        theta = 0.1
+        lenx = config.frame_x_radius * 1.2
+        leny = config.frame_y_radius * 1.2
+        nx = 4
+        ny = 8
+        for i in range(-nx, nx+1):
+            pts.append(LEFT * lenx + UP * spacing * i)
+            pts.append(RIGHT * lenx + UP * spacing * i)
+        for i in range(-ny, ny+1):
+            pts.append(UP * leny + RIGHT * spacing * i)
+            pts.append(DOWN * leny + RIGHT * spacing * i)
+
+        kwargs = {'stroke_width': 5, 'stroke_color': BLUE}
+        lines = VGroup(*[Line(pts[i], pts[i+1], **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        lines0 = lines.copy().set_color(GREY).set_z_index(0)
+
+
+        for pt in pts:
+            pt[1] += pt[0] * theta
+        lines2 = VGroup(*[Line(pts[i], pts[i+1], **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        for pt in pts:
+            pt[0] -= pt[1] * theta
+        lines3 = VGroup(*[Line(pts[i], pts[i+1], **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        self.add(lines, lines0)
+        self.wait(0.1)
+        self.play(ReplacementTransform(lines, lines2))
+        self.wait(0.1)
+        self.play(ReplacementTransform(lines2, lines3))
+        self.wait()
+
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
         STFTWigner().render()
