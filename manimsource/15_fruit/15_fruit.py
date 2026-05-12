@@ -486,9 +486,11 @@ class Ratios(ClickBaitEqScale):
 
         self.add(eq1)
         self.wait(0.1)
+        eq1_ = eq1[0].copy().set_opacity(0.3)
+        eq1[0].set_z_index(5)
         self.play(mh.rtransform(eq1[0], eq2[0],
-                                eq1[0][0].copy(), eq2[2][0], eq1[0][1:3].copy(), eq2[2][2:4],
-                                eq1[0][3:5].copy(), eq2[2][5:7], eq1[0][5:].copy(), eq2[2][8:],
+                                eq1_[0].copy(), eq2[2][0], eq1_[1:3].copy(), eq2[2][2:4],
+                                eq1_[3:5].copy(), eq2[2][5:7], eq1_[5:].copy(), eq2[2][8:],
                                 run_time=1.5),
                   Succession(Wait(0.8), FadeIn(eq2[1])),
                   Succession(Wait(1.0), FadeIn(eq2[2][1], eq2[2][4], eq2[2][7])),
@@ -531,10 +533,11 @@ class Ratios(ClickBaitEqScale):
         self.wait(0.1)
         self.play(FadeOut(eq4))
         self.wait(0.1)
-        eq5_ = eq5[:7].copy().move_to(ORIGIN, coor_mask=RIGHT)
-        self.play(FadeIn(eq5_))
+        eq5_1 = eq5[:7].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        eq5_ = eq5_1.copy().set_opacity(0.3)
+        self.play(FadeIn(eq5_1.set_z_index(5)))
         self.wait(0.1)
-        self.play(mh.rtransform(eq5_.copy(), eq5[:7],
+        self.play(mh.rtransform(eq5_1, eq5[:7],
                                 eq5_[0][0], eq5[8][0], eq5_[1], eq5[9], eq5_[2][0], eq5[10][0],
                                 eq5_[3], eq5[11], eq5_[4][0], eq5[12][0], eq5_[5:], eq5[13:],
                                 run_time=1.7),
