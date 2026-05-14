@@ -348,10 +348,17 @@ def cube_curve2(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
                      [mn.YELLOW, mn.ORANGE])
     dots = Group(*pts)
 
+    eq = mn.MathTex(r'PQ', font_size=30)[0].rotate(-PI/2, mn.RIGHT)
+    c0 = pts[0][0].get_center()[0,0,:].numpy()
+    c1 = pts[1][0].get_center()[0,0,:].numpy()
+    eq[0].move_to(c0*1.2).rotate(PI,mn.IN)
+    eq[1].move_to(c1*1.2).rotate(PI,mn.IN)
+
     with Sync() if anim == 3 else Off():
         cam.orbit_around_point(ORIGIN, 40, OUT)
     with Sync() if anim == 3 else Off():
         dots.spawn()
+        ManimMob(eq).spawn()
 
     if anim == 3:
         return
@@ -406,38 +413,41 @@ def cube_curve2(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
 
     p1_2 = point(point_r1_2, use_xyz)
     pts = get_points(r, [p1_2], [mn.PINK])
-
-    with Sync(run_time=1.5):
+    if anim == 7:
+        with Sync(run_time=1.5):
+            cam.orbit_around_point(ORIGIN, 140, OUT)
+        with Sync():
+            circle_thru_points(r, p_1, p1_2, fps=quality.frames_per_second, run_time=2.)
+            with Sync(run_time=2.):
+                cam.orbit_around_point(ORIGIN, -50, OUT)
+        pts[0].spawn()
+        return
+    with Off():
         cam.orbit_around_point(ORIGIN, 140, OUT)
-    with Sync():
-        circle_thru_points(r, p_1, p1_2, fps=quality.frames_per_second, run_time=2.)
-        # with Seq():
-        #     Scene.wait(0.5)
-        with Sync(run_time=2.):
-            cam.orbit_around_point(ORIGIN, -50, OUT)
-    pts[0].spawn()
+        circle_thru_points(r, p_1, p1_2, fps=quality.frames_per_second, run_time=.1)
+        cam.orbit_around_point(ORIGIN, -50, OUT)
+        pts[0].spawn()
 
     if anim == 8:
-        # with Sync(run_time=16, rate_func=rate_funcs.identity):
-        #     cam.orbit_around_point(ORIGIN, 360, IN)
+        cam.orbit_around_point(ORIGIN, -30, OUT)
+        return
+    with Off():
+        cam.orbit_around_point(ORIGIN, -30, OUT)
 
-        # with Sync():
-        #     pos_dots.spawn()
-        # with Sync():
-        #     pos_dots.despawn()
-
-
-        arc = circle_thru_points(r, point_p1, point_r1_2, fps = quality.frames_per_second, run_time=0.5)
-        pts = get_points(r, [point_r1_2], [mn.PINK])
-        with Sync():
-            pts[0].spawn()
-            arc.despawn()
-
-        arc = circle_thru_points(r, p8, point_r9_, fps = quality.frames_per_second, run_time=0.5)
-        pts = get_points(r, [point_r9_], [mn.PINK])
-        with Sync():
-            pts[0].spawn()
-            arc.despawn()
+    p_r9 = point(point_r9_, use_xyz)
+    pts = get_points(r, [p_r9], [mn.ManimColor((.8,1.,.5))])
+    c = pts[0][0].get_center()[0,0,:].numpy()
+    eq = mn.MathTex(r'R', font_size=30)[0].rotate(-PI/2, mn.RIGHT)
+    eq.move_to(c*1.3).rotate(PI,mn.IN)
+    rt = 2.5
+    with Sync():
+        circle_thru_points(r, p_r8, p_r9, fps = quality.frames_per_second, run_time=rt)
+        with Sync(run_time=rt):
+            cam.orbit_around_point(ORIGIN, 80, OUT)
+            cam.orbit_around_point(ORIGIN, 30, cam.get_right_direction())
+    with Sync():
+        pts[0].spawn()
+        ManimMob(eq).spawn()
 
 
 def cube_curve(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
@@ -447,11 +457,128 @@ def cube_curve(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
+def surface_plot(quality=LD, bgcol=BLACK, anim=1):
+    r = 2.
+    xrange = [-1.2, 1.2]
+    xlen = (xrange[1] - xrange[0])*r
+    ax = mn.ThreeDAxes(x_length=xlen, y_length=xlen, z_length=xlen, x_range=xrange, y_range=xrange, z_range=xrange,
+                       z_axis_config={'rotation': PI},
+                       axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                    "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                    "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                    },
+                       )
+    ax.shift(-ax.coords_to_point(0, 0, 0))
+    xyz_str = r'xyz'
+    eq = mn.MathTex(xyz_str, font_size=30)[0].rotate(-PI/2, mn.RIGHT)
+    eq[0].move_to(ax.coords_to_point(1.3,0,0)).rotate(PI,mn.IN)
+    eq[1].move_to(ax.coords_to_point(0,1.3,0)).rotate(-PI/2,mn.IN)
+    eq[2].move_to(ax.coords_to_point(0,0,1.26)).rotate(-3*PI/4, mn.IN)
+
+    ax = ManimMob(ax)
+    cam: Camera = Scene.get_camera()
+    eq = ManimMob(eq)
+
+    with Off():
+        cam.set_distance_to_screen(10).move_to(cam.get_center() * 0.8)
+        # cam.set_euler_angles(80*DEGREES, 0*DEGREES, 150*DEGREES)
+        # cam.set_euler_angles(60*DEGREES, 0*DEGREES, 150*DEGREES)
+        cam.set_euler_angles(80*DEGREES, 0*DEGREES, 120*DEGREES)
+        cam.move(OUT*0.32)
+        ax.spawn()
+        eq.spawn()
+
+    curves = CubicCurve(du=0.01)
+    curves = [(-u+v+w, u-v+w, u+v-w) for (u,v,w) in curves]
+    normalize_curves(curves)
+    plts = []
+    surf_col = (BLUE+GREY)*0.5
+    surf_col2 = surf_col*0.7
+    surf_col2[4] = 0.85
+    surf_col[4] = 0.85
+    r = 1.5
+    theta = [0.]
+    v = np.linspace(0, r, 8)
+    for x in v[1:-1]:
+        theta += [x - 0.01, x, x + 0.01]
+    theta += [r]
+    m = len(theta)
+    theta = torch.tensor(theta)
+
+    pts_arr = []
+    for u,v,w in curves:
+        pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT)) * r
+        pts_arr.append(pts)
+        # crv = curve_surface(pts, width=0.03, color=BLUE)
+        n = pts.shape[0]
+        dp = pts[1:, :] - pts[:-1, :]
+        seglen = torch.linalg.norm(dp, dim=1)
+        u = torch.zeros(n, dtype=pts.dtype, device=pts.device)
+        u[1:] = torch.cumsum(seglen, dim=0)
+
+        crv = Surface(grid_height=m, grid_width=n)#.set_shader(basic_pbr_shader)
+        # theta[:m-1] = torch.linspace(0., r * 0.9, m-1)
+        p = crv.get_descendants()[1]
+        p.location[...] = (
+                pts[:, None, :] * theta[None, :, None]
+        ).reshape(1, -1, 3)
+        v = torch.zeros(n, device=pts.device) + 1.
+        nn = round(u[-1].item() / 0.3)
+        width = u[-1].item() / nn
+        w = width*0.3
+        for i in range(n-1):
+            if u[i] < w <= u[i+1]:
+                w += width
+                v[i] = 0.
+
+        # nn = round(n / 20)
+        # for i in range(0, nn):
+        #     v[round(i * n / nn) + 10] = 0.
+        col = p.color
+        col[...] = (
+                v[:, None] * surf_col[None, :] + (1-v[:, None]) * surf_col2[None, :]
+        ).repeat_interleave(m, dim=0).unsqueeze(0)
+        for i in range(2, m, 3):
+            col[0, i::m, :] = surf_col2
+        # col[0,m-1::m, 4] = 0.
+        plts.append(crv)
+    plt = Group(*plts)
+
+    with Off():
+        plt.spawn()
+
+    if anim == 1:
+        ps = [_.get_descendants()[1] for _ in plts]
+        locs = [_.location.clone() for _ in ps]
+        for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1.5, rate_func=rate_funcs.ease_out_exp, step=1):
+            r1 = frame.u * r
+            with frame.context:
+                for p, pts, loc in zip(ps, pts_arr, locs):
+                    loc[...] = (
+                        pts[:, None, :] * theta[None, :, None].clip(0, r1)
+                    ).reshape(1, -1, 3)
+                    p.set_non_recursive(location=loc)
+    elif anim == 2:
+        gp = Group(ax, eq, plt)
+        with Sync(rate_func=rate_funcs.identity, run_time=6):
+            gp.orbit_around_point(ORIGIN, -360, OUT)
+
+    if anim > 0:
+        Scene.wait(0.1)
+
+    name = 'surface{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
-    anim = 7
     # cube_curve(quality=HD, use_xyz=True, anim=1)
     # cube_curve(quality=HD, use_xyz=True, anim=2)
-    cube_curve(quality=LD, use_xyz=True, anim=anim)
+    # for anim in range(1, 9):
+    # cube_curve(quality=HD, use_xyz=True, anim=9)
+    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=1)
+    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
+    surface_plot(quality=HD, bgcol=BLACK, anim=0)
+
 
