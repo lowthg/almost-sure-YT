@@ -4,6 +4,7 @@ import colorsys
 from algan import *
 import manim as mn
 import scipy as sp
+from algan.external_libraries.manim import DashedLine
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 
@@ -144,16 +145,22 @@ def CubicCurvePosNeg(du = 0.02, a=11):
     (1+w)(v-w)^2+(1+w^2-aw)(
     """
 
-def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, width=0.03):
+def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, width=0.03, closed=True, **kwargs):
     if normals is None:
         normals = pts
     if tangents is None:
-        tangents = torch.roll(pts, shifts=1, dims=0) - torch.roll(pts, shifts=-1, dims=0)
+        if closed:
+            tangents = torch.roll(pts, shifts=1, dims=0) - torch.roll(pts, shifts=-1, dims=0)
+        else:
+            tangents = torch.empty_like(pts)
+            tangents[1:-1] = pts[2:] - pts[:-2]
+            tangents[0] = pts[1] - pts[0]
+            tangents[-1] = pts[-1] - pts[-2]
     du = torch.nn.functional.normalize(normals, dim=1)
     dv = torch.nn.functional.normalize(torch.linalg.cross(normals, tangents), dim=1)
     theta = torch.linspace(-math.pi, math.pi, resolution, device=pts.device)
     n = pts.shape[0]
-    crv = Surface(grid_height=resolution, grid_width=n, color=color)
+    crv = Surface(grid_height=resolution, grid_width=n, color=color, **kwargs)
     crv.get_descendants()[1].location[...] = (
                 pts[:, None, :] +
                 (torch.sin(theta)[None, :, None] * du[:, None, :] +
@@ -353,12 +360,13 @@ def cube_curve2(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
     c1 = pts[1][0].get_center()[0,0,:].numpy()
     eq[0].move_to(c0*1.2).rotate(PI,mn.IN)
     eq[1].move_to(c1*1.2).rotate(PI,mn.IN)
+    eq = ManimMob(eq)
 
     with Sync() if anim == 3 else Off():
         cam.orbit_around_point(ORIGIN, 40, OUT)
     with Sync() if anim == 3 else Off():
         dots.spawn()
-        ManimMob(eq).spawn()
+        eq.spawn()
 
     if anim == 3:
         return
@@ -458,9 +466,8 @@ def cube_curve(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
 
 
 def surface_plot(quality=LD, bgcol=BLACK, anim=1):
-    r = 2.
     xrange = [-1.2, 1.2]
-    xlen = (xrange[1] - xrange[0])*r
+    xlen = (xrange[1] - xrange[0])*2
     ax = mn.ThreeDAxes(x_length=xlen, y_length=xlen, z_length=xlen, x_range=xrange, y_range=xrange, z_range=xrange,
                        z_axis_config={'rotation': PI},
                        axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
@@ -477,7 +484,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
 
     ax = ManimMob(ax)
     cam: Camera = Scene.get_camera()
-    eq = ManimMob(eq)
+    eq = Group(*[ManimMob(_) for _ in eq[:]])
 
     with Off():
         cam.set_distance_to_screen(10).move_to(cam.get_center() * 0.8)
@@ -496,7 +503,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
     surf_col2 = surf_col*0.7
     surf_col2[4] = 0.85
     surf_col[4] = 0.85
-    r = 1.5
+    r = 2.25
     theta = [0.]
     v = np.linspace(0, r, 8)
     for x in v[1:-1]:
@@ -507,7 +514,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
 
     pts_arr = []
     for u,v,w in curves:
-        pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT)) * r
+        pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT))
         pts_arr.append(pts)
         # crv = curve_surface(pts, width=0.03, color=BLUE)
         n = pts.shape[0]
@@ -523,9 +530,10 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                 pts[:, None, :] * theta[None, :, None]
         ).reshape(1, -1, 3)
         v = torch.zeros(n, device=pts.device) + 1.
-        nn = round(u[-1].item() / 0.3)
+        w = 0.3 / 1.5
+        nn = round(u[-1].item() / w)
         width = u[-1].item() / nn
-        w = width*0.3
+        w = width * 0.3
         for i in range(n-1):
             if u[i] < w <= u[i+1]:
                 w += width
@@ -547,6 +555,17 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
     with Off():
         plt.spawn()
 
+    def get_line(pt, scale=1., **kwargs):
+        m = 7
+        a = torch.linspace(-r, r, m).float()
+        normal = LEFT + DOWN + IN
+        pt = pt.float()
+        lpts = a[:,None] * pt[None,:]
+        tgts = pt.unsqueeze(0).expand(m, 3)
+        normal1 = normal - torch.dot(normal, pt) / torch.dot(pt, pt) * pt
+        normals = normal1.unsqueeze(0).float().expand(m, 3)
+        return curve_surface(lpts*scale, normals=normals, tangents=tgts, resolution=8, color=YELLOW, width=0.05, **kwargs)
+
     if anim == 1:
         ps = [_.get_descendants()[1] for _ in plts]
         locs = [_.location.clone() for _ in ps]
@@ -562,6 +581,140 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
         gp = Group(ax, eq, plt)
         with Sync(rate_func=rate_funcs.identity, run_time=6):
             gp.orbit_around_point(ORIGIN, -360, OUT)
+    elif anim >= 3:  # draw line
+        pts = pts_arr[1]
+        with Off():
+            plt.set_opacity_via_color(0.8)
+        npts = pts.shape[0]
+
+        if anim == 3:
+            line1 = get_line(pts[0], 0.)
+            line2 = get_line(pts[0])
+            with Off():
+                line1.spawn()
+            with Sync(rate_func=rate_funcs.ease_out_exp):
+                line1.become(line2)
+        elif anim == 4:
+            add_to_scene = True
+            for frame in ah.FrameStepper(fps = quality.frames_per_second, step=1, rate_func=rate_funcs.smooth, run_time=2):
+                i = (npts-1) * (1-frame.u)
+                i0 = min(int(i), npts - 2)
+                p = i0 + 1 - i
+                q = i - i0
+                pt = (pts[i0] * p + pts[i0+1] * q).float()
+                line = get_line(pt, add_to_scene=add_to_scene)
+                with frame.context:
+                    if add_to_scene:
+                        line.spawn()
+                        desc = line.get_descendants()[1]
+                        add_to_scene = False
+                    else:
+                        desc.set_non_recursive(location=line.get_descendants()[1].location.clone())
+        elif 5 <= anim <= 9:
+            nplane = 10
+            z0 = r*0.3
+            line = get_line(pts[0])
+            pt = pts[0] / pts[0][-1] * -z0
+            dot = ManimMob(mn.Dot3D(pt.numpy(), radius=0.08, color=mn.ORANGE))
+            if anim <=6:
+                with Off():
+                    line.spawn()
+                    dot.spawn()
+
+            plane = Surface(color=GREY, opacity=0.8, grid_height=nplane)
+            p = plane.get_descendants()[1]
+            xmax = 2.04
+            xplane = torch.linspace(-xmax, xmax, nplane)
+            p.location[0,:,0] = xplane.repeat_interleave(nplane)
+            p.location[0,:,1] = xplane.repeat(nplane)
+            p.location[0,:,2] = -z0
+
+            crvs = []
+            for pts1 in pts_arr:
+                pts = pts1[:-1].float() * r
+                z1 =  0.01-z0
+                mask = (pts[:,2] <= z1 * 0.2) & (pts[:,0].abs() < pts[:,2] * -xmax/z0) & (pts[:,1].abs() < pts[:,2] * -xmax/z0) # abs(pts[:,0] / pts[:,2] * -z0) < xmax
+                starts = torch.where(mask & ~torch.roll(mask,1))[0]
+                ends = torch.where(mask & ~torch.roll(mask,-1))[0]
+                for s, e in zip(starts, ends):
+                    if s <= e:
+                        seg = pts[s:e+1]
+                    else:
+                        seg = torch.cat([pts[s:], pts[:e+1]], dim=0)
+                    seg /= seg[:,2:3] / -z0
+                    m = seg.shape[0]
+                    crvs.append(curve_surface(seg, normals=IN.unsqueeze(0).expand(m, 3).float(), color=BLUE,width=0.06, closed=False))
+
+            crv = Group(*crvs)
+
+            if anim == 5:
+                with Sync(run_time=1.):
+                    plane.spawn()
+                    crv.spawn()
+            elif anim == 6:
+                with Off():
+                    plane.spawn()
+                    crv.spawn()
+                with Sync():
+                    with Sync(run_time=2.):
+                        plt.despawn()
+                        eq[2].despawn()
+                        ax.submobjects[2].despawn()
+                    with Sync(run_time=1.5):
+                        line.despawn()
+                        dot.despawn()
+            elif anim >= 7:
+                with Off():
+                    plane.spawn()
+                    crv.spawn()
+                    if anim <= 8:
+                        plt.despawn()
+                        eq[2].despawn()
+                        ax.submobjects[2].despawn()
+                if anim <= 8:
+                    with Sync(run_time=2.) if anim == 7 else Off():
+                        cam.orbit_around_line(ORIGIN, cam.get_right_direction(), num_degrees=-80)
+                        cam.orbit_around_line(ORIGIN, OUT, num_degrees=-120)
+                        cam.move(DOWN*0.2)
+                        eq[0].orbit_around_point(eq[0].get_center(), 90, RIGHT)
+                        eq[1].orbit_around_point(eq[1].get_center(), 90, DOWN)
+                        eq[1].orbit_around_point(eq[1].get_center(), 90, IN)
+                        eq[1].move(DOWN*0.275 + RIGHT*0.25)
+
+                if anim >= 8:
+                    asymps = []
+                    lam = 2 - math.sqrt(3)
+                    c = (lam + 1/(lam*lam) - 1/(1+lam))/(1-1/(lam*lam)) * z0
+                    dz = 0.05 if anim == 8 else 0
+                    for x0,y0,x1,y1 in [(z0/6-xmax, xmax, xmax, z0/6-xmax),
+                                        (-xmax, c - lam * xmax, xmax, c + lam * xmax),
+                                        (c - lam * xmax, -xmax, c + lam * xmax, xmax)]:
+                        dline = ManimMob(mn.DashedLine(mn.IN * (z0 + dz) + x0*mn.RIGHT + y0*mn.UP,
+                                                       mn.IN * (z0 + dz) + x1*mn.RIGHT + y1*mn.UP,
+                                                       stroke_color=mn.ORANGE, stroke_width=10, dash_length=0.1))
+                        # pts1 = torch.stack([OUT * (z0 + 0.05) + x0*RIGHT + y0*UP,
+                        #                                OUT * (z0 + 0.05) + x1*RIGHT + y1*UP], dim=0).float()
+                        # dline = curve_surface(pts1, color=ORANGE, width=0.06, closed=False)
+                        asymps.append(dline)
+                    asymps = Group(*asymps)
+                    with Off():
+                        asymps.spawn()
+
+                    if anim == 8:
+                        with Sync(run_time=2):
+                            asymps.move(IN*0.05)
+                            eq[1].move(DOWN * -0.275 + RIGHT * -0.25)
+                            eq[1].orbit_around_point(eq[1].get_center(), -90, IN)
+                            eq[1].orbit_around_point(eq[1].get_center(), -90, DOWN)
+                            eq[0].orbit_around_point(eq[0].get_center(), -90, RIGHT)
+                            cam.move(DOWN * -0.2)
+                            cam.orbit_around_line(ORIGIN, OUT, num_degrees=120)
+                            cam.orbit_around_line(ORIGIN, cam.get_right_direction(), num_degrees=80)
+                    if anim == 9:
+                        with Sync(run_time=1.):
+                            plane.despawn()
+                            crv.despawn()
+                            asymps.despawn()
 
     if anim > 0:
         Scene.wait(0.1)
@@ -578,7 +731,6 @@ if __name__ == "__main__":
     # for anim in range(1, 9):
     # cube_curve(quality=HD, use_xyz=True, anim=9)
     # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=1)
-    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
-    surface_plot(quality=HD, bgcol=BLACK, anim=0)
-
+    surface_plot(quality=HD, bgcol=BLACK, anim=9)
+    # surface_plot(quality=LD, bgcol=BLACK, anim=9)
 
