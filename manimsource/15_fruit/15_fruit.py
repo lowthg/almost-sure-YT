@@ -562,6 +562,76 @@ class Ratios(ClickBaitEqScale):
         self.play(mh.rtransform(eq5[:8], eq7[:8], eq6[1], eq7[8]))
         self.wait()
 
+
+class ZEqualOne(Scene):
+    tcol = GREY
+    bgcol = GREY
+
+    def __init__(self, *args, **kwargs):
+        config.background_color = self.tcol if config.transparent else self.bgcol
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        MathTex.set_default(font_size=50, stroke_width=2)
+        eq1 = MathTex(r'\frac{x}{y+z}', r'+', r'\frac{y}{x+z}', r'+', r'\frac{z}{x+y}', r'=', r'4')
+        eq2 = MathTex(r'{}+', r'1')
+        eq3 = MathTex(r'z', r'=', r'1', font_size=60)
+
+        VGroup(*[eq1[i][j] for i in (0,2,4) for j in (0,2,4)], eq3[0]).set_color(col_x)
+        VGroup(eq1[-1], eq2[1], eq3[2]).set_color(col_num)
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=12)
+        eq2 = eq_shadow(eq2, bg_stroke_width=12)
+        eq3 = eq_shadow(eq3, bg_stroke_width=12)
+
+        mh.align_sub(eq2, eq2[0], eq1[0][3])
+        eq2_1 = mh.align_sub(eq2.copy(), eq2[0], eq1[2][3])
+        eq2[1].move_to(eq1[0][4], coor_mask=RIGHT)
+        eq2_1[1].move_to(eq1[2][4], coor_mask=RIGHT)
+        eq2_2 = eq2_1[1].copy().shift(mh.diff(eq1[2][4], eq1[4][0]))
+        eq3.next_to(eq1, UP, buff=1.5).align_to(eq1, LEFT).shift(RIGHT*0.5)
+
+        self.add(eq1)
+        self.wait(0.1)
+        self.play(FadeIn(eq3))
+        self.wait(0.1)
+        self.play(FadeOut(eq1[0][4], eq1[2][4], eq1[4][0]),
+                  mh.rtransform(eq3[2], eq2[1], eq3[2].copy(), eq2_1[1], eq3[2].copy(), eq2_2),
+                  FadeOut(eq3[:2]))
+        self.wait(1)
+
+class Asymptotes(ZEqualOne):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=65)
+        eq1 = Tex(r'\sf asymptotes', r'($z=0$)')
+        mh.font_size_sub(eq1, 1, 50)
+        eq1[1].next_to(eq1[0], DOWN, buff=0.2)
+        eq1[0].set_color(ORANGE)
+        eq1[1][1].set_color(col_x)
+        eq1[1][-2].set_color(col_num)
+        eq1 = eq_shadow(eq1, bg_stroke_width=10)
+        self.add(eq1)
+
+class Antipodal(ZEqualOne):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        eq1 = MathTex(r'(x:y:z)', r'=', r'(-x:-y:-z)')
+        VGroup(eq1[0][1], eq1[0][3], eq1[0][5], eq1[2][2], eq1[2][5], eq1[2][8]).set_color(col_x)
+        VGroup(eq1[2][1], eq1[2][4], eq1[2][7]).set_color(col_op)
+        eq1 = eq_shadow(eq1, bg_stroke_width=12)
+        self.add(eq1)
+
+class UnitSphere(ZEqualOne):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        eq1 = MathTex(r'x^2+y^2', r'=', r'r^2')
+        VGroup(eq1[0][0], eq1[0][3]).set_color(col_x)
+        VGroup(eq1[0][1], eq1[0][4], eq1[2][1]).set_color(col_num)
+        eq1[2][0].set_color(col_a)
+
+        eq1 = eq_shadow(eq1, bg_stroke_width=12)
+        self.add(eq1)
+
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
         ClickBaitEq().render()

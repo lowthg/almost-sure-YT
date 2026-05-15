@@ -9,7 +9,7 @@ from numpy.random.mtrand import Sequence
 from sorcery import switch
 from torch.utils.jit.log_extract import run_test
 
-sys.path.append('../')
+sys.path.append('../../')
 import manimhelper as mh
 
 class Percolation(Scene):
@@ -285,11 +285,11 @@ class DigitGame(Scene):
 
         alice_scale = 1.1
         bob_scale = alice_scale * .43/.49 * 499/543
-        alice = ImageMobject(r'../media/wifejak.png').set_z_index(6).scale(alice_scale)
+        alice = ImageMobject(r'../../media/wifejak.png').set_z_index(6).scale(alice_scale)
         a = alice.pixel_array.copy()
         alice = ImageMobject(a[:-82,:,:]).set_z_index(6).scale(alice_scale)
 
-        bob = ImageMobject(r'../media/husbandjak.png').set_z_index(6).scale(bob_scale)
+        bob = ImageMobject(r'../../media/husbandjak.png').set_z_index(6).scale(bob_scale)
         alice.to_edge(DL, buff=0).shift(RIGHT*0.5)# + 92/1080 * config.frame_height * alice_scale * DOWN)
         bob.to_edge(DR, buff=0).shift(RIGHT*0.1)
         alice.generate_target()
