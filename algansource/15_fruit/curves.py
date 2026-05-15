@@ -7,7 +7,7 @@ import scipy as sp
 from algan.external_libraries.manim import DashedLine
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
-
+from manim import VGroup
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -516,7 +516,6 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
     for u,v,w in curves:
         pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT))
         pts_arr.append(pts)
-        # crv = curve_surface(pts, width=0.03, color=BLUE)
         n = pts.shape[0]
         dp = pts[1:, :] - pts[:-1, :]
         seglen = torch.linalg.norm(dp, dim=1)
@@ -538,17 +537,12 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
             if u[i] < w <= u[i+1]:
                 w += width
                 v[i] = 0.
-
-        # nn = round(n / 20)
-        # for i in range(0, nn):
-        #     v[round(i * n / nn) + 10] = 0.
         col = p.color
         col[...] = (
                 v[:, None] * surf_col[None, :] + (1-v[:, None]) * surf_col2[None, :]
         ).repeat_interleave(m, dim=0).unsqueeze(0)
         for i in range(2, m, 3):
             col[0, i::m, :] = surf_col2
-        # col[0,m-1::m, 4] = 0.
         plts.append(crv)
     plt = Group(*plts)
 
@@ -580,7 +574,15 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
     elif anim == 2:
         gp = Group(ax, eq, plt)
         with Sync(rate_func=rate_funcs.identity, run_time=6):
-            gp.orbit_around_point(ORIGIN, -360, OUT)
+            gp.orbit_around_point(ORIGIN, 360, OUT)
+        # following does final slow-down
+        # with Off():
+        #     gp.orbit_around_point(ORIGIN, 360 * 5.5/6, OUT)
+        # def f(t):
+        #     return 1. - (t-1.)**2
+        # with Sync(rate_func=f, run_time=1):
+        #     gp.orbit_around_point(ORIGIN, 360 * 0.5/6, OUT)
+
     elif anim >= 3:  # draw line
         pts = pts_arr[1]
         with Off():
@@ -610,7 +612,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                         add_to_scene = False
                     else:
                         desc.set_non_recursive(location=line.get_descendants()[1].location.clone())
-        elif 5 <= anim <= 9:
+        elif 5 <= anim <= 9 or anim == 14:
             nplane = 10
             z0 = r*0.3
             line = get_line(pts[0])
@@ -663,7 +665,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                     with Sync(run_time=1.5):
                         line.despawn()
                         dot.despawn()
-            elif anim >= 7:
+            elif 11 >= anim >= 7:
                 with Off():
                     plane.spawn()
                     crv.spawn()
@@ -715,6 +717,89 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                             plane.despawn()
                             crv.despawn()
                             asymps.despawn()
+    if anim >= 10:
+        r = 2.
+        crvs = []
+        for pts in pts_arr:
+            pts *= r
+            crv1 = curve_surface(pts, width=0.03, color=BLUE)
+            crvs.append(crv1)
+        crvs = Group(*crvs)
+        sphere = get_sphere(r)
+
+        if anim == 10:
+            sphere.set_opacity_via_color(0.8)
+            with Off():
+                sphere.spawn()
+                crvs.spawn()
+            with Sync(run_time=2):
+                sphere.set_opacity_via_color(1)
+                plt.despawn()
+        else:
+            with Off():
+                sphere.spawn()
+                crvs.spawn()
+                plt.despawn()
+        if anim > 10:
+            theta0 = 0
+            theta1 = 360
+            run_time=6
+            if anim == 11:
+                gp = Group(ax, eq, sphere, crvs)
+            elif anim == 12:
+                pt = pts_arr[0][-180]
+                dot1 = ManimMob(mn.Dot3D(pt.numpy(), radius=0.08, color=mn.ORANGE))
+                dot2 = ManimMob(mn.Dot3D(-pt.numpy(), radius=0.08, color=mn.ORANGE))
+                a = torch.linspace(-1., 1., 7)
+                pts = a[:, None] * pt[None, :]
+                normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
+                normals = normals.unsqueeze(0).expand(7, 3)
+                line = curve_surface(pts.float(), normals=normals, resolution=8, color=YELLOW, width=0.05)
+                with Off():
+                    dot1.spawn()
+                    dot2.spawn()
+                    line.spawn()
+                gp = Group(ax, eq, sphere, crvs, dot1, dot2, line)
+            elif anim >= 13:
+                pt = pts_arr[0][600].float()
+                a = torch.linspace(-1.5, 1.5, 15)
+                pts = a[:, None] * pt[None, :]
+                normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
+                normals = normals.unsqueeze(0).expand(15, 3)
+                line = curve_surface(pts.float(), normals=normals, resolution=8, color=YELLOW, width=0.05)
+                with Off():
+                    line.spawn()
+                if anim == 13:
+                    theta0 = 180
+                    run_time=3
+                    gp = Group(ax, eq, sphere, crvs, line)
+                if anim == 14:
+                    theta1 = 180
+                    run_time=3
+                    gp = Group(ax, eq, sphere, crvs, line)
+                if anim == 15:
+                    col = plane.get_descendants()[1].color
+                    col[0,:,:3] = PURPLE[:3] * 0.3 + GREY[:3] * 0.7
+                    for p in crv.get_descendants():
+                        col = p.color
+                    # print(col.shape)
+                        col[0, :, 2] = 1.
+                        col[0, :, 1] = 0.9
+                        col[0, :, 0] = 0.5
+                    # col[0, :, :2] = BLUE[:2]
+                    with Off():
+                        plane.spawn()
+                        crv.spawn()
+                    gp = Group(ax, eq, sphere, crvs, plane, crv, line)
+
+            # with Sync(run_time=6, rate_func=rate_funcs.identity):
+            if theta0 != 0:
+                with Off():
+                    gp.orbit_around_point(ORIGIN, theta0, OUT)
+            if theta1 != theta0:
+                with Sync(run_time=run_time, rate_func=rate_funcs.identity):
+                    gp.orbit_around_point(ORIGIN, theta1 - theta0, OUT)
+
 
     if anim > 0:
         Scene.wait(0.1)
@@ -730,7 +815,7 @@ if __name__ == "__main__":
     # cube_curve(quality=HD, use_xyz=True, anim=2)
     # for anim in range(1, 9):
     # cube_curve(quality=HD, use_xyz=True, anim=9)
-    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=1)
-    surface_plot(quality=HD, bgcol=BLACK, anim=9)
-    # surface_plot(quality=LD, bgcol=BLACK, anim=9)
+    surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
+    # surface_plot(quality=HD, bgcol=BLACK, anim=14)
+    # surface_plot(quality=LD, bgcol=BLACK, anim=2)
 
