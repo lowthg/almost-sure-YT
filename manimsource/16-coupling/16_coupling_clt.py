@@ -6,7 +6,7 @@ import sys
 import scipy as sp
 from torch.utils.jit.log_extract import run_test
 
-sys.path.append('../')
+sys.path.append('../../')
 import manimhelper as mh
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
