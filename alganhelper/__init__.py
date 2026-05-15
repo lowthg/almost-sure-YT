@@ -82,7 +82,7 @@ class FrameStepper:
         u0 = self.index / self.n
 
 
-        u = self.rate_func(u0)
+        u = self.rate_func(torch.tensor(u0))
         if type(u) == torch.Tensor:
             u = u.item()
         t = u0 * self.run_time
