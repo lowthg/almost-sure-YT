@@ -186,7 +186,10 @@ class ClickBaitEqScale(ClickBaitEq2):
         eq4 = MathTex(r'a(y+z)', r'a(x+z)', r'a(x+y)')
 
         mh.rtransform.copy_colors = True
-        VGroup(gp1).set_color(col_x)
+        # VGroup(gp1).set_color(col_x)
+        VGroup(eq1_2[0], eq1_3[0], eq1_5[0]).set_color(colx)
+        VGroup(eq1_1[0], eq1_4[0], eq1_5[2]).set_color(coly)
+        VGroup(eq1_1[2], eq1_3[2], eq1_6[0]).set_color(colz)
         VGroup(eq2[0][0], eq2[1][0], eq2[2][0], gp2).set_color(col_a)
 
         mh.align_sub(eq2, eq2[0][1], gp1[2])
@@ -235,6 +238,10 @@ colx = RED
 coly = YELLOW
 colz = GREEN
 coln = col_num
+
+colx = col_x + 0.5 * (RED - col_x)
+coly = col_x + 0.5 * (YELLOW - col_x)
+colz = col_x + 0.5 * (GREEN - col_x)
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -453,7 +460,10 @@ class Ratios(ClickBaitEqScale):
         for i in [1, 3, 5]: mh.font_size_sub(eq7, i, 110)
 
         mh.rtransform.copy_colors = True
-        VGroup(eq1[0][1], eq1[0][3], eq1[0][5]).set_color(col_x)
+        # VGroup(eq1[0][1], eq1[0][3], eq1[0][5]).set_color(col_x)
+        eq1[0][1].set_color(colx)
+        eq1[0][3].set_color(coly)
+        eq1[0][5].set_color(colz)
         VGroup(eq2[2][1], eq2[2][4], eq2[2][7], eq3[2][1], eq3[2][5], eq3[2][9],
                eq5[8][1:3], eq5[10][1:3], eq5[12][1:3]).set_color(col_a)
         VGroup(eq3[0][1], eq3[0][3], eq3[0][5], eq3[2][3], eq3[2][7], eq3[2][11],
@@ -572,12 +582,15 @@ class ZEqualOne(Scene):
         Scene.__init__(self, *args, **kwargs)
 
     def construct(self):
-        MathTex.set_default(font_size=50, stroke_width=2)
+        MathTex.set_default(font_size=60, stroke_width=2)
         eq1 = MathTex(r'\frac{x}{y+z}', r'+', r'\frac{y}{x+z}', r'+', r'\frac{z}{x+y}', r'=', r'4')
         eq2 = MathTex(r'{}+', r'1')
         eq3 = MathTex(r'z', r'=', r'1', font_size=60)
 
-        VGroup(*[eq1[i][j] for i in (0,2,4) for j in (0,2,4)], eq3[0]).set_color(col_x)
+        # VGroup(*[eq1[i][j] for i in (0,2,4) for j in (0,2,4)], eq3[0]).set_color(col_x)
+        VGroup(eq1[0][0], eq1[2][2], eq1[4][2]).set_color(colx)
+        VGroup(eq1[0][2], eq1[2][0], eq1[4][4]).set_color(coly)
+        VGroup(eq1[0][4], eq1[2][4], eq1[4][0], eq3[0]).set_color(colz)
         VGroup(eq1[-1], eq2[1], eq3[2]).set_color(col_num)
 
         eq1 = eq_shadow(eq1, bg_stroke_width=12)
@@ -589,7 +602,7 @@ class ZEqualOne(Scene):
         eq2[1].move_to(eq1[0][4], coor_mask=RIGHT)
         eq2_1[1].move_to(eq1[2][4], coor_mask=RIGHT)
         eq2_2 = eq2_1[1].copy().shift(mh.diff(eq1[2][4], eq1[4][0]))
-        eq3.next_to(eq1, UP, buff=1.5).align_to(eq1, LEFT).shift(RIGHT*0.5)
+        eq3.next_to(eq1, UP, buff=1.3).align_to(eq1, LEFT).shift(RIGHT*0.5)
 
         self.add(eq1)
         self.wait(0.1)
@@ -607,7 +620,7 @@ class Asymptotes(ZEqualOne):
         mh.font_size_sub(eq1, 1, 50)
         eq1[1].next_to(eq1[0], DOWN, buff=0.2)
         eq1[0].set_color(ORANGE)
-        eq1[1][1].set_color(col_x)
+        eq1[1][1].set_color(colz)
         eq1[1][-2].set_color(col_num)
         eq1 = eq_shadow(eq1, bg_stroke_width=10)
         self.add(eq1)
@@ -616,7 +629,9 @@ class Antipodal(ZEqualOne):
     def construct(self):
         MathTex.set_default(stroke_width=2, font_size=60)
         eq1 = MathTex(r'(x:y:z)', r'=', r'(-x:-y:-z)')
-        VGroup(eq1[0][1], eq1[0][3], eq1[0][5], eq1[2][2], eq1[2][5], eq1[2][8]).set_color(col_x)
+        VGroup(eq1[0][1], eq1[2][2]).set_color(colx)
+        VGroup(eq1[0][3], eq1[2][5]).set_color(coly)
+        VGroup(eq1[0][5], eq1[2][8]).set_color(colz)
         VGroup(eq1[2][1], eq1[2][4], eq1[2][7]).set_color(col_op)
         eq1 = eq_shadow(eq1, bg_stroke_width=12)
         self.add(eq1)
@@ -624,13 +639,123 @@ class Antipodal(ZEqualOne):
 class UnitSphere(ZEqualOne):
     def construct(self):
         MathTex.set_default(stroke_width=2, font_size=60)
-        eq1 = MathTex(r'x^2+y^2', r'=', r'r^2')
-        VGroup(eq1[0][0], eq1[0][3]).set_color(col_x)
-        VGroup(eq1[0][1], eq1[0][4], eq1[2][1]).set_color(col_num)
+        eq1 = MathTex(r'x^2+y^2+z^2', r'=', r'r^2')
+        # VGroup(eq1[0][0], eq1[0][3]).set_color(col_x)
+        eq1[0][0].set_color(colx)
+        eq1[0][3].set_color(coly)
+        eq1[0][6].set_color(colz)
+        VGroup(eq1[0][1], eq1[0][4], eq1[0][7], eq1[2][1]).set_color(col_num)
         eq1[2][0].set_color(col_a)
 
         eq1 = eq_shadow(eq1, bg_stroke_width=12)
         self.add(eq1)
+
+class CubicRearrange(Narration1):
+    trcolor = BLACK
+    def construct(self):
+        eq1 = Equation1.eq1()
+        eq2 = MathTex(r'x(x+z)(x+y)', r'+',
+                      r'y(y+z)(x+y)', r'+',
+                      r'z(y+z)(x+z)', r'=', r'4(y+z)(x+z)(x+y)', font_size=65, stroke_width=2)
+        eq2[3:].next_to(eq2[0], DOWN, buff=0.4).align_to(eq2[0], LEFT)
+        eq3 = MathTex(r'x^3', r'+', r'x^2y^1', r'+', r'x^2z^1', r'+', r'x^1y^1z^1', r'+', r'\cdots',
+                      font_size=65, stroke_width=2)
+
+        VGroup(eq1, eq2, eq3).set_z_index(4)
+
+        VGroup(eq3[0][1], eq3[2][1], eq3[2][3], eq3[4][1], eq3[4][3],
+               eq3[6][1], eq3[6][3], eq3[6][5]).set_color(col_num)
+
+        eq2.next_to(eq1, UP, buff=-0.2)
+
+        boxargs = {'stroke_width': 0, 'stroke_opacity': 0, 'fill_color': BLACK, 'fill_opacity': 0.65,
+                                   'corner_radius': 0.15, 'buff': 0.2}
+
+        box1 = SurroundingRectangle(eq1, **boxargs)
+
+        VGroup(box1, eq1, eq2).to_edge(DOWN, buff=0.1)
+
+        eq2_1 = eq2.copy().align_to(eq1, DOWN)
+        eq3.next_to(eq2_1, UP, buff=0.4).align_to(eq2, LEFT)
+
+        box2 = SurroundingRectangle(VGroup(eq1, eq2), **boxargs)
+
+        mh.rtransform.copy_colors = True
+
+        self.add(eq1, box1)
+        self.wait(0.1)
+        dt = 1.4
+
+        anims1 = AnimationGroup(mh.rtransform(eq1[0][0], eq2[0][0], eq1[2][2:].copy(), eq2[0][2:5], eq1[4][2:].copy(), eq2[0][7:10],
+                                run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq2[0][1], eq2[0][5:7], eq2[0][10])),
+                  mh.rtransform(box1, box2)
+                  )
+        anims2 = AnimationGroup(mh.rtransform(eq1[1].copy(), eq2[1], eq1[2][0], eq2[2][0], eq1[0][2:].copy(), eq2[2][2:5],
+                                eq1[4][2:].copy(), eq2[2][7:10], run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq2[2][1], eq2[2][5:7], eq2[2][10])),
+                  )
+        anims3 = AnimationGroup(mh.rtransform(eq1[3].copy(), eq2[3], eq1[4][0], eq2[4][0], eq1[0][2:].copy(), eq2[4][2:5],
+                                eq1[2][2:].copy(), eq2[4][7:10], run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq2[4][1], eq2[4][5:7], eq2[4][10])),
+                  )
+        anims4 = AnimationGroup(mh.rtransform(eq1[5][0], eq2[5][0], eq1[5][1], eq2[6][0], run_time=1.5))
+        anims5 = AnimationGroup(mh.rtransform(eq1[0][2:], eq2[6][2:5], eq1[2][2:], eq2[6][7:10], eq1[4][2:], eq2[6][12:15]),
+                  FadeOut(eq1[0][1], eq1[1], eq1[2][1], eq1[3], eq1[4][1]),
+                  Succession(Wait(0.8), FadeIn(eq2[6][1], eq2[6][5:7], eq2[6][10:12], eq2[6][15])),
+                  )
+        self.play(anims1, Succession(Wait(dt), anims2), Succession(Wait(dt*2), anims3),
+                  Succession(Wait(dt*3), anims4), Succession(Wait(dt*3+1), anims5))
+        # self.play(mh.rtransform(eq2, eq2_1), run_time=0.8)
+        mh.copy_colors_eq(eq2, eq2_1)
+        self.play(eq2.animate(run_time=0.8).move_to(eq2_1))
+        anims1 = AnimationGroup(AnimationGroup(mh.rtransform(eq2[0][0].copy(), eq3[0][0]),
+                  mh.rtransform(eq2[0][2].copy(), eq3[0][0]),
+                  mh.rtransform(eq2[0][7].copy(), eq3[0][0]),
+                                 run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq3[0][1])),
+                  Succession(Wait(1.1), FadeIn(eq3[1])),
+                  )
+        anims2 = AnimationGroup(AnimationGroup(mh.rtransform(eq2_1[0][0].copy(), eq3[2][0]),
+                  mh.rtransform(eq2_1[0][2].copy(), eq3[2][0],
+                                eq2_1[0][9].copy(), eq3[2][2]),
+                                 run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq3[2][1])),
+                  Succession(Wait(1.1), FadeIn(eq3[3])),
+                  )
+        anims3 = AnimationGroup(AnimationGroup(mh.rtransform(eq2_1[0][0].copy(), eq3[4][0]),
+                  mh.rtransform(eq2_1[0][4].copy(), eq3[4][2],
+                                eq2_1[0][7].copy(), eq3[4][0]),
+                                 run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq3[4][1])),
+                  Succession(Wait(1.1), FadeIn(eq3[5])),
+                  )
+        anims4 = AnimationGroup(AnimationGroup(mh.rtransform(eq2_1[0][0].copy(), eq3[6][0]),
+                  mh.rtransform(eq2_1[0][4].copy(), eq3[6][4],
+                                eq2_1[0][9].copy(), eq3[6][2]),
+                                 run_time=1.5),
+                  Succession(Wait(1), FadeIn(eq3[7:])),
+                  )
+        dt = 1.2
+        self.play(anims1, Succession(Wait(dt), anims2), Succession(Wait(dt*2), anims3),
+                  Succession(Wait(dt*3), anims4))
+        circ1 = mh.circle_eq(eq3[0][1]).scale(0.7).shift(DOWN*0.05).set_z_index(5)
+        circ2 = mh.circle_eq(VGroup(eq3[2][1], eq3[2][3])).scale(0.7).shift(DOWN*0.05+RIGHT*0.1).set_z_index(5)
+        circ3 = mh.circle_eq(VGroup(eq3[4][1], eq3[4][3])).scale(0.7).shift(DOWN*0.05+RIGHT*0.1).set_z_index(5)
+        circ4 = mh.circle_eq(VGroup(eq3[6][1], eq3[6][3], eq3[6][5])).scale(0.7).shift(DOWN*0.05+RIGHT*0.1).set_z_index(5)
+        anims1 = AnimationGroup(Create(circ1, rate_func=linear, run_time=0.5))
+        anims2 = AnimationGroup(FadeIn(eq3[2][3]), Succession(Wait(0.5), Create(circ2, run_time=0.5)))
+        anims3 = AnimationGroup(FadeIn(eq3[4][3]), Succession(Wait(0.5), Create(circ3, run_time=0.5)))
+        anims4 = AnimationGroup(FadeIn(eq3[6][1], eq3[6][3], eq3[6][5]), Succession(Wait(0.5), Create(circ4, run_time=0.5)))
+        dt = 0.5
+        self.play(anims1, anims2, Succession(Wait(dt), anims3),
+                  Succession(Wait(dt*2), anims4))
+        self.wait(0.1)
+        box3 = SurroundingRectangle(eq2, **boxargs)
+        self.play(FadeOut(eq3, circ1, circ2, circ3, circ4),
+                  Succession(Wait(0.5), mh.rtransform(box2, box3)))
+        self.wait()
+
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "fps": 15, "preview": True}):
