@@ -26,13 +26,14 @@ def diff(source: Mobject, target: Mobject, coor_mask=UR):
     """
     return (target.get_center() - source.get_center()) * coor_mask
 
-def fade_replace(obj1: Mobject, obj2: Mobject, coor_mask=np.array([1, 1, 1]), **kwargs):
+def fade_replace(obj1: Mobject, obj2: Mobject, coor_mask=np.array([1, 1, 1]), path_arc=0., **kwargs):
     """
     Fade out obj1 into obj2
     For when the objects differ so that ReplacementTransform doesn't work
     """
     shift = diff(obj1, obj2) * coor_mask
-    return FadeOut(obj1, shift=shift, **kwargs), FadeIn(obj2, shift=shift, **kwargs)
+    return (FadeOut(obj1, shift=shift, path_arc=path_arc, **kwargs),
+            FadeIn(obj2, shift=shift, path_arc=path_arc, **kwargs))
 
 
 def stretch_replace(*obj: Mobject, copy_colors=None, **kwargs):

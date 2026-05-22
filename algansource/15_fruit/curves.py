@@ -612,7 +612,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                         add_to_scene = False
                     else:
                         desc.set_non_recursive(location=line.get_descendants()[1].location.clone())
-        elif 5 <= anim <= 9 or anim == 14:
+        elif 5 <= anim <= 9 or anim >= 14:
             nplane = 10
             z0 = r*0.3
             line = get_line(pts[0])
@@ -739,7 +739,8 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
             with Off():
                 sphere.spawn()
                 crvs.spawn()
-                plt.despawn()
+                if anim < 18:
+                    plt.despawn()
         if anim > 10:
             theta0 = 0
             theta1 = 360
@@ -761,7 +762,10 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                     line.spawn()
                 gp = Group(ax, eq, sphere, crvs, dot1, dot2, line)
             elif anim >= 13:
-                pt = pts_arr[0][600].float()
+                iline = -195
+                nline = pts_arr[0].shape[0] - 1
+                pt = pts_arr[0][iline].float()
+                print(pts_arr[0].shape)
                 a = torch.linspace(-1.5, 1.5, 15)
                 pts = a[:, None] * pt[None, :]
                 normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
@@ -777,7 +781,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                     theta1 = 180
                     run_time=3
                     gp = Group(ax, eq, sphere, crvs, line)
-                if anim == 15:
+                if 15 <= anim <= 23:
                     col = plane.get_descendants()[1].color
                     col[0,:,:3] = PURPLE[:3] * 0.3 + GREY[:3] * 0.7
                     for p in crv.get_descendants():
@@ -791,14 +795,79 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                         plane.spawn()
                         crv.spawn()
                     gp = Group(ax, eq, sphere, crvs, plane, crv, line)
+                    # if anim == 15: theta1 = 180
+                    # if anim == 16: theta0 = 180
+                    # run_time = 3
+                    if 18 <= anim <= 19:
+                        with Off():
+                            line.despawn()
+                        gp = Group(ax, eq, sphere, crvs, plane, crv, plt)
+                        # if anim == 18: theta1 = 180
+                        # if anim == 19: theta0 = 180
+                    if 20 <= anim <= 21:
+                        with Off():
+                            line.despawn()
+                            sphere.despawn()
+                            crvs.despawn()
+                        gp = Group(ax, eq, plane, crv, plt)
+                        # if anim == 20: theta1 = 180
+                        # if anim == 21: theta0 = 180
+                    if 22 <= anim <= 23:
+                        with Off():
+                            line.despawn()
+                            plt.despawn()
+                        gp = Group(ax, eq, sphere, crvs, plane, crv)
+                        # if anim == 22: theta1 = 180
+                        # if anim == 23: theta0 = 180
 
             # with Sync(run_time=6, rate_func=rate_funcs.identity):
-            if theta0 != 0:
+            if anim == 17:
+                gp = Group(ax, eq, sphere, crvs, plane, crv)
+                theta0 = 360 * 30 / 6 / 30
+                theta1 = theta0 + 360
+                run_time=6
                 with Off():
                     gp.orbit_around_point(ORIGIN, theta0, OUT)
-            if theta1 != theta0:
-                with Sync(run_time=run_time, rate_func=rate_funcs.identity):
-                    gp.orbit_around_point(ORIGIN, theta1 - theta0, OUT)
+                p = line.get_descendants()[1]
+                with Sync():
+                    with Sync(rate_func=rate_funcs.identity, run_time=run_time):
+                        gp.orbit_around_point(ORIGIN, theta1 - theta0, OUT)
+                    with Seq():
+                        for frame in ah.FrameStepper(fps=quality.frames_per_second,run_time=run_time,rate_func=rate_funcs.identity,step=1):
+                            u = frame.u
+                            theta = theta0 * (1-u) + theta1 * u
+                            # u1 = rate_funcs.smooth(u).item()
+                            u1 = u
+                            v = (iline + 1 - nline * u1) % nline
+                            i = int(v)
+                            v -= i
+                            pt = (pts_arr[0][i] * (1-v) + pts_arr[0][i+1] * v).float()
+                            pts = a[:, None] * pt[None, :]
+                            normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
+                            normals = normals.unsqueeze(0).expand(15, 3)
+                            line1 = curve_surface(pts.float(), normals=normals, resolution=8, color=YELLOW, width=0.05, add_to_scene=False)
+                            line1.orbit_around_point(ORIGIN, theta, OUT)
+                            loc = line1.get_descendants()[1].location.clone()
+
+                            with frame.context:
+                                p.set_non_recursive(location=loc)
+
+                            # theta_ = theta
+
+            else:
+                if theta0 != 0:
+                    with Off():
+                        gp.orbit_around_point(ORIGIN, theta0, OUT)
+                if theta1 != theta0:
+                    with Sync(run_time=run_time, rate_func=rate_funcs.identity):
+                        gp.orbit_around_point(ORIGIN, (theta1 - theta0), OUT)
+                # following does final slow-down
+                # with Off():
+                #     gp.orbit_around_point(ORIGIN, 360 * 5.5/6, OUT)
+                # def f(t):
+                #     return 1. - (t-1.)**2
+                # with Sync(rate_func=f, run_time=1):
+                #     gp.orbit_around_point(ORIGIN, 360 * 0.5/6, OUT)
 
 
     if anim > 0:
@@ -815,7 +884,12 @@ if __name__ == "__main__":
     # cube_curve(quality=HD, use_xyz=True, anim=2)
     # for anim in range(1, 9):
     # cube_curve(quality=HD, use_xyz=True, anim=9)
-    surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
-    # surface_plot(quality=HD, bgcol=BLACK, anim=14)
-    # surface_plot(quality=LD, bgcol=BLACK, anim=2)
+    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
+    # surface_plot(quality=HD, bgcol=BLACK, anim=16)
+    # surface_plot(quality=LD, bgcol=BLACK, anim=18)
+    # surface_plot(quality=LD, bgcol=BLACK, anim=19)
+    surface_plot(quality=HD, bgcol=BLACK, anim=20)
+    # surface_plot(quality=HD, bgcol=BLACK, anim=20)
+    # surface_plot(quality=HD, bgcol=BLACK, anim=22)
+    # surface_plot(quality=LD, bgcol=BLACK, anim=23)
 
