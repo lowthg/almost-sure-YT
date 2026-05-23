@@ -7,7 +7,7 @@ import scipy as sp
 from algan.external_libraries.manim import DashedLine
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
-from manim import VGroup
+from manim import VGroup, ManimColor
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -130,6 +130,8 @@ point_r9_ = (1.91351933902876166269149126585145312311157305638537402696309772369
              0.41248744472058697085059064167596864978309517527133584614904575465015648101827615,
              1.58850414786674863699812567622291227638480863227727045318648072891631625503050035)
 
+pos_region_color = GREEN
+line_col = Color((.398, .887, 1.))
 
 
 def CubicCurvePosNeg(du = 0.02, a=11):
@@ -145,7 +147,7 @@ def CubicCurvePosNeg(du = 0.02, a=11):
     (1+w)(v-w)^2+(1+w^2-aw)(
     """
 
-def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, width=0.03, closed=True, **kwargs):
+def curve_surface_loc(pts, normals=None, tangents=None, resolution=8, width=0.03, closed=True):
     if normals is None:
         normals = pts
     if tangents is None:
@@ -159,14 +161,16 @@ def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, wi
     du = torch.nn.functional.normalize(normals, dim=1)
     dv = torch.nn.functional.normalize(torch.linalg.cross(normals, tangents), dim=1)
     theta = torch.linspace(-math.pi, math.pi, resolution, device=pts.device)
+    return (
+            pts[:, None, :] +
+            (torch.sin(theta)[None, :, None] * du[:, None, :] +
+             torch.cos(theta)[None, :, None] * dv[:, None, :]) * (width / 2)
+    ).reshape(1, -1, 3).float()
+
+def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, width=0.03, closed=True, **kwargs):
     n = pts.shape[0]
     crv = Surface(grid_height=resolution, grid_width=n, color=color, **kwargs)
-    crv.get_descendants()[1].location[...] = (
-                pts[:, None, :] +
-                (torch.sin(theta)[None, :, None] * du[:, None, :] +
-                 torch.cos(theta)[None, :, None] * dv[:, None, :]) * (width/2)
-        ).reshape(1, -1, 3)
-
+    crv.get_descendants()[1].location[...] = curve_surface_loc(pts, normals, tangents, resolution, width, closed)
     return crv
 
 
@@ -180,8 +184,8 @@ def positive_region(r, curve, curve_obj, use_xyz=False):
             dots.append(ManimMob(mn.Dot3D(p, radius=0.06, color=line_col2)))
 
     res = 20 if use_xyz else 10
-    pos_region = Surface(grid_height=res, grid_width=res, color=GREEN, opacity=0.6)
-    pos_region2 = Surface(grid_height=res, grid_width=res, color=GREEN, opacity=0.6)
+    pos_region = Surface(grid_height=res, grid_width=res, color=pos_region_color, opacity=0.6)
+    pos_region2 = Surface(grid_height=res, grid_width=res, color=pos_region_color, opacity=0.6)
     loc = pos_region.get_descendants()[1].location
 
     pts = [RIGHT, UP, OUT] if use_xyz else [OUT+RIGHT, OUT+UP, RIGHT+UP]
@@ -222,9 +226,9 @@ def get_points(r, pts, colors, width=0.12, use_xyz=False):
         ))
     return res
 
-def get_sphere(r):
+def get_sphere(r, circle_opacity=0.5):
     ball = Sphere(radius=r, opacity=0.8, color=GREY, grid_height=40)#.move_to(origin)
-    circ = Circle(radius=r, border_width=3, border_color=WHITE, filled=False, opacity=0.5)
+    circ = Circle(radius=r, border_width=3, border_color=WHITE, filled=False, opacity=circle_opacity)
     circ2 = circ.clone().orbit_around_point(ORIGIN, 90, RIGHT)
     circ3 = circ.clone().orbit_around_point(ORIGIN, 90, UP)
     return Group(ball, circ, circ2, circ3)
@@ -771,8 +775,17 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                 normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
                 normals = normals.unsqueeze(0).expand(15, 3)
                 line = curve_surface(pts.float(), normals=normals, resolution=8, color=YELLOW, width=0.05)
+                iline2 = 0
+                nline2 = pts_arr[1].shape[0] - 1
+                pt2 = pts_arr[1][iline].float()
+                print(pts_arr[1].shape)
+                pts2 = a[:, None] * pt[None, :]
+                normals2 = IN - torch.dot(IN, pt2) / torch.dot(pt2, pt2) * pt2
+                normals2 = normals2.unsqueeze(0).expand(15, 3)
+                line2 = curve_surface(pts2.float(), normals=normals2, resolution=8, color=YELLOW, width=0.05)
                 with Off():
                     line.spawn()
+                    line2.spawn()
                 if anim == 13:
                     theta0 = 180
                     run_time=3
@@ -829,6 +842,7 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                 with Off():
                     gp.orbit_around_point(ORIGIN, theta0, OUT)
                 p = line.get_descendants()[1]
+                p2 = line2.get_descendants()[1]
                 with Sync():
                     with Sync(rate_func=rate_funcs.identity, run_time=run_time):
                         gp.orbit_around_point(ORIGIN, theta1 - theta0, OUT)
@@ -849,8 +863,20 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                             line1.orbit_around_point(ORIGIN, theta, OUT)
                             loc = line1.get_descendants()[1].location.clone()
 
+                            v = (iline2 + 13 + nline2 * u1) % nline2
+                            i = int(v)
+                            v -= i
+                            pt = (pts_arr[1][i] * (1-v) + pts_arr[1][i+1] * v).float()
+                            pts = a[:, None] * pt[None, :]
+                            normals = IN - torch.dot(IN, pt) / torch.dot(pt, pt) * pt
+                            normals = normals.unsqueeze(0).expand(15, 3)
+                            line1 = curve_surface(pts.float(), normals=normals, resolution=8, color=YELLOW, width=0.05, add_to_scene=False)
+                            line1.orbit_around_point(ORIGIN, theta, OUT)
+                            loc2 = line1.get_descendants()[1].location.clone()
+
                             with frame.context:
                                 p.set_non_recursive(location=loc)
+                                p2.set_non_recursive(location=loc2)
 
                             # theta_ = theta
 
@@ -876,6 +902,228 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
     name = 'surface{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def curve_head(quality=LD, bgcol=BLACK, anim=1):
+    r = 2.
+
+    cam: Camera = Scene.get_camera()
+    with Off():
+        cam.set_distance_to_screen(10).move_to(cam.get_center() * 0.8)
+        cam.set_euler_angles(80*DEGREES, 0*DEGREES, 120*DEGREES)
+        cam.move(OUT*0.32)
+
+    m = 20
+    n = 40
+    sphere =Surface(opacity=0.4, color=GREY, grid_height=m, grid_width=n)  # .move_to(origin)
+
+    u = torch.linspace(0, PI, m)
+    if anim == 1:
+        v = torch.linspace(-PI/2, PI/2, n)
+    else:
+        v = torch.linspace(PI/2,3*PI/2, n)
+
+    cu = torch.cos(u).repeat(n)[None,:,None] * r
+    su = torch.sin(u).repeat(n)[None,:,None] * r
+    cv = torch.cos(v).repeat_interleave(m)[None,:,None]
+    sv = torch.sin(v).repeat_interleave(m)[None,:,None]
+
+    up = cam.get_upwards_direction()
+    right = cam.get_right_direction()
+    fwd = cam.get_forward_direction()
+    sphere.get_descendants()[1].location = cu * up + cv * su * fwd + sv * su * right
+
+    curves = CubicCurve(du=0.02)
+    normalize_curves(curves)
+
+    plts = []
+    pts_arr = []
+    for u,v,w in curves:
+        pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT)).float()
+        pts *= r / pts.norm(dim=1, keepdim=True)
+        crv = curve_surface(pts, width=0.045, color=line_col)
+        plts.append(crv)
+        pts_arr.append(pts)
+
+    thetas = torch.linspace(0., 2 * PI, 81)
+    for dirs in [[UP, OUT], [RIGHT, OUT], [UP, RIGHT]]:
+        pts = (torch.cos(thetas)[:, None] * dirs[0] + torch.sin(thetas)[:, None] * dirs[1]).float() * r
+        crv = curve_surface(pts, color=WHITE, opacity=0.3)
+        plts.append(crv)
+
+    plt = Group(*plts)
+
+    with Off():
+        sphere.spawn()
+        plt.spawn()
+
+    descs = [_.get_descendants()[1] for _ in plt[:]]
+    locs = [_.location.clone() for _ in descs]
+    cols = [_.color.clone() for _ in descs]
+
+    for frame in ah.FrameStepper(run_time=6, fps=quality.frames_per_second, step=1,rate_func=rate_funcs.identity):
+        theta = frame.u * 2 * PI
+        mat = torch.from_numpy(ah.rotation_matrix(OUT, theta))
+        with frame.context:
+            for d, loc, col in zip(descs, locs, cols):
+                loc1 = loc @ mat
+                if anim == 1:
+                    mask = (loc1[0,:,:3] @ fwd[0,0,:]) <= 0
+                else:
+                    mask = (loc1[0, :, :3] @ fwd[0, 0, :]) > 0
+                col1 = col.clone()
+                col1[0,:,4] = mask
+                d.set_non_recursive(location = loc1, color=col1)
+
+    Scene.wait(0.1)
+    name = 'curve_head{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
+def curve_anim(quality=LD, bgcol=BLACK, anim=1):
+    r = 2.
+    xrange = [-1.2, 1.2]
+    xlen = (xrange[1] - xrange[0])*r
+    ax = mn.ThreeDAxes(x_length=xlen, y_length=xlen, z_length=xlen, x_range=xrange, y_range=xrange, z_range=xrange,
+                       z_axis_config={'rotation': PI},
+                       axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                    "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                    "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                                    },
+                       )
+    ax.shift(-ax.coords_to_point(0, 0, 0))
+
+    eq_str = r'uvw' if anim >= 4 else r'xyz'
+    eq = mn.MathTex(eq_str, font_size=30)[0].rotate(-PI/2, mn.RIGHT)
+    eq[0].move_to(ax.coords_to_point(1.3,0,0)).rotate(PI,mn.IN)
+    eq[1].move_to(ax.coords_to_point(0,1.3,0)).rotate(-PI/2,mn.IN)
+    eq[2].move_to(ax.coords_to_point(0,0,1.26)).rotate(-3*PI/4, mn.IN)
+
+    pos_col = ManimColor(list(pos_region_color[:3]*256))
+    pos_col2 = 0.8 * mn.GREEN + 0.2 * mn.WHITE
+    pos_col2 = mn.YELLOW
+    ax2 = ManimMob(ax.copy().set_opacity(0.85).set_color(pos_col2)) if anim == 4 else ax
+    ax = ManimMob(ax)
+
+    sphere = get_sphere(r)[0]
+
+    curves = CubicCurve(du=0.02)
+    normalize_curves(curves)
+
+    line_col = Color((.398, .887, 1.))
+    plts = []
+    pts_arr = []
+    for u,v,w in curves:
+        pts = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT)).float()
+        pts *= r / pts.norm(dim=1, keepdim=True)
+        crv = curve_surface(pts, width=0.03, color=line_col)
+        plts.append(crv)
+        pts_arr.append(pts)
+
+    cam: Camera = Scene.get_camera()
+    eq = ManimMob(eq)
+    plt = Group(*plts)
+
+    with Off():
+        cam.set_distance_to_screen(10).move_to(cam.get_center() * 0.8)
+        cam.set_euler_angles(80*DEGREES, 0*DEGREES, 120*DEGREES)
+        cam.move(OUT*0.32)
+        sphere.spawn()
+        plt.spawn()
+    if anim == 1:
+        for i, pts in enumerate(pts_arr):
+            with Off():
+                plt[i].get_descendants()[1].location = curve_surface_loc(pts, width=0.045)
+                sphere[0].set_opacity_via_color(0.5)
+        gp = Group(sphere, plt)
+        with Sync(run_time=6, rate_func=rate_funcs.identity):
+            gp.orbit_around_point(ORIGIN, 360, OUT)
+
+    if 2 <= anim <= 4:
+        thetas = torch.linspace(0., 2 * PI, 81)
+        circ_pts = []
+        circs = []
+        for dirs in [[UP, OUT], [RIGHT, OUT], [UP, RIGHT]]:
+            pts = (torch.cos(thetas)[:, None] * dirs[0] + torch.sin(thetas)[:, None] * dirs[1]).float() * r
+            circ_pts.append(pts)
+            crv = curve_surface(pts, color=WHITE, opacity=0.3)
+            circs.append(crv)
+        circs = Group(*circs)
+        with Off():
+            ax.spawn()
+            eq.spawn()
+            circs.spawn()
+
+    if anim == 2:
+        mat = scale_mat(1)
+        with Off():
+            for i, pts in enumerate(pts_arr):
+                pts1 = pts @ mat
+                pts1 *= r / pts1.norm(dim=1, keepdim=True)
+                plt[i].get_descendants()[1].set_non_recursive(
+                    location=curve_surface_loc(pts1))
+
+        gp = Group(ax, eq, circs, sphere, plt)
+        with Sync(run_time=6, rate_func=rate_funcs.identity):
+            gp.orbit_around_point(ORIGIN, 360, OUT)
+
+    if anim == 4:
+        with Off():
+            ax2.spawn()
+
+        ax_locs = [d.location.clone() for d in ax.get_descendants()]
+        ax_norms = [loc.norm(dim=2, keepdim=True) for loc in ax_locs]
+        eq_pos = torch.stack([_.get_center()[0,0,:] for _ in eq.submobjects])
+        eq_norms = eq_pos.norm(dim=1, keepdim=True)
+        eq_locs = [[d.location.clone() for d in sub.get_descendants()] for sub in eq.submobjects]
+
+        for frame in ah.FrameStepper(fps=quality.frames_per_second, step=1, run_time=4):
+            u = frame.u
+            mat = scale_mat(1-u)
+            mat2 = scale_mat(-u)
+            with frame.context:
+                for i, pts in enumerate(pts_arr):
+                    pts1 = pts @ mat
+                    pts1 *= r / pts1.norm(dim=1, keepdim=True)
+                    plt[i].get_descendants()[1].set_non_recursive(
+                        location=curve_surface_loc(pts1))
+                for i, pts in enumerate(circ_pts):
+                    pts1 = pts @ mat2
+                    pts1 *= r / pts1.norm(dim=1, keepdim=True)
+                    circs[i].get_descendants()[1].set_non_recursive(
+                        location=curve_surface_loc(pts1, width=0.03))
+                for d1, loc, norm in zip(ax.get_descendants(), ax_locs, ax_norms):
+                    loc1 = loc @ mat
+                    d1.set_non_recursive(location=loc1 * norm / loc1.norm(dim=2, keepdim=True))
+                loc = eq_pos @ mat
+                loc *= eq_norms / loc.norm(dim=1, keepdim=True)
+
+                rot = torch.from_numpy(ah.rotation_matrix(OUT, -PI/2 * (1 - u)))
+                for i in range(3):
+                    for d1, loc1 in zip(eq.submobjects[i].get_descendants(), eq_locs[i]):
+                        loc2 = loc1 - eq_pos[i, :]
+                        if i == 0:
+                            loc2 = loc2 @ rot
+                        d1.set_non_recursive(location=loc2 + loc[i,:])
+                for d1, loc, norm in zip(ax2.get_descendants(), ax_locs, ax_norms):
+                    loc1 = loc @ mat2
+                    d1.set_non_recursive(location=loc1 * norm / loc1.norm(dim=2, keepdim=True))
+
+    if anim >= 2:
+        Scene.wait(0.1)
+
+    name = 'curve_anim{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+def scale_mat(t):
+    ones = torch.ones(size=(3,3)) / 3
+    diag = torch.eye(3)
+    rot = torch.tensor([[0,-1,1], [1,0,-1], [-1,1,0]]) / math.sqrt(3)
+    e = math.exp(t * math.log(2))
+    a = e * math.cos(t * math.pi)
+    b = e * math.sin(t * math.pi)
+    mat = ones * (1-a) + diag * a + rot * b
+    mat[2,:] *= -1
+    mat[:,2] *= -1
+    return mat.float()
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
@@ -888,8 +1136,12 @@ if __name__ == "__main__":
     # surface_plot(quality=HD, bgcol=BLACK, anim=16)
     # surface_plot(quality=LD, bgcol=BLACK, anim=18)
     # surface_plot(quality=LD, bgcol=BLACK, anim=19)
-    surface_plot(quality=HD, bgcol=BLACK, anim=20)
+    # surface_plot(quality=HD, bgcol=BLACK, anim=17)
     # surface_plot(quality=HD, bgcol=BLACK, anim=20)
     # surface_plot(quality=HD, bgcol=BLACK, anim=22)
     # surface_plot(quality=LD, bgcol=BLACK, anim=23)
+    curve_head(quality=MD, bgcol=TRANSPARENT, anim=1)
+    curve_head(quality=MD, bgcol=TRANSPARENT, anim=2)
+    # curve_anim(quality=HD, bgcol=BLACK, anim=2)
+    # curve_anim(quality=HD, bgcol=TRANSPARENT, anim=2)
 
