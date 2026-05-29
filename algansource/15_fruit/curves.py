@@ -266,35 +266,30 @@ def get_sphere(r, circle_opacity=0.5, sphere_opacity=0.8):
     return Group(ball, circ, circ2, circ3)
 
 def circle_thru_points(r, pt0, pt1, dtheta1=PI/10, dtheta2=PI/10, width=0.03, fps=15, run_time=1., n=20, color=WHITE):
-    arc = Surface(grid_height=8, grid_width=n, color=color)
-    dtype = arc.get_descendants()[1].location.dtype
-
-    p0 = torch.tensor([*pt0], dtype=dtype)
+    p0 = torch.tensor([*pt0]).float()
     p0 /= torch.norm(p0)
-    p1 = torch.tensor([*pt1], dtype=dtype)
+    p1 = torch.tensor([*pt1]).float()
     p1 /= torch.norm(p1)
     p0[2] *= -1
     p1[2] *= -1
     p2 = p1 - torch.dot(p0, p1) * p0
     p2 /= torch.norm(p2)
     theta1 = math.acos(torch.dot(p0, p1))
+    theta2 = theta1 + dtheta2
+    theta = torch.linspace(-dtheta1, theta2, n, device=p0.device)[:, None]
+    u2 = torch.cos(theta) * p0 + torch.sin(theta) * p2
 
+    arc = curve_surface(u2 * r, resolution=8, width=width, closed=False, color=color)
     with Off():
         arc.spawn()
     p = arc.get_descendants()[1]
-    if run_time <= 0.:
-        theta2 = theta1 + dtheta2
-        theta = torch.linspace(-dtheta1, theta2, n, device=p0.device, dtype=dtype)[:, None, None]
-        u2 = torch.cos(theta) * p0 + torch.sin(theta) * p2
-        loc = curve_surface_loc(u2 * r, resolution=8, width=width, closed=False)
-        with Off():
-            p.set_non_recursive(location=loc)
-    else:
+
+    if run_time > 0.:
         with Seq():
             for frame in ah.FrameStepper(fps=fps, step=1, run_time=run_time, rate_func=rate_funcs.identity):
                 u = frame.u
                 theta2 = u * (theta1+dtheta2) + (1-u) * (-dtheta1)
-                theta = torch.linspace(-dtheta1, theta2, n, device=p0.device, dtype=dtype)[:, None, None]
+                theta = torch.linspace(-dtheta1, theta2, n, device=p0.device)[:, None]
                 u2 = torch.cos(theta) * p0 + torch.sin(theta) * p2
                 loc = curve_surface_loc(u2 * r, resolution=8, width=width, closed=False)
                 with frame.context:
@@ -1773,6 +1768,189 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
         name += '_tr'
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
+    MathTex.set_default(stroke_width=2)
+    r = 2.
+    ax, eq, sphere, circs, circ_pts, plt, pts_arr, curves, pos_region \
+        = get_curve_plot(r, use_xyz=False, sphere_opacity=sphere_opacity, use_pos=True)
+    ax = ManimMob(ax)
+    pts_p, labels_p, pts_o, labels_o = get_points_plot(r)
+    pt_q = get_points(r, [point_q], [mn.ORANGE])[0]
+    label_q = ManimMob(
+            mn.MathTex(r'Q', color=mn.ORANGE, font_size=35).rotate(-0.8 * PI / 2, mn.RIGHT).rotate(120 * PI / 180, mn.OUT))
+    label_q.move_to(pt_q[0].get_center() * 1.1 + UP * 0.25 + OUT * -0.2 + RIGHT * 0.1)
+    cam: Camera = Scene.get_camera()
+    col_pt3 = ManimColor((mn.PINK.to_rgb() * 1.4).clip(0,1))
+
+    point_q2_ = (715, 14664, -3619)
+    point_q2 = (715, -3619, 14664)
+    pt_q2 = get_points(r, [point_q2], [mn.ORANGE])[0]
+    pt_q2_ = get_points(r, [point_q2_], [mn.PINK])[0]
+    label_q2 = ManimMob(
+            mn.MathTex(r'2Q', color=mn.ORANGE, font_size=35).rotate(-1 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q2.move_to(pt_q2[0].get_center() * 1.1 + UP * 0. + OUT * 0.05)
+    label_q2_ = ManimMob(
+            mn.MathTex(r'-2Q', color=col_pt3, font_size=35).rotate(-PI / 2, mn.RIGHT).rotate(150 * PI / 180, mn.OUT))
+    label_q2_.move_to(pt_q2_[0].get_center() * 1.1 + UP * 0. + OUT * -0. + RIGHT * 0.5)
+    label_q.move_to(label_q.get_center() * 0.92).move(DOWN * 0.1).orbit_around_point(label_q.get_center(), -10,
+                                                                                     OUT)
+
+    with Off():
+        ax.spawn()
+        eq.spawn()
+        sphere.spawn()
+        circs.spawn()
+        pos_region.spawn()
+        plt.spawn()
+        pts_p[0].spawn()
+        # pts_o.spawn()
+        pt_q.spawn()
+        dir1 = cam.get_right_direction() * 0.15 - cam.get_upwards_direction() * 0.45 + cam.get_forward_direction()*0.2
+        dir1 += DOWN*0.1
+        labels_p[0].clone().move(dir1).spawn()
+
+    if anim == 1:
+        with Off():
+            label_q.spawn()
+        with Sync():
+            circle_thru_points(r, point_q, point_q2_, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.8)
+                with Sync():
+                    pt_q2_.spawn()
+                    label_q2_.spawn()
+            with Seq():
+                Scene.wait(0.2)
+                with Sync(run_time=1):
+                    cam.orbit_around_point(ORIGIN, 40, OUT)
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_q2_, point_q2, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.8)
+                with Sync():
+                    pt_q2.spawn()
+                    label_q2.spawn()
+            cam.orbit_around_point(ORIGIN, -30, OUT)
+            cam.orbit_around_point(ORIGIN, -30, cam.get_right_direction())
+        Scene.wait(0.1)
+
+    if anim >= 2:
+        with Off():
+            cam.orbit_around_point(ORIGIN, 10, OUT)
+            cam.orbit_around_point(ORIGIN, -30, cam.get_right_direction())
+            pt_q2.spawn()
+            pt_q2_.spawn()
+            label_q2.spawn()
+
+    right = cam.get_right_direction()
+    point_q3 = (6.65659395, 3.98619322, 1.29609938)
+    point_q3_ = (6.65659395, 1.29609938, 3.98619322)
+    point_q_ = (point_q[0], point_q[2], point_q[1])
+    point_qp = (3, 10, 15)
+    point_q3p = (3.04406698, 5.08332555, 15.63392295)
+    pt_q3 = get_points(r, [point_q3], [mn.ORANGE])[0]
+    pt_q3_ = get_points(r, [point_q3_], [mn.PINK])[0]
+    pt_q_ = get_points(r, [point_q_], [mn.PINK])[0]
+    pt_qp = get_points(r, [point_qp], [mn.YELLOW])[0]
+    pt_q3p = get_points(r, [point_q3p], [mn.YELLOW])[0]
+    label_q3_ = ManimMob(
+            mn.MathTex(r'-3Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q3_.move_to(pt_q3_[0].get_center() * 1.1 + right * -0.4)
+    label_q3 = ManimMob(
+            mn.MathTex(r'3Q', color=mn.ORANGE, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q3.move_to(pt_q3[0].get_center() * 1.1 + right * 0.35 + OUT * 0.4)
+    label_q_ = ManimMob(
+            mn.MathTex(r'-Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q_.move_to(pt_q_[0].get_center() * 1.1 + right * -0.3 + OUT * 0.2)
+    label_qp = ManimMob(
+            mn.MathTex(r'Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_qp.move_to(pt_qp[0].get_center() * 1.1 + right * 0.6 + OUT * -0.15)
+    label_q3p = ManimMob(
+            mn.MathTex(r'3Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q3p.move_to(pt_q3p[0].get_center() * 1.1 + right * 0.75 + OUT * -0.15)
+
+    if anim == 2:
+        with Off():
+            label_q.spawn()
+        with Sync():
+            circle_thru_points(r, point_q2, point_q, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.6)
+                with Sync():
+                    pt_q3_.spawn()
+                    label_q3_.spawn()
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_q3_, point_q3, run_time=0.5, width=0.04, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.3)
+                with Sync():
+                    pt_q3.spawn()
+                    label_q3.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 3:
+        with Off():
+            pt_q3_.spawn()
+            pt_q3.spawn()
+
+    if anim == 3:
+        with Off():
+            label_q3_.spawn()
+            label_q3.spawn()
+            label_q.spawn()
+        with Sync():
+            circle_thru_points(r, point_q, point_q_, run_time=0.5, width=0.03, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.3)
+                with Sync():
+                    pt_q_.spawn()
+                    label_q_.spawn()
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_p1, point_qp, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.75)
+                with Sync():
+                    pt_qp.spawn()
+                    label_qp.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 4:
+        with Off():
+            pt_q_.spawn()
+            pt_qp.spawn()
+
+    if anim == 4:
+        with Off():
+            label_q3_.spawn()
+            label_q3.spawn()
+            # circle_thru_points(r, point_p1, point_q3p, run_time=0., width=0.3, fps=quality.frames_per_second, n=21)
+        with Sync():
+            circle_thru_points(r, point_p1, point_q3p, run_time=1., width=0.03, fps=quality.frames_per_second, n=21)
+            with Seq():
+                Scene.wait(0.8)
+                with Sync():
+                    pt_q3p.spawn()
+                    label_q3p.spawn()
+        Scene.wait(0.1)
+
+
+    # if anim == 1:
+    #     with Sync():
+    #         circle_thru_points(r, point_p1, point_r1, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+    #         with Seq():
+    #             Scene.wait(0.6)
+    #             with Sync():
+    #                 pt_r1.spawn()
+    #                 label_r1.spawn()
+    #     Scene.wait(0.1)
+
+    name = 'multiples{}'.format(anim)
+    if bgcol == TRANSPARENT:
+        name += '_tr'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
 if __name__ == "__main__":
@@ -1790,8 +1968,5 @@ if __name__ == "__main__":
     # curve_anim(quality=HD, bgcol=BLACK, anim=16)
     # curve_anim(quality=HD, bgcol=TRANSPARENT, anim=15, sphere_opacity=0.65)
     # solution(quality=HD, bgcol=TRANSPARENT, anim=2, sphere_opacity=0.75)
-    manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
-    manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
-    manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
-    manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
-    manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
+    # multiples_q(quality=HD, bgcol=TRANSPARENT, anim=4, sphere_opacity=0.75)
+    multiples_q(quality=LD, bgcol=BLACK, anim=2, sphere_opacity=0.75)
