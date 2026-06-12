@@ -14,6 +14,7 @@ import alganhelper as ah
 from common.wigner import *
 LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
+LD3 = RenderSettings((1280, 720), 15)
 HD = RenderSettings((1920, 1080), 30)
 HD2 = RenderSettings((1920, 1080), 15)
 
@@ -207,7 +208,7 @@ def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, wi
     return crv
 
 
-def positive_region(r, curve, curve_obj, use_xyz=False):
+def positive_region(r, curve, curve_obj, use_xyz=False, target_col=None):
     line_col2 = mn.ManimColor.from_rgb((.6787, 1., .5337))
     # dots = []
     # for u, v, w in [(1,0,0), (0,1,0), (0,0,1)] if use_xyz else [(0,1,1), (1,0,1), (1,1,0)]:
@@ -232,6 +233,7 @@ def positive_region(r, curve, curve_obj, use_xyz=False):
     pos_region2.get_descendants()[1].location[...] = -loc
 
     line_col2 = Color(line_col2.to_rgb())
+    # GEL
     p = curve_obj.get_descendants()[1]
     col = p.color.clone()
     u, v, w = curve
@@ -241,7 +243,8 @@ def positive_region(r, curve, curve_obj, use_xyz=False):
     else:
         mask = (u < v + w + eps) & (v < u + w + eps) & (w < u + v + eps)
     mask_expanded = torch.from_numpy(mask).repeat_interleave(8)
-    col[0, mask_expanded, :3] = line_col2[:3]
+    if target_col is None: target_col = line_col2
+    col[0, mask_expanded, :3] = target_col[:3]
 
     return Group(pos_region, pos_region2), col
 
@@ -265,7 +268,8 @@ def get_sphere(r, circle_opacity=0.5, sphere_opacity=0.8):
     circ3 = circ.clone().orbit_around_point(ORIGIN, 90, UP)
     return Group(ball, circ, circ2, circ3)
 
-def circle_thru_points(r, pt0, pt1, dtheta1=PI/10, dtheta2=PI/10, width=0.03, fps=15, run_time=1., n=20, color=WHITE):
+def circle_thru_points(r, pt0, pt1, dtheta1=PI/10, dtheta2=PI/10, width=0.03, fps=15, run_time=1., n=20, color=WHITE,
+                       theta1 = None):
     p0 = torch.tensor([*pt0]).float()
     p0 /= torch.norm(p0)
     p1 = torch.tensor([*pt1]).float()
@@ -274,7 +278,7 @@ def circle_thru_points(r, pt0, pt1, dtheta1=PI/10, dtheta2=PI/10, width=0.03, fp
     p1[2] *= -1
     p2 = p1 - torch.dot(p0, p1) * p0
     p2 /= torch.norm(p2)
-    theta1 = math.acos(torch.dot(p0, p1))
+    if theta1 is None: theta1 = math.acos(torch.dot(p0, p1))
     theta2 = theta1 + dtheta2
     theta = torch.linspace(-dtheta1, theta2, n, device=p0.device)[:, None]
     u2 = torch.cos(theta) * p0 + torch.sin(theta) * p2
@@ -492,7 +496,7 @@ def cube_curve(quality=LD, bgcol=BLACK, use_xyz=True, anim=1):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def surface_plot(quality=LD, bgcol=BLACK, anim=1):
+def surface_plot(quality=LD, bgcol=BLACK, anim=1, do_eqs=True):
     xrange = [-1.2, 1.2]
     xlen = (xrange[1] - xrange[0])*2
     ax = mn.ThreeDAxes(x_length=xlen, y_length=xlen, z_length=xlen, x_range=xrange, y_range=xrange, z_range=xrange,
@@ -519,8 +523,9 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
         # cam.set_euler_angles(60*DEGREES, 0*DEGREES, 150*DEGREES)
         cam.set_euler_angles(80*DEGREES, 0*DEGREES, 120*DEGREES)
         cam.move(OUT*0.32)
-        ax.spawn()
-        eq.spawn()
+        if do_eqs:
+            ax.spawn()
+            eq.spawn()
 
     curves = CubicCurve(du=0.01)
     curves = [(-u+v+w, u-v+w, u+v-w) for (u,v,w) in curves]
@@ -599,8 +604,14 @@ def surface_plot(quality=LD, bgcol=BLACK, anim=1):
                     ).reshape(1, -1, 3)
                     p.set_non_recursive(location=loc)
     elif anim == 2:
-        gp = Group(ax, eq, plt)
-        with Sync(rate_func=rate_funcs.identity, run_time=6):
+        run_time=6
+        if do_eqs:
+            gp = Group(ax, eq, plt)
+        else:
+            gp = plt
+            with Off():
+                cam.move(cam.get_upwards_direction() * -0.3)
+        with Sync(rate_func=rate_funcs.identity, run_time=run_time):
             gp.orbit_around_point(ORIGIN, 360, OUT)
         # following does final slow-down
         # with Off():
@@ -1001,7 +1012,7 @@ def curve_head(quality=LD, bgcol=BLACK, anim=1):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def get_curve_plot(r, use_xyz=False, sphere_opacity=0.8, use_pos=True):
+def get_curve_plot(r, use_xyz=False, sphere_opacity=0.8, use_pos=True, du=0.02, target_col=None):
     xrange = [-1.2, 1.2]
     xlen = (xrange[1] - xrange[0])*r
     ax = mn.ThreeDAxes(x_length=xlen, y_length=xlen, z_length=xlen, x_range=xrange, y_range=xrange, z_range=xrange,
@@ -1031,7 +1042,7 @@ def get_curve_plot(r, use_xyz=False, sphere_opacity=0.8, use_pos=True):
         circs.append(crv)
     circs = Group(*circs)
 
-    curves = CubicCurve(du=0.02)
+    curves = CubicCurve(du=du)
     normalize_curves(curves)
 
     line_col = Color((.398, .887, 1.))
@@ -1052,7 +1063,7 @@ def get_curve_plot(r, use_xyz=False, sphere_opacity=0.8, use_pos=True):
         cam.set_euler_angles(80*DEGREES, 0*DEGREES, 120*DEGREES)
         cam.move(OUT*0.32)
 
-    pos_region, pos_col = positive_region(r, curves[1], plt[1])
+    pos_region, pos_col = positive_region(r, curves[1], plt[1], target_col=target_col)
     if use_pos:
         with Off():
             plt[1].get_descendants()[1].set_non_recursive(color=pos_col)
@@ -1108,9 +1119,11 @@ col_target_pt = mn.ManimColor((.8, 1., .5))
 
 def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     r = 2.
-    use_pos = anim == 8 or anim > 9
+    use_pos = anim == 8 or 20 >= anim >= 9
+    # target_col=(RED[:3] * 1.5).clamp(0,1) if anim == 9 else None
+    target_col=RED[:3] if anim == 9 else None
     ax, eq, sphere, circs, circ_pts, plt, pts_arr, curves, pos_region \
-        = get_curve_plot(r, use_xyz=anim < 4, sphere_opacity=sphere_opacity, use_pos=use_pos)
+        = get_curve_plot(r, use_xyz=anim < 4, sphere_opacity=sphere_opacity, use_pos=use_pos, target_col=target_col)
 
     # pos_col = ManimColor(list(pos_region_color[:3]*256))
     # pos_col2 = 0.8 * mn.GREEN + 0.2 * mn.WHITE
@@ -1200,7 +1213,7 @@ def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
         ax_norms = [_.norm(dim=2, keepdim=True) for _ in ax_locs]
         if anim == 5:
             plt_d = [plt[0].get_descendants()[1]]
-        elif anim == 6 or anim == 9:
+        elif anim == 6:
             plt_d = [plt[i].get_descendants()[1] for i in (1,2)]
         else:
             plt_d = []
@@ -1302,7 +1315,7 @@ def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
                     cam.orbit_around_point(ORIGIN, 40, dir1)
                     Scene.wait(0.1)
                 with Sync():
-                    chord = circle_thru_points(r, point_o1, point_o3, fps=quality.frames_per_second,
+                    circle_thru_points(r, point_o1, point_o3, fps=quality.frames_per_second,
                                                run_time=1.3, width=0.04)
                     with Seq():
                         Scene.wait(0.1)
@@ -1326,7 +1339,7 @@ def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
                 dir2 /= dir2.norm()
                 with Sync():
                     with Seq(run_time=6):
-                        circ = circle_thru_points(r, point_o1, (2,13,13), dtheta2=3*PI/2-PI/10, n=160, width=0.035, fps=30)
+                        circle_thru_points(r, point_o1, (2,13,13), dtheta2=3*PI/2-PI/10, n=160, width=0.04, fps=30)
                     with Seq():
                         Scene.wait(8/15)
                         with Seq(run_time=6, rate_func=rate_funcs.identity):
@@ -1340,7 +1353,7 @@ def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
                     labels_o[0].spawn()
                 dir2 = cam.get_upwards_direction()[0,0,:]
                 with Sync():
-                    circ = circle_thru_points(r, point_o1, point_p1, width=0.03, fps=quality.frames_per_second)
+                    circ = circle_thru_points(r, point_o1, point_p1, width=0.04, fps=quality.frames_per_second)
                     with Seq():
                         Scene.wait(0.2)
                         cam.orbit_around_point(ORIGIN,-60,dir2)
@@ -1355,10 +1368,64 @@ def curve_anim(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
                     circ.despawn()
                 Scene.wait(0.1)
 
-            if anim >= 20:
+            if anim == 20:
                 pt_q = get_points(r, [point_q], [mn.ORANGE])[0]
                 with Off():
                     pt_q.spawn()
+
+            if anim == 21 or anim == 22:
+                with Off():
+                    circs.despawn()
+                    pos_region.despawn()
+                    # sphere.set_opacity_via_color(0.3)
+                # with Sync():
+
+                with Sync() if anim == 21 else Off():
+                    run_time=2.
+                    point_o2_ = tuple((-_ for _ in point_o2))
+                    width = 0.03
+                    with Seq():
+                        circle_thru_points(r, point_p1, point_o3_, dtheta1 = PI/10, theta1 = 2*PI-PI/10, dtheta2=0, fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_p1, point_o2_, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0, fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_p2, point_p3, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o2, point_o1, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o2, point_o3, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o1, point_o3, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o1, point_p1, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o2, point_p2, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o3, point_p3, dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o1, (2,13,13), dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o2, (13, 2, 13), dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                    with Seq():
+                        circle_thru_points(r, point_o3, (13, 13, 2), dtheta1=PI / 10, theta1=2 * PI - PI / 10, dtheta2=0,
+                                           fps=quality.frames_per_second, run_time=run_time, width=width, n=60)
+                Scene.wait(0.1)
+
+                if anim == 22:
+                    dir = cam.get_right_direction() + cam.get_upwards_direction()
+                    dir /= dir.norm()
+                    with Seq(run_time=6, rate_func=rate_funcs.identity):
+                        cam.orbit_around_point(ORIGIN, 360, dir)
+                Scene.wait(0.1)
 
             # if anim == 20:
             #     eq = mn.MathTex(r'Q=(10:3:2)', color=mn.ORANGE, font_size=35, stroke_width=2)
@@ -1454,7 +1521,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
 
     if anim == 2:
         with Sync():
-            circle_thru_points(r, point_p1, point_q3, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_p1, point_q3, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.6)
                 with Sync():
@@ -1465,11 +1532,11 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     if anim >= 3:
         with Off():
             pt_q3.spawn()
-            circle_thru_points(r, point_p1, point_q3, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_p1, point_q3, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 3:
         with Sync():
-            circle_thru_points(r, point_q, point_q4, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q, point_q4, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.6)
                 with Sync():
@@ -1483,7 +1550,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
 
     if anim >= 4:
         with Off():
-            circle_thru_points(r, point_q, point_q4, run_time=0., width=0.03, fps=quality.frames_per_second, n=61, color=line_col2)
+            circle_thru_points(r, point_q, point_q4, run_time=0., width=0.04, fps=quality.frames_per_second, n=61, color=line_col2)
             pt_q4.spawn()
 
     if anim == 4:
@@ -1495,7 +1562,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
             label_q3.orbit_around_point(label_q3.get_center(), 45, OUT).move(RIGHT*-0.25).spawn()
             # cam.orbit_around_point(ORIGIN, 40, RIGHT)
         with Sync():
-            circ = circle_thru_points(r, point_q3, point_q7, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circ = circle_thru_points(r, point_q3, point_q7, run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.2)
                 with Sync(run_time=1.2):
@@ -1517,7 +1584,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     if anim >= 5:
         with Off():
             pt_q7.spawn()
-            circle_thru_points(r, point_q3, point_q7, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_q3, point_q7, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 5:
         with Off():
@@ -1525,7 +1592,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
             label_q3.orbit_around_point(label_q3.get_center(), 45, OUT).move(RIGHT*-0.25).spawn()
             label_q4.spawn()
         with Sync():
-            circle_thru_points(r, point_q4, point_q9, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q4, point_q9, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.4)
                 with Sync(run_time=1.):
@@ -1540,7 +1607,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     if anim >= 6:
         with Off():
             pt_q9.spawn()
-            circle_thru_points(r, point_q4, point_q9, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_q4, point_q9, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 6:
         with Off():
@@ -1549,7 +1616,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
         with Sync():
             label_q7.spawn()
         with Sync():
-            circ=circle_thru_points(r, point_q7, point_q15, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circ=circle_thru_points(r, point_q7, point_q15, run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.4)
                 with Sync(run_time=1.):
@@ -1568,7 +1635,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     if anim >= 7:
         with Off():
             pt_q15.spawn()
-            circle_thru_points(r, point_q7, point_q15, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_q7, point_q15, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 7:
         with Off():
@@ -1577,7 +1644,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
             label_q7.spawn()
             label_q9.spawn()
         with Sync():
-            circle_thru_points(r, point_q7, point_q17, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q7, point_q17, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.5)
                 cam.orbit_around_point(ORIGIN, -50, RIGHT)
@@ -1591,7 +1658,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
     if anim >= 8:
         with Off():
             pt_q17.spawn()
-            circle_thru_points(r, point_q7, point_q17, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_q7, point_q17, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 8:
         with Off():
@@ -1599,7 +1666,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
             label_q17.spawn()
             label_q15.spawn()
         with Sync():
-            circle_thru_points(r, point_q15, point_r9_, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q15, point_r9_, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.3)
                 cam.orbit_around_point(ORIGIN, -50, OUT)
@@ -1614,7 +1681,7 @@ def solution(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
         name += '_tr'
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
-def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
+def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1, do_labels=True):
     MathTex.set_default(stroke_width=2)
     r = 2.
     ax, eq, sphere, circs, circ_pts, plt, pts_arr, curves, pos_region \
@@ -1629,7 +1696,6 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
 
     with Off():
         ax.spawn()
-        eq.spawn()
         sphere.spawn()
         circs.spawn()
         pos_region.spawn()
@@ -1638,8 +1704,10 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
         # pts_o.spawn()
         pt_q.spawn()
         dir1 = cam.get_right_direction() * 0.15 - cam.get_upwards_direction() * 0.45 + cam.get_forward_direction()*0.2
-        labels_p[0].clone().move(dir1).spawn()
-        label_q.spawn()
+        if do_labels:
+            eq.spawn()
+            labels_p[0].clone().move(dir1).spawn()
+            label_q.spawn()
 
     point_r1 = (3,15,10)
     point_r2 = (715, 14664, -3619)
@@ -1665,7 +1733,7 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
 
     if anim == 1:
         with Sync():
-            circle_thru_points(r, point_p1, point_r1, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_p1, point_r1, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.6)
                 with Sync():
@@ -1676,11 +1744,11 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
     if anim >= 2:
         with Off():
             pt_r1.spawn()
-            circle_thru_points(r, point_p1, point_r1, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_p1, point_r1, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 2:
         with Sync():
-            circle_thru_points(r, point_q, point_r2, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q, point_r2, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.6)
                 with Sync():
@@ -1694,17 +1762,18 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
 
     if anim >= 3:
         with Off():
-            circle_thru_points(r, point_q, point_r2, run_time=0., width=0.03, fps=quality.frames_per_second, n=61, color=line_col2)
+            circle_thru_points(r, point_q, point_r2, run_time=0., width=0.04, fps=quality.frames_per_second, n=61, color=line_col2)
             pt_r2.spawn()
 
     if anim == 3:
         with Off():
             cam.orbit_around_point(ORIGIN, 40, OUT)
-            label_r2.spawn()
+            if do_labels:
+                label_r2.spawn()
         # with Sync():
         #     label_q3.orbit_around_point(label_q3.get_center(), 45, OUT).move(RIGHT*-0.25).spawn()
         with Sync():
-            circle_thru_points(r, point_r2, point_r4_, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_r2, point_r4_, run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.2)
                 with Sync(run_time=1.2):
@@ -1713,13 +1782,14 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
                 Scene.wait(0.9)
                 with Sync():
                     pt_r4.spawn()
-                    label_r4.spawn()
+                    if do_labels:
+                        label_r4.spawn()
         Scene.wait(0.1)
 
     if anim >= 4:
         with Off():
             pt_r4.spawn()
-            circle_thru_points(r, point_r2, point_r4_, run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_r2, point_r4_, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 4:
         dir2, angle = add_rots([(RIGHT, -60 * PI/180), (OUT, 30 * PI/180)])
@@ -1728,7 +1798,7 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
             cam.orbit_around_point(ORIGIN, 40, OUT)
             cam.orbit_around_point(ORIGIN, 60, RIGHT)
         with Sync():
-            circle_thru_points(r, point_r4_, tuple(-_ for _ in point_r8_), run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_r4_, tuple(-_ for _ in point_r8_), run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.2)
                 with Sync(run_time=1.2):
@@ -1743,7 +1813,7 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
     if anim >= 5:
         with Off():
             pt_r8.spawn()
-            circle_thru_points(r, point_r4_, tuple(-_ for _ in point_r8_), run_time=0., width=0.03, fps=quality.frames_per_second, color=line_col2)
+            circle_thru_points(r, point_r4_, tuple(-_ for _ in point_r8_), run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
 
     if anim == 5:
         dir3 = RIGHT * 0.13 + UP * -0.1
@@ -1752,7 +1822,7 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
             label_r8.spawn()
             cam.orbit_around_point(ORIGIN, 70, OUT)
         with Sync():
-            circle_thru_points(r, tuple(-_ for _ in point_r8_), point_r9_, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, tuple(-_ for _ in point_r8_), point_r9_, run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.4)
                 with Sync(run_time=1.2):
@@ -1762,6 +1832,18 @@ def manual_solution(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
                 with Sync():
                     pt_target.spawn()
         Scene.wait(0.1)
+
+    if anim >= 6:
+        with Off():
+            circle_thru_points(r, tuple(-_ for _ in point_r8_), point_r9_, run_time=0., width=0.04, fps=quality.frames_per_second, color=line_col2)
+            pt_target.spawn()
+
+    if anim == 6:
+        with Off():
+            cam.orbit_around_point(ORIGIN, 95, OUT)
+            cam.orbit_around_point(ORIGIN, -25, cam.get_right_direction())
+        with Sync(run_time=4, rate_func=rate_funcs.identity):
+            cam.orbit_around_point(ORIGIN, -105, OUT)
 
     name = 'manual_solution{}'.format(anim)
     if bgcol == TRANSPARENT:
@@ -1813,7 +1895,7 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
         with Off():
             label_q.spawn()
         with Sync():
-            circle_thru_points(r, point_q, point_q2_, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q, point_q2_, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.8)
                 with Sync():
@@ -1825,7 +1907,7 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
                     cam.orbit_around_point(ORIGIN, 40, OUT)
         Scene.wait(0.1)
         with Sync():
-            circle_thru_points(r, point_q2_, point_q2, run_time=1.2, width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q2_, point_q2, run_time=1.2, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.8)
                 with Sync():
@@ -1849,11 +1931,29 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
     point_q_ = (point_q[0], point_q[2], point_q[1])
     point_qp = (3, 10, 15)
     point_q3p = (3.04406698, 5.08332555, 15.63392295)
+    point_q5 = (3.053593877043831, 4.107252165654094, 0.849823960453238)
+    point_q5_ = (3.053593877043831, 0.849823960453238, 4.107252165654094)
+    point_q5p = (3.0260001984804026, 2.2497220295558957, 10.873046781459418)
+    point_q7 = (10.511694932248265, 29.67874280744111, 5.666693968405116)
+    point_q7_ = (10.511694932248265, 5.666693968405116, 29.67874280744111)
+    point_q7p = (2.708661275399193, 0.9593607514484106, 5.024555968707872)
+    point_q9 = (3.094267479766289, 14.35423244620534, 3.7273687139010594)
+    point_q9_ = (3.094267479766289, 3.7273687139010594, 14.35423244620534)
+    point_q9p = (19.135193390287615, 4.12487444720587, 15.885041478667487)
     pt_q3 = get_points(r, [point_q3], [mn.ORANGE])[0]
     pt_q3_ = get_points(r, [point_q3_], [mn.PINK])[0]
     pt_q_ = get_points(r, [point_q_], [mn.PINK])[0]
     pt_qp = get_points(r, [point_qp], [mn.YELLOW])[0]
     pt_q3p = get_points(r, [point_q3p], [mn.YELLOW])[0]
+    pt_q5 = get_points(r, [point_q5], [mn.ORANGE])[0]
+    pt_q5_ = get_points(r, [point_q5_], [mn.PINK])[0]
+    pt_q5p = get_points(r, [point_q5p], [mn.YELLOW])[0]
+    pt_q7 = get_points(r, [point_q7], [mn.ORANGE])[0]
+    pt_q7_ = get_points(r, [point_q7_], [mn.PINK])[0]
+    pt_q7p = get_points(r, [point_q7p], [mn.YELLOW])[0]
+    pt_q9 = get_points(r, [point_q9], [mn.ORANGE])[0]
+    pt_q9_ = get_points(r, [point_q9_], [mn.PINK])[0]
+    pt_q9p = get_points(r, [point_q9p], [col_target_pt])[0]
     label_q3_ = ManimMob(
             mn.MathTex(r'-3Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
     label_q3_.move_to(pt_q3_[0].get_center() * 1.1 + right * -0.4)
@@ -1869,6 +1969,33 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
     label_q3p = ManimMob(
             mn.MathTex(r'3Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
     label_q3p.move_to(pt_q3p[0].get_center() * 1.1 + right * 0.75 + OUT * -0.15)
+    label_q5_ = ManimMob(
+            mn.MathTex(r'-5Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q5_.move_to(pt_q5_[0].get_center() * 1.1 + right * -0.4 + OUT * -0.05)
+    label_q5 = ManimMob(
+            mn.MathTex(r'5Q', color=mn.ORANGE, font_size=35).rotate(-0.8 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q5.move_to(pt_q5[0].get_center() * 1.1 + right * 0. + OUT * -0.1)
+    label_q5p = ManimMob(
+            mn.MathTex(r'5Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q5p.move_to(pt_q5p[0].get_center() * 1.1 + right * -0.75 + OUT * -0.15 + cam.get_forward_direction()*-0.2)
+    label_q7_ = ManimMob(
+            mn.MathTex(r'-7Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q7_.move_to(pt_q7_[0].get_center() * 1.1 + right * -0.43 + OUT * -0.)
+    label_q7 = ManimMob(
+            mn.MathTex(r'7Q', color=mn.ORANGE, font_size=35).rotate(-0.8 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q7.move_to(pt_q7[0].get_center() * 1.1 + right * 0.15 + OUT * 0.05 + 0.05 * cam.get_right_direction())
+    label_q7p = ManimMob(
+            mn.MathTex(r'7Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q7p.move_to(pt_q7p[0].get_center() * 1.1 + right * -0.75 + OUT * -0.15 + cam.get_forward_direction()*-0.2)
+    label_q9_ = ManimMob(
+            mn.MathTex(r'-9Q', color=col_pt3, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q9_.move_to(pt_q9_[0].get_center() * 1.1 + right * 0.2 + OUT * 0.1)
+    label_q9 = ManimMob(
+            mn.MathTex(r'9Q', color=mn.ORANGE, font_size=35).rotate(-0.8 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q9.move_to(pt_q9[0].get_center() * 1.1 + right * 0.1 + OUT * 0.4)
+    label_q9p = ManimMob(
+            mn.MathTex(r'9Q+P_1', color=mn.YELLOW, font_size=35).rotate(-0.9 * PI / 2, mn.RIGHT).rotate(135 * PI / 180, mn.OUT))
+    label_q9p.move_to(pt_q9p[0].get_center() * 1.1 + right * -0.65 + OUT * -0.05 + cam.get_forward_direction()*-0.2)
 
     if anim == 2:
         with Off():
@@ -1901,7 +2028,7 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
             label_q3.spawn()
             label_q.spawn()
         with Sync():
-            circle_thru_points(r, point_q, point_q_, run_time=0.5, width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_q, point_q_, run_time=0.5, width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.3)
                 with Sync():
@@ -1909,7 +2036,7 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
                     label_q_.spawn()
         Scene.wait(0.1)
         with Sync():
-            circle_thru_points(r, point_p1, point_qp, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
+            circle_thru_points(r, point_p1, point_qp, run_time=1., width=0.04, fps=quality.frames_per_second, n=61)
             with Seq():
                 Scene.wait(0.75)
                 with Sync():
@@ -1926,9 +2053,8 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
         with Off():
             label_q3_.spawn()
             label_q3.spawn()
-            # circle_thru_points(r, point_p1, point_q3p, run_time=0., width=0.3, fps=quality.frames_per_second, n=21)
         with Sync():
-            circle_thru_points(r, point_p1, point_q3p, run_time=1., width=0.03, fps=quality.frames_per_second, n=21)
+            circle_thru_points(r, point_p1, point_q3p, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
             with Seq():
                 Scene.wait(0.8)
                 with Sync():
@@ -1936,37 +2062,363 @@ def multiples_q(quality=LD, bgcol=BLACK, sphere_opacity=0.75, anim=1):
                     label_q3p.spawn()
         Scene.wait(0.1)
 
+    if anim >= 5:
+        with Off():
+            pt_q3p.spawn()
 
-    # if anim == 1:
-    #     with Sync():
-    #         circle_thru_points(r, point_p1, point_r1, run_time=1., width=0.03, fps=quality.frames_per_second, n=61)
-    #         with Seq():
-    #             Scene.wait(0.6)
-    #             with Sync():
-    #                 pt_r1.spawn()
-    #                 label_r1.spawn()
-    #     Scene.wait(0.1)
+    if anim == 5:
+        with Off():
+            label_q3.spawn()
+            label_q3_.spawn()
+        circle_thru_points(r, point_q2, point_q3, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+        with Sync():
+            pt_q5_.spawn()
+            label_q5_.spawn()
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_q5_, point_q5, run_time=0.7, width=0.04, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.5)
+                with Sync():
+                    pt_q5.spawn()
+                    label_q5.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 6:
+        with Off():
+            pt_q5.spawn()
+            pt_q5_.spawn()
+
+    if anim == 6:
+        with Off():
+            label_q5.spawn()
+            label_q5_.spawn()
+        with Sync():
+            circle_thru_points(r, point_p1, point_q5p, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+            with Seq():
+                Scene.wait(0.8)
+                with Sync():
+                    pt_q5p.spawn()
+                    label_q5p.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 7:
+        with Off():
+            pt_q5p.spawn()
+
+    if anim == 7:
+        with Off():
+            label_q5.spawn()
+            label_q5_.spawn()
+        circle_thru_points(r, point_q2, point_q5, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+        with Sync():
+            pt_q7_.spawn()
+            label_q7_.spawn()
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_q7_, point_q7, run_time=0.7, width=0.04, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.4)
+                with Sync():
+                    pt_q7.spawn()
+                    label_q7.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 8:
+        with Off():
+            pt_q7.spawn()
+            pt_q7_.spawn()
+
+    if anim == 8:
+        with Off():
+            label_q7.spawn()
+            label_q7_.spawn()
+        with Sync():
+            circle_thru_points(r, point_p1, point_q7p, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+            with Seq():
+                Scene.wait(0.8)
+                with Sync():
+                    pt_q7p.spawn()
+                    label_q7p.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 9:
+        with Off():
+            pt_q7p.spawn()
+
+    if anim == 9:
+        with Off():
+            label_q7.spawn()
+            label_q7_.spawn()
+        circle_thru_points(r, point_q2, point_q7, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+        with Sync():
+            pt_q9_.spawn()
+            label_q9_.spawn()
+        Scene.wait(0.1)
+        with Sync():
+            circle_thru_points(r, point_q9_, point_q9, run_time=0.8, width=0.04, fps=quality.frames_per_second, n=61)
+            with Seq():
+                Scene.wait(0.45)
+                with Sync():
+                    pt_q9.spawn()
+                    label_q9.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 10:
+        with Off():
+            pt_q9.spawn()
+            pt_q9_.spawn()
+
+    if anim == 10:
+        with Off():
+            label_q9.spawn()
+            label_q9_.spawn()
+        with Sync():
+            circle_thru_points(r, point_p1, point_q9_, run_time=1., width=0.04, fps=quality.frames_per_second, n=21)
+            with Seq():
+                Scene.wait(0.9)
+                with Sync():
+                    pt_q9p.spawn()
+                    label_q9p.spawn()
+        Scene.wait(0.1)
+
+    if anim >= 11:
+        with Off():
+            pt_q9p.spawn()
+
+    if anim == 11:
+        with Off():
+            label_q2.despawn()
+            labels_p[0].despawn()
+
+        def add2q(u):
+            v = point_q2
+            p = q = 0
+            for i, j in [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)]:
+                p += u[i]*u[i]*v[j] + 2 * u[i]*v[i]*u[j]
+                q += v[i]*v[i]*u[j] + 2 * v[i]*u[i]*v[j]
+            p -= 11 * (u[0]*u[1]*v[2] + u[0]*v[1]*u[2] + v[0]*u[1]*u[2])
+            q -= 11 * (v[0]*v[1]*u[2] + v[0]*u[1]*v[2] + u[0]*v[1]*v[2])
+            w = u[0]*q - v[0]*p, u[2]*q - v[2]*p, u[1]*q - v[1]*p
+            g = math.sqrt(w[0]*w[0]+w[1]*w[1]+w[2]*w[2])
+            if w[0] < 0.:
+                g = -g
+            w = tuple((_/g for _ in w))
+            return w
+
+        points = []
+        point_n = point_q9
+        for _ in range(80):
+            point_n = add2q(point_n)
+            points.append(point_n)
+
+        pts = get_points(r, points, [mn.ORANGE] * len(points))
+        for i, pt in enumerate(pts):
+            print(i)
+            Scene.wait(1./30)
+            with Off():
+                pt.spawn()
+        Scene.wait(0.1)
+
 
     name = 'multiples{}'.format(anim)
     if bgcol == TRANSPARENT:
         name += '_tr'
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
+def interp_point(points, t, r):
+    n = points.shape[0] - 1
+    s = n * (t % 1.)
+    i = int(math.floor(s))
+    p = s + 1 - i
+    result = points[i] * (1-p) + points[i+1] * p
+    result *= r / result.norm()
+    return result
+
+
+def add_points(u, v):
+    w = u - v
+    if w.norm() < 0.04:
+        u = u + v
+        g = (2 * u[0] * (u[1]+u[2]) + u[1]*u[1] + u[2]*u[2] - 11*u[1]*u[2],
+             2 * u[1] * (u[0]+u[2]) + u[0]*u[0] + u[2]*u[2] - 11*u[0]*u[2],
+             2 * u[2] * (u[0]+u[1]) + u[0]*u[0] + u[1]*u[1] - 11*u[0]*u[1])
+        v = (g[1]*u[2]-g[2]*u[1], g[2]*u[0]-g[0]*u[2], g[0]*u[1]-g[1]*u[0])
+
+        p = q = 0
+        for i, j in [(0, 1), (0, 2), (1, 2), (1, 0), (2, 0), (2, 1)]:
+            # expand zi^2z_j term
+            p += v[i]*v[i]*u[j] + 2*v[i]*u[i]*v[j]
+            q += v[i]*v[i]*v[j]
+        p -= 11*(v[0]*v[1]*u[2] + v[0]*u[1]*v[2] + u[0]*v[1]*v[2])
+        q -= 11*v[0]*v[1]*v[2]
+
+        w = u[0]*q - v[0]*p, u[1]*q - v[1]*p, u[2]*q - v[2]*p
+    else:
+        p = q = 0
+        for i, j in [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)]:
+            p += u[i] * u[i] * v[j] + 2 * u[i] * v[i] * u[j]
+            q += v[i] * v[i] * u[j] + 2 * v[i] * u[i] * v[j]
+        p -= 11 * (u[0] * u[1] * v[2] + u[0] * v[1] * u[2] + v[0] * u[1] * u[2])
+        q -= 11 * (v[0] * v[1] * u[2] + v[0] * u[1] * v[2] + u[0] * v[1] * v[2])
+        w = u[0] * q - v[0] * p, u[1] * q - v[1] * p, u[2] * q - v[2] * p
+    g = math.sqrt(w[0] * w[0] + w[1] * w[1] + w[2] * w[2])
+    if w[0] < 0.:
+        g = -g
+    w = tuple((_ / g for _ in w))
+    return w
+
+
+def oval_intersection(quality=LD, bgcol=BLACK, sphere_opacity=0.8, anim=1):
+    MathTex.set_default(stroke_width=2)
+    r = 2.
+    ax, eq, sphere, circs, circ_pts, plt, _, curves, pos_region \
+        = get_curve_plot(r, use_xyz=False, sphere_opacity=sphere_opacity, use_pos=True)
+    ax = ManimMob(ax)
+    # pt_q = get_points(r, [point_q], [mn.ORANGE])[0]
+    cam: Camera = Scene.get_camera()
+
+    curves = CubicCurve(du=0.000001)
+    u,v,w = curves[1]
+    oval = (torch.outer(torch.from_numpy(u), RIGHT) + torch.outer(torch.from_numpy(v), UP) + torch.outer(torch.from_numpy(w), OUT)).float()
+    oval *= r / oval.norm(dim=1, keepdim=True)
+
+    print(oval.shape)
+    n = oval.shape[0]
+    params = [0.1, -0.1]
+    points = [interp_point(oval, _, r) for _ in params]
+
+    dir1 = -(points[0] + points[1])
+    dir1 /= dir1.norm()
+    dir2 = points[0] - torch.dot(points[0], dir1) * dir1
+    dir2 /= dir2.norm()
+
+    points[0][-1] *= -1
+    points[1][-1] *= -1
+    dots = get_points(r, [_.numpy() for _ in points], [mn.YELLOW, mn.YELLOW])
+    thetas = torch.linspace(0., 2 * PI, 81)
+    pts = (torch.cos(thetas)[:, None] * dir1 + torch.sin(thetas)[:, None] * dir2).float() * r
+    crv = curve_surface(pts, color=WHITE, opacity=1, width=0.04)
+    desc = crv.get_descendants()[1]
+    dot3 = get_points(r, [mn.UP], [mn.ORANGE])[0]
+
+    def update_params(*params):
+        points = [interp_point(oval, _, r) for _ in params]
+        dir1 = -(points[0] + points[1])
+        dir1 /= dir1.norm()
+        dir2 = points[0] - torch.dot(points[0], dir1) * dir1
+        dir2 /= dir2.norm()
+        dots[0][0].move_to(points[0])
+        dots[0][1].move_to(-points[0])
+        dots[1][0].move_to(points[1])
+        dots[1][1].move_to(-points[1])
+        pts1 = (torch.cos(thetas)[:, None] * dir1 + torch.sin(thetas)[:, None] * dir2).float() * r
+        loc = curve_surface_loc(pts1, width=0.04)
+        desc.set_non_recursive(location=loc)
+
+        points[0][-1] *= -1
+        points[1][-1] *= -1
+        point3 = add_points(points[0], points[1])
+        pt = torch.tensor([*point3]) * r
+        pt[-1] *= -1
+        dot3[0].move_to(pt)
+        dot3[1].move_to(-pt)
+
+
+    with Off():
+        ax.spawn()
+        eq.spawn()
+        sphere.spawn()
+        circs.spawn()
+        pos_region.spawn()
+        plt.spawn()
+        dir1 = cam.get_right_direction() * 0.15 - cam.get_upwards_direction() * 0.45 + cam.get_forward_direction()*0.2
+        dir1 += DOWN*0.1
+        dots[0].spawn()
+        dots[1].spawn()
+        dot3.spawn()
+        crv.spawn()
+
+    param_func = lambda t: (t, t+0.5)
+    run_time=4.
+    rate_func=rate_funcs.identity
+
+    if anim == 2:
+        dt = 3/30
+        def param_func(t):
+            s = max(1-4*t, 0)
+            s = (1 - s*s)/8 * 1.03715
+            return s + dt, t + 0.5 + dt
+
+    if anim == 3:
+        run_time=1.
+        def param_func(t):
+            s0 = 1.03715 / 8 + 3/30
+            t0 = 1.5 + 3/30 - 1
+            u = max(1-t, 0)
+            u = (1-u*u)/8
+            return s0, t0 + u
+
+    if anim == 4:
+        run_time = 3.
+        rate_func = rate_funcs.smooth
+        def param_func(t):
+            s0 = 1.03715 / 8 + 3/30
+            t0 = 1.5 + 3/30 - 1 + 1./8
+
+            s1 = 0.001
+            t1 = 0.999
+            s = s1 * t + s0 * (1-t)
+            t = t1 * t + t0 * (1-t)
+
+            return s, t
+
+    if anim == 5:
+        run_time=1.
+        def param_func(t):
+            s0 = 1.03715 / 8 + 3/30
+            t0 = 1.5 + 3/30 - 1 + 1./8
+            u = t*t/8
+            return s0+u, t0+u
+
+    if anim == 6:
+        run_time=4.
+        def param_func(t):
+            s0 = 1.03715 / 8 + 3/30
+            t0 = 1.5 + 3/30 - 1 + 1./8
+            return s0+t, t0+t
+
+
+
+
+    for frame in ah.FrameStepper(run_time=run_time, fps=quality.frames_per_second, step=1, rate_func=rate_func):
+        params = param_func(frame.u)
+        with frame.context:
+            update_params(*params)
+    Scene.wait(0.1)
+
+    name = 'oval_intersection{}'.format(anim)
+    if bgcol == TRANSPARENT:
+        name += '_tr'
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     # cube_curve(quality=HD, use_xyz=True, anim=1)
-    # cube_curve(quality=HD, use_xyz=True, anim=2)
-    # for anim in range(1, 9):
-    # cube_curve(quality=HD, use_xyz=True, anim=9)
-    # surface_plot(quality=HD, bgcol=TRANSPARENT, anim=2)
+    surface_plot(quality=LD3, bgcol=BLACK, anim=2, do_eqs=False)
     # surface_plot(quality=HD, bgcol=BLACK, anim=16)
-    # surface_plot(quality=LD, bgcol=BLACK, anim=23)
     # curve_head(quality=MD, bgcol=TRANSPARENT, anim=1)
     # curve_head(quality=MD, bgcol=TRANSPARENT, anim=2)
-    # curve_anim(quality=HD, bgcol=BLACK, anim=16)
+    # curve_anim(quality=HD, bgcol=BLACK, anim=22)
     # curve_anim(quality=HD, bgcol=TRANSPARENT, anim=15, sphere_opacity=0.65)
-    # solution(quality=HD, bgcol=TRANSPARENT, anim=2, sphere_opacity=0.75)
-    # multiples_q(quality=HD, bgcol=TRANSPARENT, anim=4, sphere_opacity=0.75)
-    multiples_q(quality=LD, bgcol=BLACK, anim=2, sphere_opacity=0.75)
+    # solution(quality=HD, bgcol=TRANSPARENT, anim=8, sphere_opacity=0.75)
+    # manual_solution(quality=HD, bgcol=TRANSPARENT, anim=5, sphere_opacity=0.75)
+    # line_col2 = WHITE
+    # manual_solution(quality=HD, bgcol=BLACK, anim=6, sphere_opacity=0.75, do_labels=False)
+    # multiples_q(quality=HD, bgcol=TRANSPARENT, anim=10, sphere_opacity=0.75)
+    # multiples_q(quality=HD, bgcol=BLACK, anim=11, sphere_opacity=0.75)
+    # HD.resolution = LD.resolution
+    # oval_intersection(quality=HD, bgcol=BLACK, anim=3, sphere_opacity=0.8)
