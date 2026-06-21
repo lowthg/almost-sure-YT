@@ -17,6 +17,7 @@ Animation sequence:
 from manim import *
 import numpy as np
 import mpmath as mp
+from scipy.differentiate import derivative
 from scipy.special import j0
 from scipy.interpolate import interp1d
 
@@ -156,16 +157,10 @@ def M_approx_vectorised(xs, n_zeros=20):
         gamma = float(rho.imag)
         zetad = mp.zeta(rho, derivative=1)
         coeff = 1. / (rho * zetad)
-        # print(i, gamma, 'coeff:', coeff)
-        # gamma = z['rho_im']
-        # cr    = z['coeff_re']
-        # ci    = z['coeff_im']
-        # x^(1/2 + i*gamma) = sqrt(x) * exp(i*gamma*log(x))
         cr = float(coeff.real)
         ci = float(coeff.imag)
         cos_g = np.cos(gamma * logxs)
         sin_g = np.sin(gamma * logxs)
-        # Re[ coeff * x^rho ] = sqx * (cr*cos - ci*sin)
         result += 2.0 * sqxs * (cr * cos_g - ci * sin_g)
 
     return result
@@ -469,20 +464,37 @@ class ArcSinCombo(Scene):
         # print('Max error |x|<0.999:', np.max(np.abs(p2 - ana)))
         # print('Integral inner:', np.trapezoid(p2, x2))
 
-        nterms = 5
-
+        nterms = 100
+        weights = []
+        for i in range(nterms):
+            rho = mp.zetazero(i+1)
+            zetad = mp.zeta(rho, derivative=1)
+            term = 2. / (rho * zetad)
+            wgt = float(abs(term))
+            # print(wgt)
+            weights.append(wgt)
 
         npts = 2000
-        xvals = np.linspace(-1, 1, npts)
-        yvals = pdf_v2([0.8], xvals, t_max=5000., N=2**20)
+        xvals = np.linspace(-1.5, 1.5, npts)
+        yvals = pdf_v2(weights, xvals, t_max=5000., N=2**20)
 
-        ax = Axes(x_range=[xvals[0], xvals[-1] * 1.05], x_length=12, y_length=7, y_range=[0, 2],
+        ymax = 2
+        ax = Axes(x_range=[xvals[0], xvals[-1] * 1.05], x_length=12, y_length=7, y_range=[0, ymax],
                   axis_config={'color': WHITE, 'stroke_width': 4,
                                'include_ticks': False, 'include_tip': True})
 
         plt = ax.plot_line_graph(xvals, yvals, add_vertex_dots=False, line_color=BLUE, stroke_width=6)
 
-        self.add(ax, plt)
+        var = 6. / PI / PI
+        # var *= 0.06
+        var *= PI*PI/6 - 1
+        npdf = np.exp(-xvals * xvals / (2*var)) / np.sqrt(2*PI*var)
+        plt2 = ax.plot_line_graph(xvals, npdf, add_vertex_dots=False, line_color=BLUE, stroke_width=6)
+
+        line1 = DashedLine(ax.c2p(1,0), ax.c2p(1,ymax), stroke_width=4, stroke_color=GREY)
+        line2 = DashedLine(ax.c2p(-1,0), ax.c2p(-1,ymax), stroke_width=4, stroke_color=GREY)
+
+        self.add(ax, plt, plt2, line1, line2)
 
 if __name__ == "__main__":
     with tempconfig({"quality": "low_quality", "preview": True, 'fps': 15}):
