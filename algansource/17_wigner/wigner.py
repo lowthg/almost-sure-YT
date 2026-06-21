@@ -11,6 +11,7 @@ from manim import MathTex, VGroup
 sys.path.append('../../')
 import alganhelper as ah
 from common.wigner import *
+from algansource.wave import setup_wave, set_wave, time_evolution
 LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
@@ -311,44 +312,6 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
             surf.spawn()
 
     return origin, right, up, out, p, x, y, shape, Group(txt1, txt2, ax1)
-
-def setup_wave(xrange=(-5., 5.), npts=640):
-    xmin, xmax = xrange
-
-    n_col=4
-    surfx = Surface(grid_height=n_col, grid_width=npts)
-    px = surfx.get_descendants()[1]
-    locx = px.location.clone()
-    colx = px.color.clone()
-    xx = locx[:, :, 0] * (xmax - xmin) / 2 + (xmax + xmin) / 2
-    yx = (locx[:, :, 1] + 1) / 2
-    colx[..., 4] = 0.75
-    px.set_non_recursive(color=colx)
-
-    with Off():
-        surfx.spawn()
-
-    return px, xx, yx
-
-def set_wave(p, xvals, vals, vals1, origin, right, up):
-    yvals = torch.linspace(0., 1., 4)
-    n = len(xvals)
-    locx = p.location.clone()
-    # print(xvals.shape)
-    # print(vals.shape)
-    # print(yvals.shape)
-    # print(n)
-    # print((xvals.repeat_interleave(4).view(1, -1, 1) * right).shape)
-    # print(((vals.view(n, 1) * yvals.view(1, 4)).reshape(1, n*4, 1) * up).shape)
-    locx[...,:] = (xvals.repeat_interleave(4).view(1, -1, 1) * right +
-                    (vals.view(n, 1) * yvals.view(1, 4)).reshape(1, n*4, 1) * up + origin)
-    colx = p.color.clone()
-
-    for i in range(n*4):
-        lightness = min(0.15 + vals[i // 4] * 0.3 * yvals[i % 4], 0.8)
-        colx[0, i, :3] = torch.tensor([*colorsys.hls_to_rgb(np.angle(vals1[i // 4]) / (2 * PI) + 0.5, lightness, 0.85)])
-
-    p.set_non_recursive(location=locx, color=colx)
 
 col_up = torch.tensor([1, .6, 0.])
 col_dn = INDIGO[:3]
@@ -794,16 +757,6 @@ def wigner_fft(psi, x_min, x_max,
         return W_interp
 
     return W
-
-def time_evolution(psi, V, dt=1., dx=0.1, mass=1.):
-    n = len(psi)
-    k_space = torch.fft.fftfreq(n, dx) * (2 * np.pi)  # Momentum space grid
-    T = 0.5 / mass * k_space**2  # Kinetic energy operator
-    psi_k = torch.fft.fft(psi)
-    psi_k = torch.exp(-1j * T * dt) * psi_k  # Evolve in momentum space
-    psi = torch.fft.ifft(psi_k)  # Transform back to position space
-    psi = torch.exp(-1j * V * dt) * psi  # Evolve due to potential
-    return psi
 
 def make_pendulum_solver(
     x_vals,

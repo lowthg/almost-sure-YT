@@ -22,6 +22,18 @@ col_eq = (col_op+mn.WHITE)*0.5
 col_txt = (mn.BLUE-mn.WHITE) * 1.0 + mn.WHITE
 col_txt2 = (mn.YELLOW-mn.WHITE) * 0.5 + mn.WHITE
 
+def gauss1d(a=1., b=0., c=1., shift=0.):
+    """
+    :return: c * exp(-ax^2/2 + bx)
+    """
+    print(a,b,c)
+    res = (a/2, 0., 0., b + a*shift, 0., c * np.exp(-a/2*shift*shift-b*shift))
+    return [tuple(complex(_) for _ in res)]
+
+def gauss1d_calc(params, xvals):
+    res = sum([torch.exp(xvals*xvals*(-a) + xvals*b) * c for (a,_,_, b, _, c) in params])
+    return res
+
 def gauss1d_std(mean=0., scale=1.):
     result = (0.5 / scale / scale, 0., 0., mean / scale / scale, 0., 1.)
     result = [tuple(complex(_) for _ in result)]
@@ -156,5 +168,19 @@ def gauss_smooth(params, v_x=0., v_p=0.):
 
         result.append((a1, b1, c1, d1, e1, f1))
 
-
     return result
+
+
+def gauss_fractional_ft(params, theta=0.):
+    c = math.cos(theta)
+    s = math.sin(theta) * 1j
+    params2 = []
+    for (a, _, _, b, _, scale) in params:
+        a2 = 2 * a
+        v = 1. / (c + s * a2)
+        scale2 = np.sqrt(v*(c+s)) * np.exp(v*s*b*b/2)
+        # print('scale', v)
+        params2.append((0.5 * v * (c*a2+s), 0.j, 0.j, v * b, 0.j, scale2*scale))
+        # params2.append((a, 0.j, 0.j, b, 0.j, scale))
+
+    return params2
