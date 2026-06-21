@@ -53,7 +53,7 @@ def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, s
     return mob
 
 class FrameStepper:
-    def __init__(self, fps = 30., run_time=1., rate_func=rate_funcs.smooth, step=2, include_start=True):
+    def __init__(self, fps = 30., run_time=1., rate_func=rate_funcs.smooth, step=1, include_start=True):
         self.u = 0.
         self.du = 0.
         self.time = 0.
