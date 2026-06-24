@@ -3,9 +3,16 @@ import numpy as np
 import math
 import sys
 
+from pyglet.libs.darwin import CGRect
+
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
+
+col_pi = col_special * 0.5 + ORANGE * 0.5
+col_ft = YELLOW_B * 0.5 + ORANGE * 0.5
+col_angle = YELLOW
+col_trig = PURPLE_A#*0.5+WHITE*0.5
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
     res = VGroup()
@@ -57,6 +64,28 @@ class FourierTfmEq(Scene):
         eq19 = MathTex(r'e^{+01}')
         eq20 = MathTex(r'\mathcal F_{-\frac\pi2}f(x)', r'=')
 
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0], eq1[4][0], eq12[0][-4], eq13[0][-4]).set_color(col_psi)
+        VGroup(eq1[4][2], eq1[5][1], eq1[3][-1], eq3[0][0], eq3[0][2],
+               eq4[5][3], eq5[3][2], eq5[0][2], eq14[0][-2], eq15[4][6:8]).set_color(col_x)
+        VGroup(eq1[0][2], eq2[5][1], eq1[3][-2], eq3[1][0], eq3[1][4],
+               eq6[1], eq5[5][0], eq5[7][1], eq14[5][2], eq14[6][1], eq15[4][9:11]).set_color(col_p)
+        VGroup(eq1[3][4], eq15[2][4], eq15[4][4]).set_color(col_i)
+        VGroup(eq1[3][0], eq2[3][0]).set_color(col_special)
+        VGroup(eq1[3][2:4], eq3[1][2:4], eq8[0][-2:]).set_color(col_pi)
+        VGroup(eq1[2], eq2[2], eq1[5][0], eq2[5][0], eq8[0][:-2],
+               eq4[1][1], eq5[5][1], eq5[-1][2], eq10[2][1], eq15[4][2],
+               eq16[0][9], eq16[1][6]).set_color(col_op)
+        VGroup(eq7[2][0], eq10[2][0], eq15[4][1], eq15[4][3],
+               eq16[1][5], eq18[0][2], eq19[0][2:]).set_color(col_num)
+        VGroup(eq12[0][0], eq13[0][:3]).set_color(col_ft)
+        VGroup(eq15[0][1], eq15[2][8], eq15[4][15], eq15[4][-1],
+               eq16[0][3], eq16[0][8], eq16[0][13], eq16[1][3], eq16[1][10], eq17[0][1:4]).set_color(col_angle)
+        VGroup(eq15[2][5:8], eq15[4][12:15], eq15[4][20:23],
+               eq16[0][:3], eq16[0][5:8], eq16[0][10:13], eq16[1][:3], eq16[1][7:10]).set_color(col_trig)
+        mh.copy_colors_eq(eq1[0], eq2[4], eq1[4], eq2[0], eq1[3][2:], eq2[3][1:])
+        mh.copy_colors_eq(eq8[0], eq9[5])
+
         mh.align_sub(eq2, eq2[1], eq1[1]).next_to(eq1, DOWN, buff=0.6, coor_mask=UP)
         VGroup(eq1, eq2).move_to(ORIGIN)
         eq3[1].shift(RIGHT)
@@ -82,6 +111,7 @@ class FourierTfmEq(Scene):
         mh.align_sub(eq18, eq18[0][-3], eq15[2][-3])
         mh.align_sub(eq19, eq19[0][0], eq15[4][0])
         mh.align_sub(eq20, eq20[1], eq15[1])
+
 
         self.add(eq1, eq2)
         self.play(FadeIn(eq3))
