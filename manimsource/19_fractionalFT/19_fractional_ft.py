@@ -80,7 +80,7 @@ class FourierTfmEq(Scene):
                eq16[1][5], eq18[0][2], eq19[0][2:]).set_color(col_num)
         VGroup(eq12[0][0], eq13[0][:3]).set_color(col_ft)
         VGroup(eq15[0][1], eq15[2][8], eq15[4][15], eq15[4][-1],
-               eq16[0][3], eq16[0][8], eq16[0][13], eq16[1][3], eq16[1][10], eq17[0][1:4]).set_color(col_angle)
+               eq16[0][3], eq16[0][8], eq16[0][13], eq16[1][3], eq16[1][10], eq17[0][1:4], eq20[0][1]).set_color(col_angle)
         VGroup(eq15[2][5:8], eq15[4][12:15], eq15[4][20:23],
                eq16[0][:3], eq16[0][5:8], eq16[0][10:13], eq16[1][:3], eq16[1][7:10]).set_color(col_trig)
         mh.copy_colors_eq(eq1[0], eq2[4], eq1[4], eq2[0], eq1[3][2:], eq2[3][1:])
@@ -192,12 +192,19 @@ class FourierTfmEq(Scene):
         self.wait(0.1)
         self.play(FadeOut(eq13))
         self.wait(0.1)
+        eq15_3 = mh.align_sub(eq15[0].copy(), eq15[1], eq14[1])
+        circ1 = mh.circle_eq(eq15_3[1], scale=0.5)
+        self.play(Succession(Wait(0.7), Create(circ1, rate_func=linear, run_time=0.5)),
+                  mh.rtransform(eq14[0][0], eq15_3[0], eq14[0][1:], eq15_3[2:]),
+                  FadeIn(eq15_3[1], shift=mh.diff(eq14[0][0], eq15_3[0])),
+                  )
+        self.wait(0.1)
         eq15_1 = eq15[2][2].copy().move_to(eq15[2][-3], coor_mask=RIGHT)
-        self.play(mh.rtransform(eq14[0][0], eq15[0][0], eq14[0][1:], eq15[0][2:], eq14[1], eq15[1]),
+        self.play(mh.rtransform(eq14[1], eq15[1], eq15_3, eq15[0]),
                   mh.rtransform(eq14[2][2:4], eq15[2][:2], eq14[2][-2:], eq15[2][-2:], eq14[2][1], eq15[2][-3]),
                   mh.rtransform(eq14[3], eq15[3], eq14[4][0], eq15[4][0], eq14[4][-4:], eq15[4][-8:-4],
                                 eq14[5:], eq15[5:], eq14[2][0], eq15_1),
-                  FadeIn(eq15[0][1], shift=mh.diff(eq14[0][0], eq15[0][0])),
+                  FadeOut(circ1, shift=mh.diff(eq15_3, eq15[0])),
                   run_time=2)
         self.wait(0.1)
         self.play(mh.rtransform(eq15_1, eq15[2][2]),
@@ -239,9 +246,13 @@ class FourierTfmEq(Scene):
                   FadeIn(eq20[0][1]))
         self.wait(0.1)
         self.play(FadeOut(circ1), run_time=0.8)
-        self.wait(0.1)
         eq19[0][1].move_to(eq15[4][16], coor_mask=RIGHT)
+        circ1 = mh.circle_eq(eq19[0][1], scale=0.5).set_z_index(10)
+        self.play(Create(circ1, run_time=0.5, rate_func=linear))
+        self.wait(0.1)
         self.play(FadeOut(eq15[4][16]), FadeIn(eq19[0][1]))
+        self.wait(0.1)
+        self.play(FadeOut(circ1))
         self.wait(0.1)
         self.play(AnimationGroup(mh.rtransform(eq20[0][0], eq15_2[0][0], eq20[0][-4:], eq15_2[0][-4:]),
                   mh.fade_replace(eq20[0][2:-4], eq15_2[0][1], coor_mask=RIGHT),
