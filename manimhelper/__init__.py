@@ -86,26 +86,26 @@ def rtransform(*args, copy_colors=None, **kwargs):
 rtransform.copy_colors = False
 
 
-def circle_eq(eq, color=RED, stroke_width=10) -> ParametricFunction:
+def circle_eq(eq, color=RED, stroke_width=10, scale=1.) -> ParametricFunction:
     """
     create red curve around eq
     """
     points = [
-        (eq.get_corner(UL) + eq.get_top()) * 0.5 + UP * 0.3,
-        eq.get_corner(UR) + UR * 0.2 + RIGHT * 0.5,
-        eq.get_corner(UR) + UR * 0.05 + RIGHT * 0.5,
-        eq.get_right() + RIGHT * 0.1,
-        eq.get_corner(DR) + DR * 0.05 + RIGHT * 0.5,
-        eq.get_corner(DR) + DR * 0.2 + RIGHT * 0.5,
-        eq.get_corner(DR) + DR * 0.2 + RIGHT * 0.5,
-        eq.get_bottom() + DOWN * 0.2,
-        eq.get_bottom() + DOWN * 0.2,
-        eq.get_corner(DL) + DL * 0.2 + LEFT * 0.5,
-        eq.get_corner(DL) + DL * 0.2 + LEFT * 0.5,
-        eq.get_corner(DL) + DL * 0.05 + LEFT * 0.8,
-        eq.get_corner(UL) + UL * 0.2 + LEFT * 0.8,
-        eq.get_corner(UL) + UL * 0.2 + LEFT * 0.5,
-        (eq.get_corner(UR) + eq.get_top()) * 0.5 + UP * 0.3,
+        (eq.get_corner(UL) + eq.get_top()) * 0.5 + UP * 0.3 * scale,
+        eq.get_corner(UR) + UR * 0.2 * scale + RIGHT * 0.5 * scale,
+        eq.get_corner(UR) + UR * 0.05 * scale + RIGHT * 0.5 * scale,
+        eq.get_right() + RIGHT * 0.1 * scale,
+        eq.get_corner(DR) + DR * 0.05 * scale + RIGHT * 0.5 * scale,
+        eq.get_corner(DR) + DR * 0.2 * scale + RIGHT * 0.5 * scale,
+        eq.get_corner(DR) + DR * 0.2 * scale + RIGHT * 0.5 * scale,
+        eq.get_bottom() + DOWN * 0.2 * scale,
+        eq.get_bottom() + DOWN * 0.2 * scale,
+        eq.get_corner(DL) + DL * 0.2 * scale + LEFT * 0.5 * scale,
+        eq.get_corner(DL) + DL * 0.2 * scale + LEFT * 0.5 * scale,
+        eq.get_corner(DL) + DL * 0.05 * scale + LEFT * 0.8 * scale,
+        eq.get_corner(UL) + UL * 0.2 * scale + LEFT * 0.8 * scale,
+        eq.get_corner(UL) + UL * 0.2 * scale + LEFT * 0.5 * scale,
+        (eq.get_corner(UR) + eq.get_top()) * 0.5 + UP * 0.3 * scale,
     ]
     bez = bezier(points)
     plot = ParametricFunction(bez, color=color, stroke_width=stroke_width).set_z_index(2)
