@@ -1,7 +1,7 @@
 from algan import *
 import colorsys
 
-def setup_wave(xrange=(-5., 5.), npts=640):
+def setup_wave(xrange=(-5., 5.), npts=640, opacity=0.75):
     xmin, xmax = xrange
 
     n_col=4
@@ -11,7 +11,7 @@ def setup_wave(xrange=(-5., 5.), npts=640):
     colx = px.color.clone()
     xx = locx[:, :, 0] * (xmax - xmin) / 2 + (xmax + xmin) / 2
     yx = (locx[:, :, 1] + 1) / 2
-    colx[..., 4] = 0.75
+    colx[..., 4] = opacity
     px.set_non_recursive(color=colx)
 
     with Off():
