@@ -385,28 +385,43 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
             return params
     if anim == 6:
         w = 2.
+        c = 0.9
         if part == 0:
             params1 = gauss1d()
-            c = 0.9
             psi1 = gauss1d_calc(params1, xvals)
             psi2 = ((xvals <= w) & (xvals >= -w)).float() * c
             run_time = 1.
-            for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1,
-                                         rate_func=rate_funcs.smooth):
-                u = frame.u
-                psi4 = psi1 * (1 - u) + psi2 * u
-                with frame.context:
-                    set_wave(px, xvals, psi4.abs(), psi4, origin, right, out)
-        elif part == 1:
-            pass
+            def psi_update(u, du):
+                return psi1 * (1 - u) + psi2 * u
+        else:
+            evolver = WaveEvolver(xrange=xrange, npts=npts, n_extend_left=8000, n_extend_right=8000, n_scale=2,
+                                  speed=1.)
+            evolver.V = evolver.xvals1 ** 2 * 0.5 - 0.5
+            evolver.psi = (1. - (evolver.xvals1.abs() - 2.).clip(0) * 10).clip(0) * c
+            def psi_update(u, du):
+                return evolver.evolve(du * angle)
+            if part == 1:
+                angle = PI/2
+                run_time=3.
+            if part == 2:
+                evolver.evolve(PI/2)
+                angle = PI/4
+                evolver.speed = -evolver.speed
+                run_time = 1.
+            if part == 3:
+                evolver.evolve(PI/4)
+                evolver.speed = -evolver.speed
+                angle = PI/8
+            if part == 4:
+                angle = PI
+                run_time = 3. + 6/30
+                rate_func = rate_funcs.identity
 
-    if anim != 6:
+    if anim > 1:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, rate_func=rate_func):
             psi = psi_update(frame.u, frame.du)
             with frame.context:
                 set_wave(px, xvals, psi.abs(), psi, origin, right, out)
-
-    if anim > 1:
         Scene.wait(0.1)
 
     name = 'fractional_ex{}'.format(anim)
@@ -426,12 +441,15 @@ def fractional_example2(quality=LD, bgcol=BLACK, anim=0):
     angle = 2*PI
     rate = 2.
 
+    do_anim = True
+
     def psi_update(u, du):
         params2 = gauss_fractional_ft(params1, angle*u)
         return gauss1d_calc(params2, xvals)
 
     if anim == 1:
         params1 = gauss1d(1.)
+        do_anim = True
     elif anim == 2:
         params1 = gauss1d(4.)
         angle = PI
@@ -448,7 +466,7 @@ def fractional_example2(quality=LD, bgcol=BLACK, anim=0):
         evolver = WaveEvolver(xrange=xrange, npts=npts, n_extend_left=8000, n_extend_right=8000, n_scale=2,
                               speed=1.)
         evolver.V = evolver.xvals1 ** 2 * 0.5 - 0.5
-        evolver.psi = (1. - (evolver.xvals1.abs() - 2.).clip(0) * 10).clip(0)
+        evolver.psi = (1. - (evolver.xvals1.abs() - 2.).clip(0) * 100).clip(0)
         ymax1 = 1.8
         angle = PI
 
@@ -504,5 +522,5 @@ if __name__ == "__main__":
 
     # fourier_example(HD, bgcol=BLACK, anim=103)
     # fourier_example(LD, bgcol=BLACK, anim=103)
-    # fractional_ex(HD, bgcol=TRANSPARENT, anim=6, part=0)
-    fractional_ex(LD, bgcol=BLACK, anim=4, part=0)
+    fractional_ex(HD, bgcol=TRANSPARENT, anim=6, part=4)
+    # fractional_ex(LD, bgcol=BLACK, anim=6, part=3)
