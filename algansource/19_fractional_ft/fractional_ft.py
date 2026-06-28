@@ -1,4 +1,8 @@
+import torch
 from algan import *
+from manim import MathTex
+from manim.utils.color.BS381 import SILVER_GREY
+from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -430,90 +434,81 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def fractional_example2(quality=LD, bgcol=BLACK, anim=0):
-    """
-    example fractional fourier transform 2d plots
-    """
-    npts=639
-    xrange = (-5.,5.)
-    ymax1 = 1.2
-    params1 = gauss1d(.5, shift=1.)
-    angle = 2*PI
-    rate = 2.
-
-    do_anim = True
-
-    def psi_update(u, du):
-        params2 = gauss_fractional_ft(params1, angle*u)
-        return gauss1d_calc(params2, xvals)
-
-    if anim == 1:
-        params1 = gauss1d(1.)
-        do_anim = True
-    elif anim == 2:
-        params1 = gauss1d(4.)
-        angle = PI
-    elif anim == 3:
-        params1 = gauss1d(2., shift=2.)
-    elif anim == 4:
-        params1 = gauss1d(2., shift=3.) + gauss1d(2., shift=-3.)
-        params1 = gauss_scale(params1, 1.)
-    elif anim == 5:
-        params1 = gauss1d(2., shift=4.) + gauss_scale(gauss1d(2., shift=-4.), -0.5)
-        params1 = gauss_scale(params1, 1.)
-        xrange = (-7.,7.)
-    elif anim == 6:
-        evolver = WaveEvolver(xrange=xrange, npts=npts, n_extend_left=8000, n_extend_right=8000, n_scale=2,
-                              speed=1.)
-        evolver.V = evolver.xvals1 ** 2 * 0.5 - 0.5
-        evolver.psi = (1. - (evolver.xvals1.abs() - 2.).clip(0) * 100).clip(0)
-        ymax1 = 1.8
-        angle = PI
-
-        def psi_update(u, du):
-            return evolver.evolve(du*angle)
-
-
-    xvals = torch.linspace(xrange[0], xrange[1], npts)
-
-    px, xx, yx = setup_wave(npts=npts, xrange=xrange, opacity=1)
-    xmin1, xmax1 = (xrange[0], xrange[1]*1.05)
-    xlen = 8.
-    right = xlen / (xmax1 - xmin1) * RIGHT
-    ylen = 3.
-    out = ylen / ymax1 * UP
-    ylen = ymax1 * out[1].item()
-
-    ax = mn.Axes(x_range=[xmin1, xmax1], y_range=[0, ymax1], x_length=xlen, y_length=ylen,
-              axis_config={'color': mn.WHITE, 'stroke_width': 5, 'include_ticks': False,
-                           "tip_width": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                           "tip_height": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                           },
-              ).set_opacity(0.8)
-    ax.shift(-ax.coords_to_point(0, 0) + mn.DOWN)
-    origin = torch.from_numpy(ax.coords_to_point(0, 0)) + IN*0.1
-    mn.MathTex.set_default(font_size=30)
-    ax = ManimMob(mn.VGroup(ax))
-
-    run_time = rate * angle / PI
-
+def button(quality=LD, bgcol=BLACK, anim=0):
     cam = Scene.get_camera()
     with Off():
         cam.set_distance_to_screen(100)
-        ax.spawn()
 
-    for frame in ah.FrameStepper(fps=quality.frames_per_second, rate_func=rate_funcs.identity, run_time=run_time):
-        u = frame.u
-        du = frame.du
-        psi2 = psi_update(u, du)
-        with frame.context:
-            set_wave(px, xvals, psi2.abs(), psi2, origin, right, out)
+    r = 0.3
 
-    Scene.wait(0.1)
+    col1 = GREY.clone()
+    col1[:3] = torch.from_numpy(SILVER_GREY.to_rgb())
+    col2 = col1.clone()
+    col2[:3] *= 0.7
+    circ = Circle(radius=r, color=col1, border_color=col2, border_width=3)
 
-    name = 'fractional_example2_{}'.format(anim)
+    eq = mn.MathTex(r'0', r'\frac\pi2', r'\pi', r'\frac{3\pi}2', font_size=20, stroke_width=0)
+    r1 = r * 1.15
+    r2 = r * 1.4
+    r3 = r * 1.25
+    lines = [
+        mn.Line(r1*dir, r2*dir, color=mn.WHITE, stroke_width=4) for dir in [mn.UP, mn.RIGHT, mn.DOWN, mn.LEFT]]
+    sqrt2 = 1./math.sqrt(2)
+    lines2 = [mn.Line(r1*dir*sqrt2, r3*dir*sqrt2, color=mn.WHITE, stroke_width=4)
+              for dir in [mn.UP+mn.RIGHT, mn.RIGHT+mn.DOWN, mn.DOWN+mn.LEFT, mn.LEFT+mn.UP]]
+    buff=0.2
+    eq[0].next_to(mn.ORIGIN, mn.UP, buff=buff).shift(r*mn.UP)
+    eq[1].next_to(mn.ORIGIN, mn.RIGHT, buff=buff).shift(r*mn.RIGHT)
+    eq[2].next_to(mn.ORIGIN, mn.DOWN, buff=buff).shift(r*mn.DOWN)
+    eq[3].next_to(mn.ORIGIN, mn.LEFT, buff=buff).shift(r*mn.LEFT)
+    eq1 = ManimMob(eq)
+    body = Group(circ, eq1, *[ManimMob(_) for _ in lines + lines2]).move(IN*0.1)
+
+    # pointer = ManimMob(mn.Line(r*mn.UP*0.2, r*mn.UP*0.95, stroke_width=10, stroke_color=mn.BLACK))
+    # pointer = ah.Line(r*mn.UP*0.2, r*mn.UP*0.95, color=BLACK)
+    print(UP.shape)
+    pointer = ah.curve_surface(torch.stack([r*UP*0.2, r*UP*0.95]),
+                               normals=torch.stack([IN, IN]), resolution=8, color=BLACK, width=0.06, closed=False)
+    pointer.set_shader(null_shader)
+    center = RIGHT * 3.5 + UP
+    body.move(center)
+    pointer.move(center)
+
+    with Off():
+        body.spawn()
+        pointer.spawn()
+
+    if anim == 1:
+        with Sync(run_time=3):
+            pointer.orbit_around_point(center, 360, IN)
+    if anim == 2:
+        with Sync(run_time=3):
+            pointer.orbit_around_point(center, 90, IN)
+        Scene.wait(0.1)
+    if anim == 3:
+        with Sync(run_time=8, rate_func=rate_funcs.identity):
+            pointer.orbit_around_point(center, 360, IN)
+    if anim == 4:
+        with Sync(run_time=6, rate_func=rate_funcs.identity):
+            pointer.orbit_around_point(center, 360, IN)
+    if anim == 5:
+        with Off():
+            pointer.orbit_around_point(center, 90, IN)
+        with Sync(run_time=1):
+            pointer.orbit_around_point(center, -45, IN)
+        Scene.wait(0.1)
+    if anim == 6:
+        with Off():
+            pointer.orbit_around_point(center, 45, IN)
+        with Sync(run_time=1):
+            pointer.orbit_around_point(center, -22.5, IN)
+        Scene.wait(0.1)
+    if anim == 7:
+        with Sync(run_time = 6. + 12/30, rate_func=rate_funcs.identity):
+            pointer.orbit_around_point(center, 360, IN)
+
+    name = 'button{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
-
 
 
 if __name__ == "__main__":
@@ -522,5 +517,7 @@ if __name__ == "__main__":
 
     # fourier_example(HD, bgcol=BLACK, anim=103)
     # fourier_example(LD, bgcol=BLACK, anim=103)
-    fractional_ex(HD, bgcol=TRANSPARENT, anim=6, part=4)
+    # fractional_ex(HD, bgcol=TRANSPARENT, anim=6, part=4)
     # fractional_ex(LD, bgcol=BLACK, anim=6, part=3)
+    button(HD, TRANSPARENT, anim=7)
+    # button(LD, BLACK, anim=1)
