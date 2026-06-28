@@ -1,6 +1,5 @@
 import numpy as np
 import math
-
 import torch
 import manim as mn
 
@@ -21,6 +20,8 @@ col_var = col_special
 col_eq = (col_op+mn.WHITE)*0.5
 col_txt = (mn.BLUE-mn.WHITE) * 1.0 + mn.WHITE
 col_txt2 = (mn.YELLOW-mn.WHITE) * 0.5 + mn.WHITE
+col_ft = mn.YELLOW_B * 0.5 + mn.ORANGE * 0.5
+col_angle = mn.YELLOW
 
 def gauss1d(a=1., b=0., c=1., shift=0.):
     """

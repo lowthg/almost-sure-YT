@@ -1,17 +1,19 @@
-import torch
 from algan import *
-from manim import MathTex
 from manim.utils.color.BS381 import SILVER_GREY
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
+from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 
 sys.path.append('../../')
 import alganhelper as ah
 from common.wigner import *
-from algansource.wave import setup_wave, set_wave, WaveEvolver
+from algansource.wave import setup_wave, set_wave, WaveEvolver, setup_cam, setup_surf
 LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
 HD2 = RenderSettings((1920, 1080), 15)
+
+col_up = torch.tensor([1, .6, 0.])
+col_dn = INDIGO[:3]
 
 
 def gauss_density(quality=LD, bgcol=BLACK, anim=1):
@@ -508,6 +510,157 @@ def button(quality=LD, bgcol=BLACK, anim=0):
             pointer.orbit_around_point(center, 360, IN)
 
     name = 'button{}'.format(anim)
+    render_to_file(name, render_settings=quality, background_color=bgcol)
+
+
+def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=False):
+    name = 'wigner_wave{}'.format(anim) if show_wave else 'wigner_anim{}'.format(anim)
+    setup_cam()
+
+    xmin, xmax = xrange = (-5., 5.)
+    ymin, ymax = yrange = (-5., 5.)
+    # xmin, xmax = xrange = (-2., 2.)
+    # ymin, ymax = yrange = (-2., 2.)
+
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, signal_vars=signal_vars)
+    # with Off():
+    #     cam = Scene.get_camera()
+    #     cam.move_to(cam.get_center()*1.5+IN)
+    #     ax[:2].despawn()
+
+    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+    fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
+    mesh_mask = 1 - fill_mask
+
+    col0 = p.color.clone()
+    loc = p.location.clone()
+
+    col = col0.clone()
+
+    rate_func = rate_funcs.smooth
+    part = 1
+    smooth1 = smooth2 = 0.
+
+    if anim == 1:
+        run_time = 0.5
+        def f(t):  # round Gaussian shift in X
+            params = gauss1d_std(scale=1.)
+            params = gauss_shift(params, 3.5 * t)
+            return [(params, 1.)]
+
+    if show_wave:
+        name = 'wigner_wave{}'.format(anim)
+
+        npts = 640
+        px, xx, yx = setup_wave(xrange=xrange, npts=npts)
+        pp, xp, yp = setup_wave(xrange=yrange, npts=npts)
+        xvals = torch.linspace(xmin, xmax, npts)
+        pvals = torch.linspace(ymin, ymax, npts)
+
+
+    def set_frame(mixed_params, smooth):
+        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+        if smooth > 0.:
+            assert len(mixed_params) == 1
+            (params, a) = mixed_params[0]
+            params2 = gauss_smooth(gauss_wigner(params, params), smooth, smooth)
+            vals = gauss2d_calc(params2, x, y).real * a
+
+        loc[...,2] = origin[2] + vals * out[2]
+        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
+        col[...,:3] = fill_mask * shade_up * col_up\
+                        + fill_mask * shade_down * col_dn\
+                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + mesh_mask * col0[...,:3]
+        p.set_non_recursive(location=loc.clone(), color=col.clone())
+
+
+        if show_wave:
+            vals = 0
+            vals1 = 0.+0j
+            for params, a in mixed_params:
+                vals0 = gauss2d_calc(params, xvals, xvals*0)
+                w = vals0.abs()
+                vals1 += vals0 * w * a
+                vals += w * w * a
+
+            set_wave(px, xvals, vals, vals1, origin + ymax * up, right, out*0.5)
+
+            vals = 0
+            vals1 = 0.+0j
+            for params, a in mixed_params:
+                params2 = gauss_tfm(params)
+                vals0 = gauss2d_calc(params2, pvals, pvals*0)
+                w = vals0.abs()
+                vals1 += vals0 * w * a
+                vals += w * w * a
+
+            set_wave(pp, pvals, vals, vals1, origin + xmin * right, -up, out*0.5)
+
+    # run_time = 0.1
+
+    def move_view(cam, part=1):
+        if part == 1:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, -70*DEGREES, cam.get_right_direction())
+        elif part == 2:
+            with Off():
+                cam.orbit_around_point(origin, -70*DEGREES, cam.get_right_direction())
+            with Sync(run_time=2):
+                cam.orbit_around_point(origin, 130*DEGREES, cam.get_right_direction())
+        elif part == 3:
+            with Off():
+                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, -60*DEGREES, cam.get_right_direction())
+        elif part == 4:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, -30*DEGREES, cam.get_right_direction())
+        elif part == 5:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
+        elif part == 6:
+            with Sync(run_time=1):
+                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
+                set_frame(f0(1.), smooth2*smooth2)
+        elif part == 7:
+            with Sync(run_time=4):
+                cam.orbit_around_point(origin, 360*DEGREES, cam.get_right_direction())
+        elif part == 8:
+            with Sync(run_time=3):
+                cam.orbit_around_point(origin, 180*DEGREES, OUT)
+
+    if part == 1:
+        for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
+            print(frame.index, frame.time, frame.dt)
+            if smooth1 > 0 or smooth2 > 0:
+                smooth = smooth2 * frame.u + smooth1 * (1-frame.u)
+                smooth *= smooth
+            else: smooth = 0.
+
+            with frame.context:
+                set_frame(f(frame.u), smooth)
+    else:
+        with Off():
+            set_frame(f(1.), smooth1*smooth1)
+        cam: Camera = Scene.get_camera()
+        if part == 2: move_view(cam, 1)
+        if part == 3: move_view(cam, 2)
+        if part == 4: move_view(cam, 3)
+        if part == 5: move_view(cam, 1)
+        if part == 6: move_view(cam, 2)
+        if part == 7: move_view(cam, 3)
+        if part == 8: move_view(cam, 4)
+        if part == 9: move_view(cam, 5)
+        if part == 10: move_view(cam, 6)
+        if part == 11: move_view(cam, 7)
+        if part == 12: move_view(cam, 8)
+
+
+
+    Scene.wait(1.1/quality.frames_per_second)
+
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 

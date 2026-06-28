@@ -10,8 +10,6 @@ import manimhelper as mh
 from common.wigner import *
 
 col_pi = col_special * 0.5 + ORANGE * 0.5
-col_ft = YELLOW_B * 0.5 + ORANGE * 0.5
-col_angle = YELLOW
 col_trig = PURPLE_A#*0.5+WHITE*0.5
 
 def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=0., bg_color=BLACK, bg_stroke_width=10.):
@@ -264,5 +262,33 @@ class FourierTfmEq(Scene):
                   Succession(Wait(1), FadeIn(eq15_2[4][1:16], eq15_2[4][20:]))
                   )
         eq15 = eq15_2
+        self.wait(0.1)
+        self.play(eq15.animate.to_edge(UP, buff=1), FadeOut(eq16, rate_func=linear), run_time=1.5)
+
+        self.wait()
+
+class Gaussian_f(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=80)
+        eq1 = MathTex(r'f(x)', r'=', r'e^{-\frac12x^2}')
+        eq2 = MathTex(r'f(x)', r'=', r'e^{-\frac12x^2+i\omega x}')
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0]).set_color(col_psi)
+        VGroup(eq1[0][2], eq1[2][-2:], eq2[2][-1]).set_color(col_x)
+        VGroup(eq1[2][0]).set_color(col_special)
+        VGroup(eq1[2][2], eq1[2][4]).set_color(col_num)
+        VGroup(eq1[2][3]).set_color(col_op)
+        VGroup(eq2[2][-3]).set_color(col_i)
+        VGroup(eq2[2][-2]).set_color(col_p)
+
+        mh.align_sub(eq2, eq2[1], eq1[1]).move_to(eq1, coor_mask=RIGHT)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2][:], eq2[2][:-4]),
+                  FadeIn(eq2[2][-4:], shift=mh.diff(eq1[2][-1], eq2[2][-5])),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(FadeOut(eq2[2][7:], rate_func=linear))
 
         self.wait()

@@ -52,6 +52,32 @@ def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, s
     mob = ImageMob(t, **kwargs)
     return mob
 
+def curve_surface_loc(pts, normals=None, tangents=None, resolution=8, width=0.03, closed=True):
+    if normals is None:
+        normals = pts
+    if tangents is None:
+        if closed:
+            tangents = torch.roll(pts, shifts=1, dims=0) - torch.roll(pts, shifts=-1, dims=0)
+        else:
+            tangents = torch.empty_like(pts)
+            tangents[1:-1] = pts[2:] - pts[:-2]
+            tangents[0] = pts[1] - pts[0]
+            tangents[-1] = pts[-1] - pts[-2]
+    du = torch.nn.functional.normalize(normals, dim=1)
+    dv = torch.nn.functional.normalize(torch.linalg.cross(normals, tangents), dim=1)
+    theta = torch.linspace(-math.pi, math.pi, resolution, device=pts.device)
+    return (
+            pts[:, None, :] +
+            (torch.sin(theta)[None, :, None] * du[:, None, :] +
+             torch.cos(theta)[None, :, None] * dv[:, None, :]) * (width / 2)
+    ).reshape(1, -1, 3).float()
+
+def curve_surface(pts, normals=None, tangents=None, resolution=8, color=BLUE, width=0.03, closed=True, **kwargs):
+    n = pts.shape[0]
+    crv = Surface(grid_height=resolution, grid_width=n, color=color, **kwargs)
+    crv.get_descendants()[1].location[...] = curve_surface_loc(pts, normals, tangents, resolution, width, closed)
+    return crv
+
 class FrameStepper:
     def __init__(self, fps = 30., run_time=1., rate_func=rate_funcs.smooth, step=1, include_start=True):
         self.u = 0.

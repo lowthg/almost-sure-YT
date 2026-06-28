@@ -11,7 +11,7 @@ from manim import MathTex, VGroup
 sys.path.append('../../')
 import alganhelper as ah
 from common.wigner import *
-from algansource.wave import setup_wave, set_wave, time_evolution
+from algansource.wave import setup_wave, set_wave, time_evolution, setup_cam, setup_surf
 LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
@@ -250,68 +250,6 @@ def g1(t):
     params = gauss_scale(params, 1./gauss1d_norm(params))
     return [(params,1)]
 
-def setup_cam():
-    with Off():
-        cam: Camera = Scene.get_camera()
-        cam.set_distance_to_screen(13)
-        cam.move_to(cam.get_center()*1.45)
-        cam.set_euler_angles(70*DEGREES, 0*DEGREES, 60*DEGREES)
-        light: PointLight = Scene.get_light_sources()[0]
-        light.orbit_around_point(ORIGIN, -90, axis=OUT)
-        light.move(UP*4)
-
-def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
-               colors=None, stroke_color=RED_E, signal_vars=False):
-    xmin, xmax = xrange
-    ymin, ymax = yrange
-    zmin, zmax = zrange
-    xlen = 12.
-    ylen = 12.
-    zlen = 6.
-    ax = mn.ThreeDAxes([xmin, xmax * 1.05], [ymin, ymax * 1.1], [zmin, zmax*1.2], xlen, ylen, zlen,
-                    axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
-                                 "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                 "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                 },
-                    z_axis_config={'rotation': PI},
-                    ).shift(mn.DL * 0.3 + mn.OUT*0.2)
-    origin = torch.tensor(ax.coords_to_point(0, 0), dtype=ORIGIN.dtype)
-    right = torch.tensor(ax.coords_to_point(1, 0), dtype=ORIGIN.dtype) - origin
-    up = torch.tensor(ax.coords_to_point(0, 1), dtype=ORIGIN.dtype) - origin
-    out = torch.tensor(ax.coords_to_point(0, 0, 1), dtype=ORIGIN.dtype) - origin
-    eqstr = [r't', r'\omega'] if signal_vars else [r'X', r'P']
-    txt1 = mn.MathTex(eqstr[0], stroke_width=2, font_size=60).move_to(ax.coords_to_point(xmax * 1.1, 0))
-    txt2 = mn.MathTex(eqstr[1], stroke_width=2, font_size=60).move_to(ax.coords_to_point(0, ymax * 1.15))
-    txt1.rotate(-PI / 2, mn.RIGHT)
-    txt2.rotate(-PI / 2, mn.RIGHT)
-    txt2.rotate(PI / 2, mn.OUT)
-    ax1 = ManimMob(ax)
-    txt1 = ManimMob(txt1)
-    txt2 = ManimMob(txt2)
-    Group(*ax1.submobjects[:2], txt1, txt2).move(IN*0.11)
-
-    if colors is None:
-        colors = [
-            Color(mn.RED_D.to_rgb() * 0.5 / .8),
-            Color(mn.RED_E.to_rgb() * 0.5 / .8)
-        ]
-    surf = ah.surface_mesh(num_recs=64, rec_size=10, col1=colors[0], col2=colors[1], stroke_color=stroke_color,
-                           fill_opacity=0.9, stroke_opacity=1)
-    shape = (surf.grid_width, surf.grid_height)
-    p = surf.get_descendants()[1]
-    loc = p.location.clone()
-    x = loc[:,:,0] * (xmax - xmin) / 2 + (xmax+xmin)/2
-    y = loc[:,:,1] * (ymax - ymin) / 2 + (ymax+ymin)/2
-    surf.scale(np.array([(xmax-xmin)*right[0]/2, (ymax-ymin)*up[1]/2, 1])).move_to(origin)
-
-    with Off():
-        txt1.spawn()
-        txt2.spawn()
-        ax1.spawn()
-        if spawn:
-            surf.spawn()
-
-    return origin, right, up, out, p, x, y, shape, Group(txt1, txt2, ax1)
 
 col_up = torch.tensor([1, .6, 0.])
 col_dn = INDIGO[:3]
@@ -1415,7 +1353,7 @@ if __name__ == "__main__":
     #COMPUTING_DEFAULTS.max_animate_batch_size = 4
     # for anim in [15,16,17,18]:
     # wigner_anim(quality=HD, bgcol=BLACK, anim=45)
-    wigner_anim(quality=HD, bgcol=BLACK, anim=47)
+    wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=True)
     # for anim in [13]:
     # evolve_wave(quality=LD, bgcol=BLACK, anim=1, remove_extras=True)
     # dynamics_reset(quality=HD, bgcol=BLACK, anim=3)
