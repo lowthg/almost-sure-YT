@@ -280,16 +280,16 @@ def fourier_example(quality=LD, bgcol=BLACK, anim=0):
     name = 'fourier_example{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
-def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
-    npts=639
+def fractional_ax():
+    # npts=639
     xrange = (-5.,5.)
     ymax1 = 1.2
-    xvals = torch.linspace(xrange[0], xrange[1], npts)
+    # xvals = torch.linspace(xrange[0], xrange[1], npts)
 
     xmin1, xmax1 = (xrange[0], xrange[1]*1.05)
-    xlen = 8.
+    xlen = 8.6
     right = xlen / (xmax1 - xmin1) * RIGHT
-    ylen = 1.8
+    ylen = 2.9
     out = ylen / ymax1 * UP
     ylen = ymax1 * out[1].item()
     ax = mn.Axes(x_range=[xmin1, xmax1], y_range=[0, ymax1], x_length=xlen, y_length=ylen,
@@ -297,8 +297,8 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
                            "tip_width": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
                            "tip_height": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
                            },
-              ).set_opacity(0.8)
-    ax.shift(-ax.coords_to_point(0, 0)).move_to(mn.ORIGIN, coor_mask=mn.UP)
+              ).set_opacity(0.8).shift(mn.LEFT*0.1)
+    # ax.shift(-ax.coords_to_point(0, 0)).move_to(mn.ORIGIN, coor_mask=mn.UP)
     mn.MathTex.set_default(font_size=30)
     eq1 = mn.MathTex(r'x').move_to(ax.x_axis.get_right() + mn.RIGHT*0.05, aligned_edge=LEFT)
     eq2 = mn.MathTex(r'\mathcal F_\theta f(x)').move_to(ax.y_axis.get_top() + mn.RIGHT*0.15 + mn.DOWN*0.07, aligned_edge=LEFT)
@@ -306,9 +306,37 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
     eq2[0][2].set_color(col_psi)
     eq2[0][0].set_color(col_ft)
     eq2[0][1].set_color(col_angle)
-
     origin = torch.from_numpy(ax.coords_to_point(0, 0)) + IN*0.1
-    mn.MathTex.set_default(font_size=30)
+    return ax, eq1, eq2, out, right, origin
+
+def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
+    npts=639
+    xrange = (-5.,5.)
+    # ymax1 = 1.2
+    xvals = torch.linspace(xrange[0], xrange[1], npts)
+
+    # xmin1, xmax1 = (xrange[0], xrange[1]*1.05)
+    # xlen = 8.6
+    # right = xlen / (xmax1 - xmin1) * RIGHT
+    # ylen = 2.9
+    # out = ylen / ymax1 * UP
+    # ylen = ymax1 * out[1].item()
+    # ax = mn.Axes(x_range=[xmin1, xmax1], y_range=[0, ymax1], x_length=xlen, y_length=ylen,
+    #           axis_config={'color': mn.WHITE, 'stroke_width': 5, 'include_ticks': False,
+    #                        "tip_width": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+    #                        "tip_height": 0.4 * mn.DEFAULT_ARROW_TIP_LENGTH,
+    #                        },
+    #           ).set_opacity(0.8).shift(mn.LEFT*0.1)
+    # ax.shift(-ax.coords_to_point(0, 0)).move_to(mn.ORIGIN, coor_mask=mn.UP)
+    # mn.MathTex.set_default(font_size=30)
+    # eq1 = mn.MathTex(r'x').move_to(ax.x_axis.get_right() + mn.RIGHT*0.05, aligned_edge=LEFT)
+    # eq2 = mn.MathTex(r'\mathcal F_\theta f(x)').move_to(ax.y_axis.get_top() + mn.RIGHT*0.15 + mn.DOWN*0.07, aligned_edge=LEFT)
+    # mn.VGroup(eq1, eq2[0][4]).set_color(col_x)
+    # eq2[0][2].set_color(col_psi)
+    # eq2[0][0].set_color(col_ft)
+    # eq2[0][1].set_color(col_angle)
+    ax, eq1, eq2, out, right, origin = fractional_ax()
+
     ax = ManimMob(mn.VGroup(ax, eq1, eq2))
 
     cam = Scene.get_camera()
@@ -513,22 +541,46 @@ def button(quality=LD, bgcol=BLACK, anim=0):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
-def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=False):
-    name = 'wigner_wave{}'.format(anim) if show_wave else 'wigner_anim{}'.format(anim)
-    setup_cam()
-
+def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
+    name = 'fractional_3d{}'.format(anim)
+    if part > 0: name = name + r'_{}'.format(part)
+    npts = 639
     xmin, xmax = xrange = (-5., 5.)
     ymin, ymax = yrange = (-5., 5.)
-    # xmin, xmax = xrange = (-2., 2.)
-    # ymin, ymax = yrange = (-2., 2.)
+    xvals = torch.linspace(xmin, xmax, npts)
 
-    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, signal_vars=signal_vars)
-    # with Off():
-    #     cam = Scene.get_camera()
-    #     cam.move_to(cam.get_center()*1.5+IN)
-    #     ax[:2].despawn()
+    if anim == 0:
+        ax_, eq1_, eq2_, out_, right_, origin_ = fractional_ax()
+        ax1_ = ManimMob(mn.VGroup(ax_, eq1_, eq2_))
 
-    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=False)
+        with Off():
+            ax1_.spawn()
+
+        params1 = gauss1d(1.)
+        psi1 = gauss1d_calc(params1, xvals)
+        cam: Camera = Scene.get_camera()
+        cam_shift = 0.96 * cam.get_center()[0, 0, :]
+        R = get_rotation_around_axis(-60, OUT) @ get_rotation_around_axis(-70, RIGHT)
+        right_ = R @ right_
+        out_ = R @ out_
+        origin_ = R @ (origin_ + cam_shift).float()
+        light: PointLight = Scene.get_light_sources()[0]
+        light_pos = light.get_center()
+
+
+        with Off():
+            p_, _, _ = setup_wave(npts=npts, xrange=xrange, opacity=1)
+            set_wave(p_, xvals, psi1.abs(), psi1.clone(), origin_, right_, out_)
+            ax1_.move(cam_shift).orbit_around_point(ORIGIN, 70, RIGHT).orbit_around_point(ORIGIN, 60, OUT)
+
+    setup_cam()
+
+    vars = (mn.MathTex('x', stroke_width=2, font_size=60, color=col_x),
+            mn.MathTex('y', stroke_width=2, font_size=60, color=col_p))
+
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, vars=vars, no_spawn=anim==0)
+
+    surf2 = ah.surface_mesh(num_recs=64, rec_size=10, fill_opacity=1, stroke_opacity=0, add_to_scene=anim==0)
     fill_mask = surf2.get_descendants()[1].color[:,:,-1:]
     mesh_mask = 1 - fill_mask
 
@@ -538,33 +590,86 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
     col = col0.clone()
 
     rate_func = rate_funcs.smooth
-    part = 1
-    smooth1 = smooth2 = 0.
+    smooth1 = smooth2 = 0.5
+    scale1 = scale2 = 2.
+    run_time = 1.
 
     if anim == 1:
-        run_time = 0.5
-        def f(t):  # round Gaussian shift in X
-            params = gauss1d_std(scale=1.)
-            params = gauss_shift(params, 3.5 * t)
-            return [(params, 1.)]
+        def f(u):
+            a = math.exp(u * math.log(4))
+            params = gauss1d(a)
+            params = gauss_scale(params, 1./gauss1d_norm(params))
+            return params
+        if part == 1:
+            theta1 = 0.
+            theta2 = PI/2
+            run_time = 1.5
+        if part == 2:
+            theta1 = 0.
+            theta2 = PI
+            run_time = 3.
+            rate_func = rate_funcs.identity
+
+    if anim == 2:
+        def f(u):
+            a = 4. * math.exp(-u * math.log(2))
+            params = gauss1d(a)
+            params = gauss_scale(params, 1./gauss1d_norm(params))
+            params = gauss_shift(params, 3. * u)
+            return params
+        if part == 1:
+            theta1 = 0.
+            theta2 = PI
+            run_time = 3.
+            rate_func = rate_funcs.identity
+        elif part == 2:
+            theta1 = PI
+            theta2 = PI*2
+            run_time = 3.
+            rate_func = rate_funcs.identity
+
+    if anim == 3:
+        def f(u):
+            params = gauss1d(2.)
+            params = gauss_scale(params, 1./gauss1d_norm(params))
+            params1 = gauss_shift(params, 3.)
+            params2 = gauss_shift(params, -3.)
+            return params1 + gauss_scale(params2, -u)
+        if part == 1:
+            theta1 = 0.
+            theta2 = PI
+            run_time = 3.
+            rate_func = rate_funcs.identity
+        elif part == 2:
+            theta1 = PI
+            theta2 = PI*2
+            run_time = 3.
+            rate_func = rate_funcs.identity
+
+        if part == 3:
+            smooth2 = 0.
+            scale2 = 0.7
+            theta1 = theta2 = 0.
+
+
+    if anim > 0 and part > 0:
+        params0 = f(1.)
+        def f(t):
+                params = gauss_fractional_ft(params0, t*theta2 + (1-t)*theta1)
+                return params
 
     if show_wave:
-        name = 'wigner_wave{}'.format(anim)
-
-        npts = 640
         px, xx, yx = setup_wave(xrange=xrange, npts=npts)
         pp, xp, yp = setup_wave(xrange=yrange, npts=npts)
-        xvals = torch.linspace(xmin, xmax, npts)
         pvals = torch.linspace(ymin, ymax, npts)
 
 
-    def set_frame(mixed_params, smooth):
-        vals = sum([gauss2d_calc(gauss_wigner(params, params), x, y).real * a for params, a in mixed_params])
+    def set_frame(params, smooth, scale=1.):
+        vals = gauss2d_calc(gauss_wigner(params, params), x, y).real
         if smooth > 0.:
-            assert len(mixed_params) == 1
-            (params, a) = mixed_params[0]
             params2 = gauss_smooth(gauss_wigner(params, params), smooth, smooth)
-            vals = gauss2d_calc(params2, x, y).real * a
+            vals = gauss2d_calc(params2, x, y).real
+        vals *= scale
 
         loc[...,2] = origin[2] + vals * out[2]
         shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
@@ -577,100 +682,84 @@ def wigner_anim(quality=LD, bgcol=BLACK, anim=1, show_wave=False, signal_vars=Fa
 
 
         if show_wave:
-            vals = 0
-            vals1 = 0.+0j
-            for params, a in mixed_params:
-                vals0 = gauss2d_calc(params, xvals, xvals*0)
-                w = vals0.abs()
-                vals1 += vals0 * w * a
-                vals += w * w * a
+            vals0 = gauss2d_calc(params, xvals, xvals*0)
+            w = vals0.abs()
+            vals1 = vals0 * w
+            vals = w * w
 
             set_wave(px, xvals, vals, vals1, origin + ymax * up, right, out*0.5)
 
-            vals = 0
-            vals1 = 0.+0j
-            for params, a in mixed_params:
-                params2 = gauss_tfm(params)
-                vals0 = gauss2d_calc(params2, pvals, pvals*0)
-                w = vals0.abs()
-                vals1 += vals0 * w * a
-                vals += w * w * a
+            params2 = gauss_tfm(params)
+            vals0 = gauss2d_calc(params2, pvals, pvals*0)
+            w = vals0.abs()
+            vals1 = vals0 * w
+            vals = w * w
 
             set_wave(pp, pvals, vals, vals1, origin + xmin * right, -up, out*0.5)
 
-    # run_time = 0.1
+    if anim == 0:
+        params = gauss1d(1.)
+        params = gauss_scale(params, 1. / gauss1d_norm(params))
+        with Off():
+            set_frame(params, smooth=0.5, scale=2.)
+            wv = [(px.location.clone(), px.color.clone()),
+                  (pp.location.clone(), pp.color.clone())]
+            loc_ = p.location.clone()
+            col_ = p.color.clone()
+            set_frame(gauss1d(c=0.), smooth=0.)
+            pp.set_non_recursive(location=wv[0][0].clone(), color=wv[0][1].clone())
+            for _ in (px, pp): _.set_opacity_via_color(0.)
+            surf2.get_descendants()[1].set_non_recursive(color=p.color, location=p.location)
+            cam.set_distance_to_screen(100)
+            light_pos2 = light.get_center()
+            light.move_to(R @ (light_pos[0,0,:]+cam_shift))
 
-    def move_view(cam, part=1):
-        if part == 1:
+        with Sync():
             with Sync(run_time=1):
-                cam.orbit_around_point(origin, -70*DEGREES, cam.get_right_direction())
-        elif part == 2:
-            with Off():
-                cam.orbit_around_point(origin, -70*DEGREES, cam.get_right_direction())
-            with Sync(run_time=2):
-                cam.orbit_around_point(origin, 130*DEGREES, cam.get_right_direction())
-        elif part == 3:
-            with Off():
-                cam.orbit_around_point(origin, 60 * DEGREES, cam.get_right_direction())
-            with Sync(run_time=1):
-                cam.orbit_around_point(origin, -60*DEGREES, cam.get_right_direction())
-        elif part == 4:
-            with Sync(run_time=1):
-                cam.orbit_around_point(origin, -30*DEGREES, cam.get_right_direction())
-        elif part == 5:
-            with Sync(run_time=1):
-                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
-        elif part == 6:
-            with Sync(run_time=1):
-                cam.orbit_around_point(origin, 30*DEGREES, cam.get_right_direction())
-                set_frame(f0(1.), smooth2*smooth2)
-        elif part == 7:
-            with Sync(run_time=4):
-                cam.orbit_around_point(origin, 360*DEGREES, cam.get_right_direction())
-        elif part == 8:
-            with Sync(run_time=3):
-                cam.orbit_around_point(origin, 180*DEGREES, OUT)
+                cam.set_distance_to_screen(13)
+                ax1_.despawn()
+            with Seq():
+                Scene.wait(0.5)
+                with Sync(run_time=1):
+                    p_.set_non_recursive(location=wv[0][0].clone(), color=wv[0][1].clone())
+                    ax.spawn()
+                    light.move_to(light_pos2)
+                    surf2.spawn()
+        with Sync(run_time=0.01):
+            pp.set_non_recursive(location=wv[0][0], color=wv[0][1])
+        with Sync():
+            pp.set_non_recursive(location=wv[1][0].view(1, 639, 4, 3).flip(1).reshape(1, 2556, 3), color=wv[1][1])
+        with Sync():
+            surf2.get_descendants()[1].set_non_recursive(color=col_, location=loc_)
 
-    if part == 1:
+    if anim > 0:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
-            print(frame.index, frame.time, frame.dt)
             if smooth1 > 0 or smooth2 > 0:
-                smooth = smooth2 * frame.u + smooth1 * (1-frame.u)
+                smooth = math.sqrt(smooth2) * frame.u + math.sqrt(smooth1) * (1-frame.u)
                 smooth *= smooth
             else: smooth = 0.
+            v = 1-frame.u
+            v *= v
+            scale = math.sqrt(scale2) * (1-v) + math.sqrt(scale1) * v
+            scale *= scale
 
             with frame.context:
-                set_frame(f(frame.u), smooth)
-    else:
-        with Off():
-            set_frame(f(1.), smooth1*smooth1)
-        cam: Camera = Scene.get_camera()
-        if part == 2: move_view(cam, 1)
-        if part == 3: move_view(cam, 2)
-        if part == 4: move_view(cam, 3)
-        if part == 5: move_view(cam, 1)
-        if part == 6: move_view(cam, 2)
-        if part == 7: move_view(cam, 3)
-        if part == 8: move_view(cam, 4)
-        if part == 9: move_view(cam, 5)
-        if part == 10: move_view(cam, 6)
-        if part == 11: move_view(cam, 7)
-        if part == 12: move_view(cam, 8)
+                set_frame(f(frame.u), smooth, scale)
 
-
-
-    Scene.wait(1.1/quality.frames_per_second)
+    Scene.wait(0.1)
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
-    COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
+    COMPUTING_DEFAULTS.max_cpu_memory_used *= 40
 
     # fourier_example(HD, bgcol=BLACK, anim=103)
     # fourier_example(LD, bgcol=BLACK, anim=103)
-    # fractional_ex(HD, bgcol=TRANSPARENT, anim=6, part=4)
-    # fractional_ex(LD, bgcol=BLACK, anim=6, part=3)
-    button(HD, TRANSPARENT, anim=7)
+    # fractional_ex(HD, bgcol=BLACK, anim=6, part=0)
+    # fractional_ex(LD, bgcol=BLACK, anim=3, part=1)
+    # button(HD, TRANSPARENT, anim=7)
     # button(LD, BLACK, anim=1)
+    fractional_3d(HD, BLACK, anim=2, part=0)
+    fractional_3d(HD, BLACK, anim=3, part=0)

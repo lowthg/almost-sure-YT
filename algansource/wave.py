@@ -126,7 +126,7 @@ def setup_cam():
         light.move(UP*4)
 
 def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
-               colors=None, stroke_color=RED_E, signal_vars=False):
+               colors=None, stroke_color=RED_E, signal_vars=False, vars=None, no_spawn=False):
     xmin, xmax = xrange
     ymin, ymax = yrange
     zmin, zmax = zrange
@@ -144,11 +144,13 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
     right = torch.tensor(ax.coords_to_point(1, 0), dtype=ORIGIN.dtype) - origin
     up = torch.tensor(ax.coords_to_point(0, 1), dtype=ORIGIN.dtype) - origin
     out = torch.tensor(ax.coords_to_point(0, 0, 1), dtype=ORIGIN.dtype) - origin
-    eqstr = [r't', r'\omega'] if signal_vars else [r'X', r'P']
-    txt1 = mn.MathTex(eqstr[0], stroke_width=2, font_size=60).move_to(ax.coords_to_point(xmax * 1.1, 0))
-    txt2 = mn.MathTex(eqstr[1], stroke_width=2, font_size=60).move_to(ax.coords_to_point(0, ymax * 1.15))
-    txt1.rotate(-PI / 2, mn.RIGHT)
-    txt2.rotate(-PI / 2, mn.RIGHT)
+    if vars is None:
+        eqstr = [r't', r'\omega'] if signal_vars else [r'X', r'P']
+        txt1 = mn.MathTex(eqstr[0], stroke_width=2, font_size=60)
+        txt2 = mn.MathTex(eqstr[1], stroke_width=2, font_size=60)
+    else: txt1, txt2 = vars
+    txt1.move_to(ax.coords_to_point(xmax * 1.1, 0)).rotate(-PI / 2, mn.RIGHT)
+    txt2.move_to(ax.coords_to_point(0, ymax * 1.15)).rotate(-PI / 2, mn.RIGHT)
     txt2.rotate(PI / 2, mn.OUT)
     ax1 = ManimMob(ax)
     txt1 = ManimMob(txt1)
@@ -168,12 +170,11 @@ def setup_surf(xrange=(-5., 5.), yrange=(-5., 5.), zrange=(-.3, .3), spawn=True,
     x = loc[:,:,0] * (xmax - xmin) / 2 + (xmax+xmin)/2
     y = loc[:,:,1] * (ymax - ymin) / 2 + (ymax+ymin)/2
     surf.scale(np.array([(xmax-xmin)*right[0]/2, (ymax-ymin)*up[1]/2, 1])).move_to(origin)
+    ax2 = Group(txt1, txt2, ax1)
+    if not no_spawn:
+        with Off():
+            ax2.spawn()
+            if spawn:
+                surf.spawn()
 
-    with Off():
-        txt1.spawn()
-        txt2.spawn()
-        ax1.spawn()
-        if spawn:
-            surf.spawn()
-
-    return origin, right, up, out, p, x, y, shape, Group(txt1, txt2, ax1)
+    return origin, right, up, out, p, x, y, shape, ax2
