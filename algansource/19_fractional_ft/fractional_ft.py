@@ -1,3 +1,6 @@
+import math
+
+import torch
 from algan import *
 from manim.utils.color.BS381 import SILVER_GREY
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
@@ -6,7 +9,7 @@ from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
 sys.path.append('../../')
 import alganhelper as ah
 from common.wigner import *
-from algansource.wave import setup_wave, set_wave, WaveEvolver, setup_cam, setup_surf
+from algansource.wave import setup_wave, set_wave, WaveEvolver, setup_cam, setup_surf, WaveEvolution
 LD = RenderSettings((854, 480), 15)
 LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
@@ -268,12 +271,12 @@ def fourier_example(quality=LD, bgcol=BLACK, anim=0):
                     set_wave(waves_p[1], xvals, psi5.abs(), psi5, origins[1], right, out)
 
 
-        # with Off():
-        #     axes.spawn()
+        if anim == 10:
+            ax, eq1, eq2, out, right, origin = fractional_ax()
+            ax = ManimMob(mn.VGroup(ax, eq1, eq2))
+            with Off():
+                ax.spawn()
 
-
-        # with Sync(run_time=1.):
-        #     ax.clone().move_to(LEFT*xlen*scale*0.5).scale(scale)
 
     Scene.wait(0.1)
 
@@ -543,6 +546,7 @@ def button(quality=LD, bgcol=BLACK, anim=0):
 
 def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
     name = 'fractional_3d{}'.format(anim)
+    do_anim = True
     if part > 0: name = name + r'_{}'.format(part)
     npts = 639
     xmin, xmax = xrange = (-5., 5.)
@@ -589,6 +593,16 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
 
     col = col0.clone()
 
+    def set_surf(vals):
+        loc[...,2] = origin[2] + vals * out[2]
+        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
+        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
+        col[...,:3] = fill_mask * shade_up * col_up\
+                        + fill_mask * shade_down * col_dn\
+                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
+                        + mesh_mask * col0[...,:3]
+        p.set_non_recursive(location=loc.clone(), color=col.clone())
+
     rate_func = rate_funcs.smooth
     smooth1 = smooth2 = 0.5
     scale1 = scale2 = 2.
@@ -603,7 +617,7 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
         if part == 1:
             theta1 = 0.
             theta2 = PI/2
-            run_time = 1.5
+            run_time = 3.
         if part == 2:
             theta1 = 0.
             theta2 = PI
@@ -651,18 +665,101 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
             scale2 = 0.7
             theta1 = theta2 = 0.
 
+    if 4 <= anim <= 5:
+        params0 = gauss1d(2.)
+        params0 = gauss_scale(params0, 1. / gauss1d_norm(params0))
+        params0 = gauss_shift(params0, 3.) + gauss_scale(gauss_shift(params0, -3.), -1.)
 
-    if anim > 0 and part > 0:
+    if anim == 4:
+        def f(u):
+            return params0
+        run_time = 3.
+        smooth2 = 0.
+        scale2 = 0.7
+        if part > 0:
+            smooth1 = smooth2
+            scale1 = scale2
+            rate_func = rate_funcs.identity
+            if part == 1:
+                theta1 = 0.
+                theta2 = PI
+            if part == 2:
+                theta1 = PI
+                theta2 = PI*2
+
+    if anim == 5:
+        if part == 0:
+            run_time = 1
+            smooth1 = smooth2 = 0.
+            scale1 = scale2 = 0.7
+            def f(t):
+                return gauss_scale(params0, 1-t)
+
+    if 6 > anim > 0 and part > 0:
         params0 = f(1.)
         def f(t):
-                params = gauss_fractional_ft(params0, t*theta2 + (1-t)*theta1)
-                return params
+            params = gauss_fractional_ft(params0, t*theta2 + (1-t)*theta1)
+            return params
 
     if show_wave:
         px, xx, yx = setup_wave(xrange=xrange, npts=npts)
         pp, xp, yp = setup_wave(xrange=yrange, npts=npts)
         pvals = torch.linspace(ymin, ymax, npts)
 
+    if anim == 6 and True:
+        scale1 = scale2 = 1.
+        c = 2.
+        b = 0.45
+
+        evolver = WaveEvolver(xrange=xrange, npts=npts, n_extend_left=8000, n_extend_right=8000, n_scale=2,
+                              speed=1.)
+        evolver.V = evolver.xvals1 ** 2 * 0.5 - 0.5
+        evolver.psi = (1. - (evolver.xvals1.abs() - c).clip(0) * 10).clip(0) * b
+
+        run_time = 3.
+
+        if part == 0:
+            scale1 = 0.
+            angle = 0.
+            run_time = 1.
+
+        if part == 1:
+            angle = PI/2
+
+        if part == 2:
+            angle = PI
+            rate_func = rate_funcs.identity
+
+        if part == 3:
+            run_time = 0.
+            angle = 0.
+            evolver.evolve(PI/2)
+
+        for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, rate_func=rate_func):
+            u = frame.u
+            scale = scale1 * (1-u) + scale2 * u
+            psi = evolver.evolve(frame.du * angle) * scale
+            psift = evolver.psift() * scale
+            if part == 0: psi = (xvals.abs() < c).float() * b * scale
+            theta = u * angle
+            if part == 3:
+                psift = (xvals.abs() < c).float() * b * scale
+                theta = PI/2
+            x_ =  x * math.cos(theta) - y * math.sin(theta)
+            y_ = x * math.sin(theta) + y * math.cos(theta)
+            a = (c - x_.abs()).clip(0) * 2
+            vals = torch.sinc(y_ / torch.pi * a) * a * (0.26 / torch.pi * scale)
+
+            with frame.context:
+                set_surf(vals)
+                set_wave(px, xvals, psi.abs(), psi, origin + ymax * up, right, out * 0.5)
+                set_wave(pp, pvals, psift.abs(), psift, origin + xmin * right, -up, out * 0.5)
+
+
+        with Off():
+            evolver.evolve(0.)
+            # set_surf(vals)
+            # set_wave(px, xvals, psi.abs()**2, psi, origin + ymax * up, right, out*0.5)
 
     def set_frame(params, smooth, scale=1.):
         vals = gauss2d_calc(gauss_wigner(params, params), x, y).real
@@ -670,30 +767,21 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
             params2 = gauss_smooth(gauss_wigner(params, params), smooth, smooth)
             vals = gauss2d_calc(params2, x, y).real
         vals *= scale
-
-        loc[...,2] = origin[2] + vals * out[2]
-        shade_up = torch.pow(((vals - 0.05)*4).clamp(0, 1), 0.8).unsqueeze(-1)
-        shade_down = (vals * -50).clamp(0.,1 ).unsqueeze(-1)
-        col[...,:3] = fill_mask * shade_up * col_up\
-                        + fill_mask * shade_down * col_dn\
-                        + fill_mask * (1-shade_up-shade_down) * col0[:,:,:3]\
-                        + mesh_mask * col0[...,:3]
-        p.set_non_recursive(location=loc.clone(), color=col.clone())
-
+        set_surf(vals)
 
         if show_wave:
             vals0 = gauss2d_calc(params, xvals, xvals*0)
-            w = vals0.abs()
-            vals1 = vals0 * w
-            vals = w * w
+            w = vals0.abs() * 0.64
+            vals1 = vals0
+            vals = w
 
             set_wave(px, xvals, vals, vals1, origin + ymax * up, right, out*0.5)
 
             params2 = gauss_tfm(params)
             vals0 = gauss2d_calc(params2, pvals, pvals*0)
-            w = vals0.abs()
-            vals1 = vals0 * w
-            vals = w * w
+            w = vals0.abs() * 0.64
+            vals1 = vals0
+            vals = w
 
             set_wave(pp, pvals, vals, vals1, origin + xmin * right, -up, out*0.5)
 
@@ -732,7 +820,7 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
         with Sync():
             surf2.get_descendants()[1].set_non_recursive(color=col_, location=loc_)
 
-    if anim > 0:
+    if 6 > anim > 0:
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1, rate_func=rate_func):
             if smooth1 > 0 or smooth2 > 0:
                 smooth = math.sqrt(smooth2) * frame.u + math.sqrt(smooth1) * (1-frame.u)
@@ -746,7 +834,8 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
             with frame.context:
                 set_frame(f(frame.u), smooth, scale)
 
-    Scene.wait(0.1)
+    if do_anim:
+        Scene.wait(0.1)
 
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
@@ -756,10 +845,19 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 40
 
     # fourier_example(HD, bgcol=BLACK, anim=103)
-    # fourier_example(LD, bgcol=BLACK, anim=103)
+    fourier_example(LD, bgcol=BLACK, anim=10)
     # fractional_ex(HD, bgcol=BLACK, anim=6, part=0)
     # fractional_ex(LD, bgcol=BLACK, anim=3, part=1)
     # button(HD, TRANSPARENT, anim=7)
     # button(LD, BLACK, anim=1)
-    fractional_3d(HD, BLACK, anim=2, part=0)
-    fractional_3d(HD, BLACK, anim=3, part=0)
+
+    # fractional_3d(HD, BLACK, anim=2, part=1)
+    # fractional_3d(HD, BLACK, anim=2, part=2)
+    # fractional_3d(HD, BLACK, anim=3, part=0)
+    # fractional_3d(HD, BLACK, anim=3, part=1)
+    # fractional_3d(HD, BLACK, anim=3, part=2)
+    # fractional_3d(HD, BLACK, anim=4, part=0)
+    fractional_3d(HD, BLACK, anim=6, part=3)
+    # fractional_3d(HD, BLACK, anim=5, part=0)
+    # fractional_3d(HD, BLACK, anim=6, part=1)
+    # fractional_3d(HD, BLACK, anim=6, part=2)
