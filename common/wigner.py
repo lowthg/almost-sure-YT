@@ -152,22 +152,39 @@ def gauss_smooth(params, v_x=0., v_p=0.):
     """
     result = []
     for a, b, c, d, e, f in params:
-        det = (1+2*a*v_x)*(1+2*b*v_p) - c*c*v_x*v_p
-        m11 = (1+2*b*v_p)/det
-        m22 = (1+2*a*v_x)/det
-        m12 = c*v_p
-        m21 = c*v_x
+        g = 1 / (1. + 2*a*v_x)
+        f *= np.exp(0.5*g*v_x*d*d) * np.sqrt(g)
+        b -= 0.5 * g*c*c*v_x
+        a *= g
+        c *= g
+        e += c*v_x*d
+        d *= g
 
-        a1 = m11*a-m12*c/2
-        b1 = m22*b-m21*c/2
-        c1= -2 * (m21*a-m22*c/2)
-        # c1= -2 * (m12*b-m11*c/2)
-        d1 = m11*d + m12*e
-        e1 = m21*d + m22*e
-        const = 0.5 * (d*v_x*d1 + e*v_p*e1)
-        f1 = f * np.exp(const)
+        g = 1 / (1. + 2*b*v_p)
+        f *= np.exp(0.5*g*v_p*e*e) * np.sqrt(g)
+        a -= 0.5 * g*c*c*v_p
+        b *= g
+        c *= g
+        d += c*v_p*e
+        e *= g
 
-        result.append((a1, b1, c1, d1, e1, f1))
+        # det = (1+2*a*v_x)*(1+2*b*v_p) - c*c*v_x*v_p
+        # m11 = (1+2*b*v_p)/det
+        # m22 = (1+2*a*v_x)/det
+        # m12 = c*v_p
+        # m21 = c*v_x
+        #
+        # a1 = m11*a-m12*c/2
+        # b1 = m22*b-m21*c/2
+        # c1= -2 * (m21*a-m22*c/2)
+        # # c1= -2 * (m12*b-m11*c/2)
+        # d1 = m11*d + m12*e
+        # e1 = m21*d + m22*e
+        # const = 0.5 * (d*v_x*d1 + e*v_p*e1)
+        # f1 = f * np.exp(const)
+
+        # result.append((a1, b1, c1, d1, e1, f1))
+        result.append((a, b, c, d, e, f))
 
     return result
 
@@ -179,7 +196,7 @@ def gauss_fractional_ft(params, theta=0.):
     for (a, _, _, b, _, scale) in params:
         a2 = 2 * a
         v = 1. / (c + s * a2)
-        scale2 = np.sqrt(v*(c+s)) * np.exp(v*s*b*b/2)
+        scale2 = complex(np.sqrt(v*(c+s)) * np.exp(v*s*b*b/2))
         # print('scale', v)
         params2.append((0.5 * v * (c*a2+s), 0.j, 0.j, v * b, 0.j, scale2*scale))
         # params2.append((a, 0.j, 0.j, b, 0.j, scale))
