@@ -253,7 +253,8 @@ def fourier_example(quality=LD, bgcol=BLACK, anim=0):
                     set_wave(waves_p[1], xvals, psi2.abs(), psi2, origins[1], right, out)
 
 
-        if anim == 9:
+        if anim == 9 or anim == 10:
+            psi0 = psi1
             w = 2.
             params1 = gauss1d()
             c = 0.9
@@ -261,21 +262,40 @@ def fourier_example(quality=LD, bgcol=BLACK, anim=0):
             psi2 = ((xvals <= w) & (xvals >= -w)).float() * c
             psi3 = torch.sin(xvals*w) / xvals * math.sqrt(2/PI) * c
             run_time=1.
-            for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1,
-                                         rate_func=rate_funcs.smooth):
-                u = frame.u
-                psi4 = psi1 * (1-u) + psi2 * u
-                psi5 = psi1 * (1-u) + psi3 * u
-                with frame.context:
-                    set_wave(waves_p[0], xvals, psi4.abs(), psi4, origins[0], right, out)
-                    set_wave(waves_p[1], xvals, psi5.abs(), psi5, origins[1], right, out)
-
+            if anim == 10:
+                with Off():
+                    set_wave(waves_p[0], xvals, psi2.abs(), psi2, origins[0], right, out)
+                    set_wave(waves_p[1], xvals, psi3.abs(), psi3, origins[1], right, out)
+            else:
+                for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, step=1,
+                                             rate_func=rate_funcs.smooth):
+                    u = frame.u
+                    psi4 = psi1 * (1-u) + psi2 * u
+                    psi5 = psi1 * (1-u) + psi3 * u
+                    with frame.context:
+                        set_wave(waves_p[0], xvals, psi4.abs(), psi4, origins[0], right, out)
+                        set_wave(waves_p[1], xvals, psi5.abs(), psi5, origins[1], right, out)
 
         if anim == 10:
             ax, eq1, eq2, out, right, origin = fractional_ax()
-            ax = ManimMob(mn.VGroup(ax, eq1, eq2))
+            eq2_1 = ManimMob(eq2[0][:2])
+            eq2_2 = ManimMob(eq2[0][2:])
+            shift = eq2_2.get_center() - axes[0][2].get_center()
+            eq2_3 = eq2_1.clone().move(-shift).set_opacity_via_color(-1.2)
             with Off():
-                ax.spawn()
+                eq2_3.spawn()
+
+            with Sync():
+                axes[1].despawn()
+                waves_p[1].despawn()
+                with Seq():
+                    Scene.wait(0.2)
+                    with Sync():
+                        axes[0][0].become(ManimMob(ax))
+                        set_wave(waves_p[0], xvals, psi0.abs(), psi0, origin, right, out)
+                        axes[0][1].become(ManimMob(eq1))
+                        axes[0][2].become(eq2_2)
+                        eq2_3.become(eq2_1)
 
 
     Scene.wait(0.1)
@@ -410,7 +430,7 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
         if part == 2:
             theta1 = 0.
             theta2 = PI*2
-            run_time=6.
+            run_time=4.
             rate_func=rate_funcs.identity
     if anim == 5:
         run_time = 1.5
@@ -459,7 +479,8 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
             psi = psi_update(frame.u, frame.du)
             with frame.context:
                 set_wave(px, xvals, psi.abs(), psi, origin, right, out)
-        Scene.wait(0.1)
+
+    Scene.wait(0.1)
 
     name = 'fractional_ex{}'.format(anim)
     if part > 0:
@@ -538,6 +559,15 @@ def button(quality=LD, bgcol=BLACK, anim=0):
         Scene.wait(0.1)
     if anim == 7:
         with Sync(run_time = 6. + 12/30, rate_func=rate_funcs.identity):
+            pointer.orbit_around_point(center, 360, IN)
+    if anim == 8:
+        with Off():
+            pointer.orbit_around_point(center, 45, IN)
+        with Sync(run_time=1.5):
+            pointer.orbit_around_point(center, 90, IN)
+        Scene.wait(0.1)
+    if anim == 9:
+        with Sync(run_time=4, rate_func=rate_funcs.identity):
             pointer.orbit_around_point(center, 360, IN)
 
     name = 'button{}'.format(anim)
@@ -641,6 +671,10 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
             theta2 = PI*2
             run_time = 3.
             rate_func = rate_funcs.identity
+        elif part == 3:
+            theta1 = 0.
+            theta2 = PI/2
+            run_time = 3.
 
     if anim == 3:
         def f(u):
@@ -676,10 +710,10 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
         run_time = 3.
         smooth2 = 0.
         scale2 = 0.7
+        rate_func = rate_funcs.identity
         if part > 0:
             smooth1 = smooth2
             scale1 = scale2
-            rate_func = rate_funcs.identity
             if part == 1:
                 theta1 = 0.
                 theta2 = PI
@@ -708,6 +742,7 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
 
     if anim == 6 and True:
         scale1 = scale2 = 1.
+        angle0 = 0.
         c = 2.
         b = 0.45
 
@@ -735,13 +770,26 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
             angle = 0.
             evolver.evolve(PI/2)
 
+        if part == 4:
+            run_time = 1.
+            evolver.evolve(PI/2)
+            evolver.speed = -1
+            angle = PI/4
+            angle0 = PI/2
+
+        if part == 5:
+            run_time = 1.5
+            evolver.evolve(PI/4)
+            angle = PI/2
+            angle0 = PI/4
+
         for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=run_time, rate_func=rate_func):
             u = frame.u
             scale = scale1 * (1-u) + scale2 * u
             psi = evolver.evolve(frame.du * angle) * scale
             psift = evolver.psift() * scale
             if part == 0: psi = (xvals.abs() < c).float() * b * scale
-            theta = u * angle
+            theta = u * angle * evolver.speed + angle0
             if part == 3:
                 psift = (xvals.abs() < c).float() * b * scale
                 theta = PI/2
@@ -840,24 +888,80 @@ def fractional_3d(quality=LD, bgcol=BLACK, anim=0, part=0, show_wave=True):
     render_to_file(name, render_settings=quality, background_color=bgcol)
 
 
+def spring(quality=LD, bgcol=BLACK, anim=1):
+    length = 1.5
+    r = 0.8
+    turns = 10.
+    right = cast_to_tensor(RIGHT) * r
+    up = cast_to_tensor(UP) * r
+    out = cast_to_tensor(IN)
+    print(OUT)
+    print(out)
+    def f(t):
+        o = cast_to_tensor(ORIGIN.clone())
+        s = t * turns
+        u = r
+        a = s-turns+0.5
+        if a > 0:
+            u *= max(1 - 4*a,0)
+            if s > 1:
+                o += max(a-0., 0) * out
+        s *= 2*PI
+        return o + (right * torch.sin(s) + up * torch.cos(s))*u + out * (2*t-1) * length
+
+    col = Color(SILVER.to_hex())
+    col2 = GOLD
+    # col[:3] *= 0.8
+    col2[:3] *= 0.8
+    pt = f(torch.tensor(1.)) + DOWN*0.5
+    pt2 = pt.clone()
+    ball = Sphere(radius=r*0.55, color=col2).move_to(pt).set_shader(basic_pbr_shader)
+    eq1 = mn.MathTex(r'm', color=mn.RED, stroke_color=mn.RED, font_size=65, stroke_width=2)
+    eq2 = mn.MathTex(r'm', color=mn.BLACK, stroke_color=mn.BLACK, font_size=65, stroke_width=10)
+    eq = Group(ManimMob(eq1), ManimMob(eq2).move(IN*0.01)).move_to(pt)
+    # eq = ManimMob(eq1).move_to(pt)
+    eq.rotate(90, RIGHT).move(DOWN*0.45+IN*0.38+LEFT*0.36)
+    ball = Group(ball, eq)
+    center = ball.get_center()
+    # ball = ManimMob(mn.Sphere(radius=r*0.5)).move_to(pt)
+
+    crv = ah.curve3d(f, npts=100, border_width=4., border_color=col).set_shader(basic_pbr_shader)
+    points = crv.control_points.location.clone()
+    pts = points.clone()
+    print(points.shape)
+
+    with Off():
+        cam: Camera = Scene.get_camera()
+        cam.set_distance_to_screen(100)
+        cam.set_euler_angles(100*DEGREES, 0*DEGREES, 0*DEGREES)
+        cam.move_to(cam.get_center()*1.45+IN*1)
+        light: PointLight = Scene.get_light_sources()[0]
+        light.orbit_around_point(ORIGIN, -120, axis=OUT)
+        light.move(UP*4)
+        crv.spawn()
+        ball.spawn()
+
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=3., step=1, rate_func=rate_funcs.identity):
+        u = math.sin(frame.u * 2 * PI)
+        with frame.context:
+            pts[...,2] = (points[...,2] + length) * (1+u*0.3) - length
+            pt2[...,2] = (pt[...,2] + length) * (1+u*0.3) - length
+            crv.control_points.location = pts
+            ball.move_to(pt2 + center - pt)
+
+    render_to_file('spring', render_settings=quality, background_color=bgcol)
+
+
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 40
 
     # fourier_example(HD, bgcol=BLACK, anim=103)
-    fourier_example(LD, bgcol=BLACK, anim=10)
-    # fractional_ex(HD, bgcol=BLACK, anim=6, part=0)
-    # fractional_ex(LD, bgcol=BLACK, anim=3, part=1)
-    # button(HD, TRANSPARENT, anim=7)
-    # button(LD, BLACK, anim=1)
-
-    # fractional_3d(HD, BLACK, anim=2, part=1)
-    # fractional_3d(HD, BLACK, anim=2, part=2)
-    # fractional_3d(HD, BLACK, anim=3, part=0)
-    # fractional_3d(HD, BLACK, anim=3, part=1)
-    # fractional_3d(HD, BLACK, anim=3, part=2)
-    # fractional_3d(HD, BLACK, anim=4, part=0)
-    fractional_3d(HD, BLACK, anim=6, part=3)
-    # fractional_3d(HD, BLACK, anim=5, part=0)
-    # fractional_3d(HD, BLACK, anim=6, part=1)
-    # fractional_3d(HD, BLACK, anim=6, part=2)
+    # fourier_example(HD, bgcol=BLACK, anim=1)
+    # fractional_ex(HD, bgcol=BLACK, anim=1, part=0)
+    # fractional_ex(HD, bgcol=BLACK, anim=4, part=2)
+    # button(HD, TRANSPARENT, anim=9)
+    # button(LD, BLACK, anim=9)
+    # fractional_3d(HD, BLACK, anim=2, part=3)
+    spring(quality=HD, bgcol=TRANSPARENT)
+    # spring(quality=LD, bgcol=BLACK)
