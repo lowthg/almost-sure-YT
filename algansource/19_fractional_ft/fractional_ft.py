@@ -1,10 +1,10 @@
-import math
-
 import torch
 from algan import *
 from manim.utils.color.BS381 import SILVER_GREY
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
+import scipy as sp
+from torch import dtype
 
 sys.path.append('../../')
 import alganhelper as ah
@@ -17,6 +17,29 @@ HD2 = RenderSettings((1920, 1080), 15)
 
 col_up = torch.tensor([1, .6, 0.])
 col_dn = INDIGO[:3]
+
+
+def get_basisfns(npol=39, c_r=2.):
+    hermite = []
+    psi = []
+    c = math.sqrt(PI)
+
+    def f(j):
+        return lambda x: torch.tensor(hermite[j](x)) * torch.exp(-0.5 * x * x)
+
+    for i in range(npol):
+        hermite.append(sp.special.hermite(i) / math.sqrt(c))
+        psi.append(f(i))
+        c *= 2 * (i + 1)
+
+    coeffs = np.zeros(npol)
+    coeffs[0] = float(1. - sp.stats.norm.cdf(-c_r) * 2) * math.sqrt(2 * math.sqrt(PI))
+    for i in range(2, npol, 2):
+        coeffs[i] = -4 * psi[i - 1](torch.tensor(c_r)) / math.sqrt(2 * i) + math.sqrt((i - 1) / i) * coeffs[i - 2]
+
+    print(2 * c_r - sum(coeffs * coeffs))
+
+    return psi, coeffs
 
 
 def gauss_density(quality=LD, bgcol=BLACK, anim=1):
@@ -952,6 +975,68 @@ def spring(quality=LD, bgcol=BLACK, anim=1):
     render_to_file('spring', render_settings=quality, background_color=bgcol)
 
 
+def fractional_approx(quality=LD, bgcol=BLACK):
+    ymax = 1.7
+    npts = 800
+    xmax = 5.
+    npol = 39
+
+    ax = mn.Axes(x_range=[-xmax, xmax * 1.05], y_range=[0, ymax], x_length=12.7, y_length=7,
+              axis_config={'color': mn.WHITE, 'stroke_width': 4, 'include_ticks': False,
+                           "tip_width": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           "tip_height": 0.5 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                           },
+              ).set_z_index(5)
+    origin = torch.from_numpy(ax.coords_to_point(0, 0))
+    right = torch.from_numpy(ax.coords_to_point(1, 0)) - origin
+    out = torch.from_numpy(ax.coords_to_point(0, 1)) - origin
+    origin += IN*0.1
+
+    mn.MathTex.set_default(stroke_width=2, font_size=70)
+    eq0 = mn.MathTex(r'x', stroke_width=2, stroke_color=col_x).set_z_index(5).next_to(ax.x_axis, mn.RIGHT, buff=0.2)
+    eq1 = mn.MathTex(r'\mathcal F_tf(x)', stroke_width=2).set_z_index(5).move_to(ax.coords_to_point(1.2, 1.6))
+    eq2 = mn.MathTex(r'n', '=', r'{}'.format(npol - 1)).set_z_index(5).move_to(ax.coords_to_point(3.2, 0.9))
+    eq1[0][2].set_color(col_psi)
+    eq1[0][4].set_color(col_x)
+    eq1[0][0].set_color(col_ft)
+    eq1[0][1].set_color(col_angle)
+    eq2[0].set_color(col_var)
+    eq2[2].set_color(col_num)
+
+    gp_mn = ManimMob(mn.VGroup(ax, eq0, eq1, eq2))
+    Scene.get_light_sources().pop()
+
+    cam: Camera = Scene.get_camera()
+    with Off():
+        cam.set_distance_to_screen(100).move_to(cam.get_center()*1.6)
+        gp_mn.spawn()
+        print(Scene.get_light_sources())
+
+    px, _, _ = setup_wave((-xmax, xmax), npts, opacity=1)
+    xvals = torch.linspace(-xmax, xmax, npts)
+    psi, coeffs = get_basisfns(npol=npol)
+
+    def psi_func(t):
+        yvals = torch.zeros(npts) * (1+0j)
+
+        for i in range(0, npol, 2):
+            yvals += psi[i](xvals) * coeffs[i] * np.exp(-i * t * 1j)
+
+        return yvals
+
+    # f = torch.exp(-xvals * xvals * 0.5 * (1+0j))
+    f = psi_func(PI/2)
+
+    for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=6., rate_func=rate_funcs.identity):
+        f = psi_func(PI/2 * frame.u)
+        with frame.context:
+            set_wave(px, xvals, f.abs(), f, origin, right, out)
+
+    Scene.wait(0.1)
+
+    render_to_file('fractional_approx', render_settings=quality, background_color=bgcol)
+
+
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 40
@@ -963,5 +1048,6 @@ if __name__ == "__main__":
     # button(HD, TRANSPARENT, anim=9)
     # button(LD, BLACK, anim=9)
     # fractional_3d(HD, BLACK, anim=2, part=3)
-    spring(quality=HD, bgcol=TRANSPARENT)
+    # spring(quality=HD, bgcol=TRANSPARENT)
     # spring(quality=LD, bgcol=BLACK)
+    fractional_approx(quality=HD)
