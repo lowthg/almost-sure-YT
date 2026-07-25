@@ -745,7 +745,7 @@ class EnergyStates(STFTWindow):
         xmax = 5.
         ymin = -0.5
         ymax= 0.7
-        ax = Axes(x_range=[-xmax, xmax*1.06], y_range=[ymin, ymax], x_length=10, y_length=6,
+        ax = Axes(x_range=[-xmax, xmax*1.06], y_range=[ymin, ymax], x_length=12, y_length=7,
                   axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
@@ -833,13 +833,13 @@ class EigenApprox(EnergyStates):
         xmax = self.xmax
         ymin = -0.2
         ymax= 1.5
-        ax = Axes(x_range=[-xmax, xmax*1.06], y_range=[ymin, ymax], x_length=10, y_length=6,
+        ax = Axes(x_range=[-xmax, xmax*1.06], y_range=[ymin, ymax], x_length=12, y_length=7,
                   axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "shade_in_3d": True,
                                },
-                  ).set_z_index(0.5)
+                  ).set_z_index(0.5).shift(DOWN*0.2)
 
         npts = self.npts
         npol = self.npol
@@ -867,19 +867,35 @@ class EigenApprox(EnergyStates):
                                   add_vertex_dots=False, stroke_width=6, stroke_color=ORANGE, fill_color=ORANGE, fill_opacity=0.3)
         plt2.set_z_index(1)
 
-        self.add(ax, plt2)
+        MathTex.set_default(stroke_width=2, font_size=70)
+        eq0 = MathTex(r'x', stroke_width=2, stroke_color=col_x).set_z_index(5).next_to(ax.x_axis, RIGHT, buff=0.2)
+        eq1 = MathTex(r'f(x)', stroke_width=2).set_z_index(5).move_to(ax.coords_to_point(0.9, 1.5))
+        eq2 = MathTex(r'n', '=', r'0').set_z_index(5).move_to(ax.coords_to_point(3.5, 1.3))
+        eq1[0][0].set_color(col_psi)
+        eq1[0][2].set_color(col_x)
+        eq2[0].set_color(col_var)
+        eq2[2].set_color(col_num)
+
+        self.add(ax, plt2, eq0, eq1)
         self.play(Create(plts[0], rate_func=linear, run_time=2),
-                  Succession(Wait(1.), FadeIn(fills[0], rate_func=linear, run_time=1.2)))
+                  Succession(Wait(1.), FadeIn(fills[0], rate_func=linear, run_time=1.2)),
+                  FadeIn(eq2))
+
+        eq_tmp = eq2[2]
         for i in range(1, npol//2):
             # plt1 = plts[i-1].copy()
             # plts[i-1].set_stroke(opacity=0.3, color=RED)
+            eq3 = MathTex(r'=', r'{}'.format(i*2), color=col_num)
+            mh.align_sub(eq3, eq3[0], eq2[1])
             plt1 = plts[i-1]
             self.play(mh.rtransform(plt1, plts[i], fills[i-1], fills[i]),
+                      FadeOut(eq_tmp), FadeIn(eq3[1]),
                       # mh.rtransform(eq1[0][0], eq2[0][0]),
                       # FadeOut(eq1[0][1:]),
                       # FadeIn(eq2[0][1:]))
                       run_time = 2. / (i+1)
                       )
+            eq_tmp = eq3[1]
             # eq1 = eq2
             self.wait(0.2)
 
