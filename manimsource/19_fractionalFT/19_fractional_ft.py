@@ -1,6 +1,4 @@
-import math
-
-import numpy as np
+import colorsys
 from manim import *
 import sys
 import scipy as sp
@@ -1477,6 +1475,81 @@ class FresnelIntensity(EigenApprox):
         self.play(tVar.animate.set_value(t1), rate_func=linear, run_time=137/30)
         self.wait(0.1)
 
+class ApproxTransform(EigenApprox):
+    npol = 39
+    def construct(self):
+        psi, coeffs = self.basisfns()
+        print(coeffs)
+
+        ymax = 1.7
+        n = 800
+        xmax = 5.
+        ax = Axes(x_range=[-xmax, xmax*1.05], y_range=[0, ymax], x_length=12, y_length=7,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(5)
+
+        MathTex.set_default(stroke_width=2, font_size=70)
+        eq0 = MathTex(r'x', stroke_width=2, stroke_color=col_x).set_z_index(5).next_to(ax.x_axis, RIGHT, buff=0.2)
+        eq1 = MathTex(r'\mathcal F_tf(x)', stroke_width=2).set_z_index(5).move_to(ax.coords_to_point(1.2, 1.6))
+        eq2 = MathTex(r'n', '=', r'{}'.format(self.npol-1)).set_z_index(5).move_to(ax.coords_to_point(3.2, 0.9))
+        eq1[0][2].set_color(col_psi)
+        eq1[0][4].set_color(col_x)
+        eq1[0][0].set_color(col_ft)
+        eq1[0][1].set_color(col_angle)
+        eq2[0].set_color(col_var)
+        eq2[2].set_color(col_num)
+
+        self.add(ax, eq0, eq1, eq2)
+
+        tVar = ValueTracker(0.)
+
+        xvals = np.linspace(-xmax, xmax, n)
+        xvals2 = np.concatenate(([xvals[0]], xvals, [xvals[-1]]))
+        yvals2 = xvals2 * 0
+
+        t1 = PI/2
+
+        ncol = 50
+        x_col = np.linspace(-xmax, xmax, ncol)
+        colors = [BLUE] * ncol
+
+        def obj_func():
+            t = tVar.get_value()
+
+
+            yvals = np.zeros(n, dtype=complex)
+            y_col = np.zeros(ncol, dtype=complex)
+
+            for i in range(0, self.npol, 2):
+                yvals += psi[i](xvals) * coeffs[i] * np.exp(-i * t * 1j)
+                y_col += psi[i](x_col) * coeffs[i] * np.exp(-i * t * 1j)
+
+            yvals1 = np.abs(yvals)
+
+            path1 = ax.plot_line_graph(xvals, yvals1, line_color=BLUE, stroke_width=6, stroke_opacity=1,
+                                       add_vertex_dots=False)
+            yvals2[1:-1] = yvals1
+
+            for i in range(ncol):
+                lightness = min(0.15 + abs(y_col[i]) * 0.3, 0.8)
+                colors[i] = ManimColor(
+                    list(colorsys.hls_to_rgb(np.angle(y_col[i]) / (2 * PI) + 0.5, lightness, 0.85))
+                )
+
+            path2 = ax.plot_line_graph(xvals2, yvals2, stroke_width=0, stroke_opacity=0,
+                                       add_vertex_dots=False,
+                                       fill_color=colors, fill_opacity=1.)
+
+            return VGroup(path1, path2)
+
+        obj = always_redraw(obj_func)
+        self.add(obj)
+        self.play(tVar.animate.set_value(t1), rate_func=linear, run_time=4)
+        self.wait(0.1)
+
 class Latexvap(Scene):
     def construct(self):
         eq = MathTex(r'v=ap', font_size=80, stroke_width=2)
@@ -1747,7 +1820,6 @@ class FresnelEq2(FresnelEquation):
                   run_time=1.5)
         self.wait()
 
-
 class SkewRot(Scene):
     def construct(self):
         pts = []
@@ -1840,4 +1912,38 @@ class SkewRot(Scene):
         # self.play(Rotate(lines0, -theta, about_point=origin), run_time=2.)
         # self.wait(0.1)
         # self.play(ReplacementTransform(lines2, lines3))
+        self.wait()
+
+
+class SmallRots(Scene):
+    def construct(self):
+        dt = PI/2 * 0.3
+        ndt = 5
+        pt0 = mh.pos(DOWN * 0.95)
+        pt1 = pt0 + UP*2.8
+        start_angle=2*dt
+        line = Line(pt0, pt1, color=BLUE, stroke_width=6).set_z_index(4)
+        line.rotate(start_angle, about_point=pt0)
+        lines = [line.copy().rotate(-i*dt, about_point=pt0) for i in range(ndt+1)]
+        eq1 = MathTex(r'\delta t', color=col_angle, font_size=60, stroke_width=1.5)
+
+        dot1 = Dot(pt0, radius=0.06, color=BLUE)
+
+        self.add(line, dot1)
+        run_dt = 10/15
+
+        pos3 = (lines[-3].get_end() + lines[-2].get_end())/2 * 1.1 - 0.1 * pt0
+
+        for i in range(ndt):
+            pos = (lines[i].get_end() + lines[i+1].get_end())/2 * 0.7 + 0.3 * pt0
+            eq2 = eq1.copy().move_to(pos)
+            self.play(Rotate(lines[i], -dt, about_point=pt0, run_time=run_dt, rate_func=linear),
+                      Succession(Wait(run_dt*0.5), FadeIn(eq2, run_time=run_dt*0.5)))
+
+        arc = Arc(arc_center=pt0, radius=2.5, start_angle=start_angle+PI/2, angle=ndt * -dt, stroke_width=6)
+
+        eq3 = MathTex(r't', color=col_angle, font_size=60, stroke_width=1.5).move_to(pos3)
+        self.play(Create(arc, run_time=1.5, rate_func=linear),
+                  Succession(Wait(1), FadeIn(eq3)))
+
         self.wait()
