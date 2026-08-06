@@ -27,7 +27,7 @@ def gauss1d(a=1., b=0., c=1., shift=0.):
     """
     :return: c * exp(-ax^2/2 + bx)
     """
-    print(a,b,c)
+    # print(a,b,c)
     res = (a/2, 0., 0., b + a*shift, 0., c * np.exp(-a/2*shift*shift-b*shift))
     return [tuple(complex(_) for _ in res)]
 
