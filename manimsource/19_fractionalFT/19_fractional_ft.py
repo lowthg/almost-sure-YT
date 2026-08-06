@@ -1,4 +1,6 @@
 import colorsys
+
+import numpy as np
 from manim import *
 import sys
 import scipy as sp
@@ -7,6 +9,8 @@ from manim import ManimColor
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
+import matplotlib
+import matplotlib.cm as cm
 
 col_pi = col_special * 0.5 + ORANGE * 0.5
 col_trig = PURPLE_A#*0.5+WHITE*0.5
@@ -1054,6 +1058,7 @@ class RotatePt(STFTWindow):
         mh.copy_colors_eq(eq12[0][1:], eq16[0][2:])
         mh.copy_colors_eq(eq13[0][:], eq18[0][1:])
         mh.copy_colors_eq(eq14[0], eq19[0], eq14[1][1:], eq19[1][2:], eq14[2], eq19[2])
+        eq15[0][0].set_color(col_p)
 
         eq10[2:].next_to(eq10[:2], DOWN, buff=0.5)
         eq10[:2].align_to(eq10[2], LEFT).shift(RIGHT*2)
@@ -1329,30 +1334,36 @@ class RotateDE(RotatePt):
 
 class DESolution(STFTWindow):
     bgcol = BLACK
+    show_detail = True
+
     def construct(self):
+        show_detail = self.show_detail
         xmax = 10
         ymax = 1.2
         ymin = -0.9
         ax = Axes(x_range=[-1.1 * xmax, 1.1 * xmax, 5], y_range=[ymin, 1.1 * ymax, 2], x_length=13, y_length=5,
-                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': True,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': show_detail,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                },
                   ).set_z_index(1).to_edge(UP, buff=0.6)
         ax.shift(-ax.coords_to_point(0,0)*RIGHT)
-        box = SurroundingRectangle(ax, stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
-                                   buff=0.15, corner_radius=0.15)
-        eq1 = MathTex(r'x', font_size=50, color=col_x, stroke_width=1.5).next_to(ax.x_axis.get_right(), UP, buff=0.2).set_z_index(5).shift(LEFT*0.1)
-        eq2 = MathTex(r'f(x)', font_size=50, stroke_width=1.5).next_to(ax.y_axis.get_top(), RIGHT, buff=0.2).set_z_index(5).shift(DOWN*0.)
-        eq3 = MathTex('-10', '-5', '5', '10', color=col_num, font_size=35, stroke_width=1).next_to(ax.coords_to_point(0,0), DOWN, buff=0.2)
-        eq3[0].move_to(ax.x_axis.ticks[0], coor_mask=RIGHT)
-        mh.align_sub(eq3[0], eq3[0][1:], ax.x_axis.ticks[0], coor_mask=RIGHT)
-        mh.align_sub(eq3[1], eq3[1][1:], ax.x_axis.ticks[1], coor_mask=RIGHT)
-        eq3[2].move_to(ax.x_axis.ticks[2], coor_mask=RIGHT)
-        eq3[3].move_to(ax.x_axis.ticks[3], coor_mask=RIGHT)
-        eq2[0][0].set_color(color=col_psi)
-        eq2[0][2].set_color(color=col_x)
-        self.add(ax, box, eq1, eq2, eq3)
+        if show_detail:
+            box = SurroundingRectangle(ax, stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
+                                       buff=0.15, corner_radius=0.15)
+            eq1 = MathTex(r'x', font_size=50, color=col_x, stroke_width=1.5).next_to(ax.x_axis.get_right(), UP, buff=0.2).set_z_index(5).shift(LEFT*0.1)
+            eq2 = MathTex(r'f(x)', font_size=50, stroke_width=1.5).next_to(ax.y_axis.get_top(), RIGHT, buff=0.2).set_z_index(5).shift(DOWN*0.)
+            eq3 = MathTex('-10', '-5', '5', '10', color=col_num, font_size=35, stroke_width=1).next_to(ax.coords_to_point(0,0), DOWN, buff=0.2)
+            eq3[0].move_to(ax.x_axis.ticks[0], coor_mask=RIGHT)
+            mh.align_sub(eq3[0], eq3[0][1:], ax.x_axis.ticks[0], coor_mask=RIGHT)
+            mh.align_sub(eq3[1], eq3[1][1:], ax.x_axis.ticks[1], coor_mask=RIGHT)
+            eq3[2].move_to(ax.x_axis.ticks[2], coor_mask=RIGHT)
+            eq3[3].move_to(ax.x_axis.ticks[3], coor_mask=RIGHT)
+            eq2[0][0].set_color(color=col_psi)
+            eq2[0][2].set_color(color=col_x)
+            self.add(ax, box, eq1, eq2, eq3)
+        else:
+            self.add(ax)
 
         n = 600
         xvals = np.linspace(1e-4, xmax * 1.2, n)
@@ -1365,14 +1376,18 @@ class DESolution(STFTWindow):
         plt3 = ax.plot_line_graph(-xvals, yvals1, add_vertex_dots=False, stroke_width=6, stroke_color=YELLOW).set_z_index(5).set_z_index(2)
         plt4 = ax.plot_line_graph(-xvals, -yvals2, add_vertex_dots=False, stroke_width=6, stroke_color=BLUE).set_z_index(5).set_z_index(3)
         self.add(plt1, plt2)
+        run_time = 10. if show_detail else 4.
         self.play(Create(plt1, rate_func=linear),
                   Create(plt2, rate_func=linear),
                   Create(plt3, rate_func=linear),
                   Create(plt4, rate_func=linear),
-                  run_time=10.
+                  run_time=run_time
                   )
 
         self.wait()
+
+class DESolutionShort(DESolution):
+    show_detail = False
 
 class LightIntensity(Scene):
     def construct(self):
@@ -1914,7 +1929,6 @@ class SkewRot(Scene):
         # self.play(ReplacementTransform(lines2, lines3))
         self.wait()
 
-
 class SmallRots(Scene):
     def construct(self):
         dt = PI/2 * 0.3
@@ -1947,3 +1961,227 @@ class SmallRots(Scene):
                   Succession(Wait(1), FadeIn(eq3)))
 
         self.wait()
+
+class Diffraction(EigenApprox):
+    def _to_rgb(
+        self,
+        mag: np.ndarray,
+    ) -> np.ndarray:
+        normalised = np.clip(mag, 0.0, 1.0)   # (NT, NF)
+        gamma = 0.4
+        gamma_corr = normalised ** gamma        # (NT, NF)
+
+        # Transpose so rows = frequency, columns = time  →  (NF, NT)
+        img2d = gamma_corr.T
+
+        # Apply colourmap  →  (NF, NT, 4)  float in [0,1]
+        # red = RED.to_rgb()
+        red = np.array([0.9294117647059, 0.1843137254902, 0.1960784313725]) / 0.9294117647059
+        rgb = img2d[...,None] * red
+        rgb = (rgb * 255).astype(np.uint8)
+
+
+        return rgb[::-1]   # flip: low frequency at image bottom
+
+    def construct(self):
+        ymax = 0.95
+        # cmap    = _get_cmap("jet")
+
+        n = 2**16 # must be even
+        step = 2**1
+        xmax = 400.
+        xmax1 = 100.
+        i0 = round((xmax - xmax1) / (2*xmax) * n)
+        i1 = n - i0 - 1
+        print(i0, i1, (i1 - i0+1)/step)
+
+        xvals = np.linspace(-xmax, xmax, n)
+        col = col_laser
+        xvals1 = np.concatenate(([-xmax], xvals, [xmax]))
+        yvals1 = np.zeros(n+2)
+
+        tVar = ValueTracker(0.08)
+
+        dx = 2*xmax/n
+        k_space = np.fft.fftfreq(n, dx) * (2 * np.pi)  # Momentum space grid
+
+        c = 2.
+        zvals = np.sinc(k_space/PI*c)*math.sqrt(c)/dx * (1+0j)
+        zvals[1::2] *= -1
+        xvals1 = xvals[i0:i1:step]
+        xvals2 = np.concatenate(([xvals1[0]], xvals1, [xvals1[-1]]))
+        yvals2 = xvals2 * 0
+        print(len(yvals1))
+
+        t1 = 20.
+
+        n = (i1-i0+1)//step
+        data = np.zeros(shape=(n, 20))
+        print(data.shape)
+        print(RED.to_rgb())
+        # data[...,:] = RED.to_rgb()
+        width=config.frame_width
+        height=config.frame_height
+
+        def obj_func():
+            t = tVar.get_value()
+
+            zvals1 = zvals * np.exp(-0.5j * k_space * k_space * t)
+            yvals = np.fft.ifft(zvals1)
+            yvals1 = np.abs(yvals[i0:i1:step])
+            yvals1 /= max(yvals1)
+            yvals1 /= 1 + t*0.1
+            yvals1 *= yvals1
+
+            data[:] = yvals1[:,None]
+
+            rgb = self._to_rgb(data)
+            print(rgb.shape)
+            obj = ImageMobject(rgb)
+            obj.stretch_to_fit_width(width)
+            obj.stretch_to_fit_height(height)
+
+            return obj
+
+            # if t > t0:
+            #     yvals1 = ((t-t0) * yvals3 + (t1-t) *yvals1)/(t1-t0)
+            #
+            # path1 = ax.plot_line_graph(xvals1, yvals1, line_color=col, stroke_width=6, stroke_opacity=1,
+            #                            add_vertex_dots=False,
+            #                            fill_color=col, fill_opacity=0)
+            # yvals2[1:-1] = yvals1
+            # path2 = ax.plot_line_graph(xvals2, yvals2, line_color=col, stroke_width=0, stroke_opacity=0,
+            #                            add_vertex_dots=False,
+            #                            fill_color=col, fill_opacity=0.7)
+            #
+            # # path3 = ax.plot_line_graph(xvals1, yvals3, line_color=BLUE, stroke_width=6, stroke_opacity=1,
+            # #                            add_vertex_dots=False,
+            # #                            fill_color=col, fill_opacity=0).set_z_index(10)
+            #
+            # return VGroup(path1, path2)
+
+        obj = always_redraw(obj_func)
+        self.add(obj)
+        self.play(tVar.animate.set_value(t1), rate_func=linear, run_time=6)
+        self.wait(0.1)
+
+
+class QHOStates(STFTWindow):
+    bgcol = BLACK
+
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5)
+        xmax = 5.
+        ymin = -0.5
+        ymax= 0.7
+        ax = Axes(x_range=[-xmax, xmax], y_range=[ymin, ymax], x_length=3.6, y_length=1.8,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "shade_in_3d": True,
+                               },
+                  ).set_z_index(0.5)
+
+        ax_arr = VGroup(*[ax.copy() for _ in range(6)])
+        ax_arr[:3].arrange(RIGHT, buff=0.2)
+        ax_arr[3:].arrange(RIGHT, buff=0.2).next_to(ax_arr, DOWN, buff=0)
+
+        npts = 400
+        npol=6
+        xvals = np.linspace(-xmax, xmax, npts)
+
+        plts = []
+        fills = []
+        hermite = []
+        c = PI
+        y_arr = []
+        np.random.seed(3)
+        for i in range(npol):
+            hermite.append(sp.special.hermite(i) / math.sqrt(c))
+            phase = np.exp(2*PI*1j * np.random.uniform(0.,1.)*i)
+            y_arr.append(np.exp(-xvals * xvals * 0.5) * hermite[i](xvals)*phase)
+            c *= 2 * (i+1)
+
+        tval = ValueTracker(0.)
+
+        def get_obj():
+            t = tval.get_value()
+            res = []
+            for i in range(npol):
+                ax = ax_arr[i]
+                yvals = y_arr[i] * np.exp(-1j * i * t)
+                plt1 = ax.plot_line_graph(xvals, yvals.real, stroke_color=BLUE, stroke_width=6,
+                                          add_vertex_dots=False).set_z_index(4)
+                area1 = ax.plot_line_graph(np.concatenate(([-xmax], xvals, [xmax])),
+                                           np.concatenate(([0], yvals.real, [0])), stroke_width=0, stroke_opacity=0,
+                                           fill_opacity=0.3, fill_color=BLUE, add_vertex_dots=False).set_z_index(1)
+                plt2 = ax.plot_line_graph(xvals, yvals.imag, stroke_color=ORANGE, stroke_width=6,
+                                          add_vertex_dots=False).set_z_index(3.9)
+                area2 = ax.plot_line_graph(np.concatenate(([-xmax], xvals, [xmax])),
+                                           np.concatenate(([0], yvals.imag, [0])), stroke_width=0, stroke_opacity=0,
+                                           fill_opacity=0.3, fill_color=ORANGE, add_vertex_dots=False).set_z_index(0.9)
+                res += [_['line_graph'] for _ in [plt1, area1, plt2, area2]]
+            return VGroup(*res)
+
+        obj = always_redraw(get_obj)
+        self.add(obj)
+        self.play(tval.animate(rate_func=linear, run_time=3).set_value(2*PI))
+
+class Symplectic(Scene):
+    def construct(self):
+        pts = []
+        spacing = 2.5
+        lenx = config.frame_x_radius * 3
+        leny = config.frame_y_radius * 4
+        nx = 5
+        ny = 9
+        for i in range(-nx, nx+1):
+            pts.append(LEFT * lenx + UP * spacing * i)
+            pts.append(RIGHT * lenx + UP * spacing * i)
+        for i in range(-ny, ny+1):
+            pts.append(UP * leny + RIGHT * spacing * i)
+            pts.append(DOWN * leny + RIGHT * spacing * i)
+        origin = DOWN*2
+
+        kwargs = {'stroke_width': 5, 'stroke_color': BLUE}
+        lines = VGroup(*[Line(pts[i]+origin, pts[i+1]+origin, **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        lines0 = lines.copy().set_z_index(0).set_opacity(0.5)
+        lines.set_stroke(width=8)
+
+        theta = 42 *DEGREES
+        a = 1/math.tan(theta)
+        b = 1/math.sin(theta)
+
+
+        for pt in pts:
+            pt[1] += pt[0] * a
+        lines2 = VGroup(*[Line(pts[i]+origin, pts[i+1]+origin, **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        for pt in pts:
+            pt[0], pt[1] = (pt[1], -pt[0])
+        for pt in pts:
+            pt[0] /= b
+            pt[1] *= b
+        lines4 = VGroup(*[Line(pts[i]+origin, pts[i+1]+origin, **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+        for pt in pts:
+            pt[1] += pt[0] * a
+        lines5 = VGroup(*[Line(pts[i]+origin, pts[i+1]+origin, **kwargs) for i in range(0, len(pts), 2)]).set_z_index(1)
+
+
+        self.add(lines, lines0)
+        # self.wait(0.1)
+        self.play(ReplacementTransform(lines, lines2, run_time=1.))
+        # self.wait(0.1)
+        self.play(Rotate(lines2, angle=-PI/2, about_point=origin), run_time=1.)
+        # self.wait(0.1)
+        self.play(ReplacementTransform(lines2, lines4), run_time=1.)
+        # self.wait(0.1)
+        self.play(ReplacementTransform(lines4, lines5), run_time=1.)
+        # self.wait(0.1)
+        arc_args = {'radius': 1.6, 'angle': -theta, 'arc_center': origin, 'stroke_width': 8, 'stroke_color': col_angle}
+        arcs = [Arc(start_angle=angle, **arc_args) for angle in [0.,PI/2,PI,3*PI/2]]
+        eq1 = MathTex(r'\theta', stroke_width=1.5, font_size=60, color=col_angle)
+        eqs = [eq1.copy().move_to(a.get_center() * 0.8+origin*0.2) for a in arcs]
+        self.play(*[Create(arc) for arc in arcs],
+                  Succession(Wait(0.5), FadeIn(*eqs)))
+        self.wait()
+

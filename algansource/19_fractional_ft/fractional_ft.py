@@ -1,5 +1,6 @@
 import torch
 from algan import *
+from manim import VGroup
 from manim.utils.color.BS381 import SILVER_GREY
 from algan.rendering.shaders.pbr_shaders import basic_pbr_shader, null_shader, default_shader
 from algan.external_libraries.manim.utils.color.SVGNAMES import INDIGO, SILVER
@@ -455,6 +456,14 @@ def fractional_ex(quality=LD, bgcol=BLACK, anim=0, part=0):
             theta2 = PI*2
             run_time=4.
             rate_func=rate_funcs.identity
+        if part == 10: # for section page
+            theta1 = 0.
+            theta2 = PI*2
+            run_time=4.
+            rate_func=rate_funcs.identity
+            with Off():
+                ax.despawn()
+
     if anim == 5:
         run_time = 1.5
         def f(u):
@@ -592,6 +601,10 @@ def button(quality=LD, bgcol=BLACK, anim=0):
     if anim == 9:
         with Sync(run_time=4, rate_func=rate_funcs.identity):
             pointer.orbit_around_point(center, 360, IN)
+    if anim == 10:
+        with Sync(run_time=6, rate_func=rate_funcs.identity):
+            pointer.orbit_around_point(center, 90, IN)
+        Scene.wait(0.1)
 
     name = 'button{}'.format(anim)
     render_to_file(name, render_settings=quality, background_color=bgcol)
@@ -1036,6 +1049,73 @@ def fractional_approx(quality=LD, bgcol=BLACK):
 
     render_to_file('fractional_approx', render_settings=quality, background_color=bgcol)
 
+def rotating_intro(quality=LD, bgcol=BLACK, anim=0):
+    npts = 639
+    xmin, xmax = xrange = (-5., 5.)
+    ymin, ymax = yrange = (-5., 5.)
+    xvals = torch.linspace(xmin, xmax, npts)
+    setup_cam()
+    vars = (VGroup(), VGroup())
+
+    origin, right, up, out, p, x, y, _, ax = setup_surf(xrange, yrange, vars=vars, no_spawn=True)
+
+    print(p.location.shape)
+
+    col0 = p.color.clone()
+    loc0 = p.location.clone()
+
+    # col = col0.clone()
+
+
+    n2 = 129
+    npts2 = n2*2+1
+    surf3 = Surface(grid_height=npts, grid_width=npts2)
+    p3 = surf3.get_descendants()[1]
+
+    print(col0.shape, loc0.shape, x.shape, y.shape)
+    col1 = col0.reshape(1,npts,npts,5)
+    loc1 = loc0.reshape(1,npts,npts,3)
+    x1 = x.reshape(1, npts, npts)
+    y1 = y.reshape(1, npts, npts)
+
+    i = npts//2 - n2
+    j = npts//2 + n2+1
+    col1 = col1[:,i:j,:,:]
+    loc1 = loc1[:,i:j,:,:]
+    x1 = x1[:,i:j,:]
+    y1 = y1[:,i:j,:]
+    npts2 = j-i
+    col2 = col1.reshape(1,npts*npts2,5)
+    loc2 = loc1.reshape(1,npts*npts2,3)
+    x2 = x1.reshape(1, npts*npts2)
+    y2 = y1.reshape(1, npts*npts2)
+
+    print(p3.color.shape, col2.shape)
+    print(p3.location.shape, loc2.shape)
+
+    loc3 = loc2.clone()
+
+    with Off():
+        surf3.spawn()
+        ax.spawn()
+
+
+    def set_surf(vals):
+        loc3[...,2] = origin[2] + vals * out[2]
+        p3.set_non_recursive(location=loc3.clone(), color=col2.clone())
+
+    c = 2.
+    a = (c - x2.abs()).clip(0) * 2
+    vals = torch.sinc(y2 / torch.pi * a) * a * (0.26 / torch.pi)
+    with Off():
+        set_surf(vals)
+
+    with Sync(rate_func=rate_funcs.identity, run_time=1.5):
+        surf3.orbit_around_point(origin, -180, out)
+
+    Scene.wait(0.1)
+
+    render_to_file('rotating_intro', render_settings=quality, background_color=bgcol)
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
@@ -1044,10 +1124,11 @@ if __name__ == "__main__":
     # fourier_example(HD, bgcol=BLACK, anim=103)
     # fourier_example(HD, bgcol=BLACK, anim=1)
     # fractional_ex(HD, bgcol=BLACK, anim=1, part=0)
-    # fractional_ex(HD, bgcol=BLACK, anim=4, part=2)
-    # button(HD, TRANSPARENT, anim=9)
+    fractional_ex(MD, bgcol=BLACK, anim=4, part=10)
+    # button(HD, TRANSPARENT, anim=10)
     # button(LD, BLACK, anim=9)
     # fractional_3d(HD, BLACK, anim=2, part=3)
     # spring(quality=HD, bgcol=TRANSPARENT)
     # spring(quality=LD, bgcol=BLACK)
-    fractional_approx(quality=HD)
+    # fractional_approx(quality=HD)
+    # rotating_intro(quality=HD, bgcol=TRANSPARENT)

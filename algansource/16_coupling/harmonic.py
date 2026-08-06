@@ -1033,5 +1033,5 @@ if __name__ == "__main__":
     #mesh_func3(quality=HD, bgcol=bgcol, anim=2)
     #mesh_func3(quality=HD, bgcol=TRANSPARENT, anim=4)
     #harmonic_func(quality=HD, bgcol=bgcol, anim=2)
-    #random_walk(quality=HD, bgcol=TRANSPARENT, anim=4, steps=120, p=1.)
-    surf_thumb(quality=HD, bgcol=TRANSPARENT)
+    random_walk(quality=HD, bgcol=TRANSPARENT, anim=3, steps=80, p=1.)
+    # surf_thumb(quality=HD, bgcol=TRANSPARENT)
