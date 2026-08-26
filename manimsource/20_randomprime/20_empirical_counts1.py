@@ -1,0 +1,276 @@
+from __future__ import annotations
+
+import os
+
+import numpy as np
+from scipy.special import expi
+
+from manim import (
+    BLUE_C,
+    DOWN,
+    LEFT,
+    ORANGE,
+    RIGHT,
+    UP,
+    Axes,
+    Integer,
+    Line,
+    MathTex,
+    Rectangle,
+    Scene,
+    Text,
+    VGroup,
+    ValueTracker,
+    linear,
+)
+
+
+def li(x: np.ndarray) -> np.ndarray:
+    """Principal-value logarithmic integral for x > 1."""
+    return expi(np.log(x))
+
+
+def normalized_error(counting_function: np.ndarray, n_min, n_max_end, bias) -> np.ndarray:
+    x = np.arange(n_min, n_max_end + 1, dtype=float)
+    li_x = li(x)
+    if bias:
+        return (
+            counting_function[n_min:]
+            - li_x
+            + li(np.sqrt(x)) / 2
+            + li(np.cbrt(x)) / 3
+        ) / np.sqrt(li_x)
+    else:
+        return (
+            counting_function[n_min:]
+            - li_x
+        ) / np.sqrt(li_x)
+
+def empirical_prime_counting(n) -> np.ndarray:
+    is_prime = np.ones(n + 1, dtype=bool)
+    is_prime[:2] = False
+    is_prime[4::2] = False
+
+    for p in range(3, int(np.sqrt(n)) + 1, 2):
+        if is_prime[p]:
+            is_prime[p * p :: 2 * p] = False
+
+    return np.cumsum(is_prime, dtype=np.int64)
+
+
+def cramer_prime_counting(seed, n_max) -> np.ndarray:
+    """One Cramér path, with no residue-class or Chebyshev weighting."""
+    rng = np.random.default_rng(seed)
+    n = np.arange(n_max + 1)
+
+    probabilities = np.zeros(n_max + 1, dtype=float)
+    probabilities[2] = 1.0
+    probabilities[3:] = 1.0 / np.log(n[3:])
+
+    selected = rng.random(n_max + 1) < probabilities
+    return np.cumsum(selected, dtype=np.int64)
+
+
+def normal_density(z: float) -> float:
+    return np.exp(-(z**2) / 2) / np.sqrt(2 * np.pi)
+
+
+def x_sampling_weights(log_weighting, n_min, n_max) -> np.ndarray:
+    x = np.arange(n_min, n_max + 1, dtype=float)
+    if log_weighting:
+        # Uniform measure in log(x) has density proportional to 1/x.
+        return 1.0 / x
+    return np.ones_like(x)
+
+
+def bin_indices(values: np.ndarray, bin_min, bin_width, bin_count) -> np.ndarray:
+    indices = np.floor((values - bin_min) / bin_width).astype(int)
+    if indices.min() < 0 or indices.max() >= bin_count:
+        raise ValueError(
+            "A value falls outside the histogram range. "
+            "Increase BIN_MIN or BIN_MAX."
+        )
+    return indices
+
+
+def maximum_prefix_density(indices: np.ndarray, weights: np.ndarray, n_min, n_max_start, bin_width, bin_count) -> float:
+    """Fixed y-scale covering every prefix shown in the animation."""
+    counts = np.zeros(bin_count, dtype=float)
+    total_weight = 0.0
+    maximum = 0.0
+
+    for offset, (index, weight) in enumerate(zip(indices, weights)):
+        counts[index] += weight
+        total_weight += weight
+        n_max = n_min + offset
+        if n_max >= n_max_start:
+            maximum = max(
+                maximum,
+                counts.max() / (total_weight * bin_width),
+            )
+
+    return np.ceil(maximum * 2) / 2
+
+
+class HistogramAnimation(Scene):
+    log_weighting = True
+    n_min = 10
+    n_max = 100
+    n_max_end = 10_000
+    animation_seconds = 14
+    bin_min = -3.5
+    bin_max = 3.5
+    bin_width = 0.05
+    bias = True
+
+    title = ""
+
+    def normalized_errors(self) -> np.ndarray:
+        raise NotImplementedError
+
+    def construct(self) -> None:
+        bin_edges = np.arange(self.bin_min, self.bin_max + self.bin_width / 2, self.bin_width)
+        bin_count = len(bin_edges) - 1
+
+        errors = self.normalized_errors()
+        indices = bin_indices(errors, self.bin_min, self.bin_width, bin_count)
+        weights = x_sampling_weights(self.log_weighting, self.n_min, self.n_max_end)
+        y_max = maximum_prefix_density(indices, weights, self.n_min, self.n_max, self.bin_width, bin_count)
+        y_tick = 0.5 if y_max > 3 else 0.25
+
+        axes = Axes(
+            x_range=[self.bin_min, self.bin_max, 1],
+            y_range=[0, y_max, y_tick],
+            x_length=11.2,
+            y_length=5.5,
+            tips=False,
+            axis_config={"include_numbers": True, "font_size": 22},
+        ).shift(DOWN * 0.45)
+
+        x_label = axes.get_x_axis_label(MathTex(r"\text{normalized error}"))
+        y_label = axes.get_y_axis_label(MathTex(r"\text{density}"))
+
+        tracker = ValueTracker(self.n_max)
+        counter_label = MathTex(r"n_{\max}=").scale(0.8)
+        counter_value = Integer(self.n_max, group_with_commas=True).scale(0.8)
+        counter = VGroup(counter_label, counter_value).arrange(RIGHT, buff=0.12)
+        counter.next_to(axes, UP, buff=0.12).align_to(axes, LEFT)
+
+        def update_counter(number: Integer) -> None:
+            number.set_value(int(round(tracker.get_value())))
+            number.next_to(counter_label, RIGHT, buff=0.12)
+
+        counter_value.add_updater(update_counter)
+
+        bar_width = abs(axes.c2p(self.bin_width, 0)[0] - axes.c2p(0, 0)[0]) * 0.94
+        bars = VGroup(
+            *[
+                Rectangle(
+                    width=bar_width,
+                    height=1e-4,
+                    stroke_width=0,
+                    fill_color=BLUE_C,
+                    fill_opacity=0.58,
+                )
+                for _ in range(bin_count)
+            ]
+        )
+
+        def update_bars(group: VGroup) -> None:
+            n_max = int(round(tracker.get_value()))
+            prefix_length = n_max - self.n_min + 1
+            prefix_weights = weights[:prefix_length]
+            counts = np.bincount(
+                indices[:prefix_length],
+                weights=prefix_weights,
+                minlength=bin_count,
+            )
+            densities = counts / (prefix_weights.sum() * self.bin_width)
+
+            for i, (bar, density) in enumerate(zip(group, densities)):
+                x_center = (bin_edges[i] + bin_edges[i + 1]) / 2
+                scene_height = abs(
+                    axes.c2p(0, density)[1] - axes.c2p(0, 0)[1]
+                )
+                bar.stretch_to_fit_height(max(scene_height, 1e-4))
+                bar.move_to(axes.c2p(x_center, density / 2))
+
+        update_bars(bars)
+        bars.add_updater(update_bars)
+
+        normal_curve = axes.plot(
+            normal_density,
+            x_range=[self.bin_min, self.bin_max, 0.02],
+            color=ORANGE,
+            stroke_width=4,
+        )
+
+        empirical_key = VGroup(
+            Rectangle(
+                width=0.34,
+                height=0.15,
+                stroke_width=0,
+                fill_color=BLUE_C,
+                fill_opacity=0.58,
+            ),
+            Text("histogram density", font_size=21),
+        ).arrange(RIGHT, buff=0.12)
+        normal_key = VGroup(
+            Line(LEFT * 0.17, RIGHT * 0.17, color=ORANGE, stroke_width=4),
+            MathTex(r"N(0,1)", font_size=26),
+        ).arrange(RIGHT, buff=0.12)
+        legend = VGroup(empirical_key, normal_key).arrange(RIGHT, buff=0.35)
+        legend.next_to(axes, UP, buff=0.12).align_to(axes, RIGHT)
+
+        self.add(
+            axes,
+            x_label,
+            y_label,
+            bars,
+            normal_curve,
+            counter,
+            legend,
+        )
+        self.wait(0.5)
+        self.play(
+            tracker.animate.set_value(self.n_max_end),
+            run_time=self.animation_seconds,
+            rate_func=linear,
+        )
+        self.wait(1)
+
+
+class EmpiricalPrimesHistogramLog(HistogramAnimation):
+    log_weighting = True
+    bin_width = 0.05
+    n_min = 1000
+    n_max = 10_000
+    n_max_end = 1_000_000
+    bias = True
+
+    def normalized_errors(self) -> np.ndarray:
+        count = empirical_prime_counting(self.n_max_end)
+        x = np.arange(self.n_min, self.n_max_end + 1, dtype=float)
+        li_x = li(x)
+        errors = (
+                count[self.n_min:]
+                - li_x
+                + li(np.sqrt(x)) / 2
+                + li(np.cbrt(x)) / 3
+        ) / np.sqrt(li(x))
+
+        return errors
+
+
+class CramerPrimesHistogramLog(HistogramAnimation):
+    log_weighting = True
+    bin_width = 0.2
+    n_min = 1000
+    n_max = 10_000
+    n_max_end = 1_000_000
+    bias = False
+
+    def normalized_errors(self) -> np.ndarray:
+        count = cramer_prime_counting(20_260_823, self.n_max_end)
+        errors = normalized_error(count, self.n_min, self.n_max_end, self.bias)
+        return errors

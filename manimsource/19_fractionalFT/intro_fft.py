@@ -165,6 +165,13 @@ class RootTfm(Scene):
         self.add(eq1)
 
 
+class RootTfmBig(Scene):
+    def construct(self):
+        eq1 = MathTex(r'\sqrt{\mathcal F}', font_size=70* 1.3 * 1.3, color=col_op, stroke_width=3)
+        eq1[0][-1].set_color(col_ft)
+        eq1 = eq_shadow(eq1, bg_stroke_width=18)
+        self.add(eq1)
+
 class Intro_FT_Decomp(Scene):
     def __init__(self, *args, **kwargs):
         config.background_color = BLUE if config.transparent else BLACK
@@ -680,3 +687,94 @@ class STFTExample(Scene):
 
         self.wait(0.1)
         self.wait()
+
+
+class Thumb_Plot1(Scene):
+    def __init__(self, *args, **kwargs):
+        config.background_color = BLUE if config.transparent else BLACK
+        Scene.__init__(self, *args, **kwargs)
+
+    xmax = 6.
+    plot_num=1
+
+    def construct(self):
+        xmax = self.xmax
+        ax = Axes(x_range=[-xmax, xmax*1.1], y_range=[-1, 1.], x_length=12, y_length=4,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "shade_in_3d": True,
+                               },
+                  ).set_z_index(1).shift(DOWN)
+
+        freq = 4.
+
+        xvals = np.linspace(-xmax, xmax, 600)
+        self.add(ax.x_axis)
+        npts = 600
+        evolver = WaveEvolver(xrange=(-xmax, xmax), npts=npts, n_extend_left=2000, n_extend_right=2000, n_scale=1,
+                              speed=1.)
+        evolver.V = evolver.xvals1 ** 2 * 0.5 - 0.5
+        evolver.psi = np.clip(1. - (np.abs(evolver.xvals1)-PI)*10, 0, 1)*math.sqrt(2/PI)
+        evolver.evolve(PI/2).real
+        evolver.speed =-1
+        evolver.time = 0.
+        origin = mh.pos(DOWN*2)
+        v = ax.get_center() - origin
+        theta = np.arctan(-v[0]/v[1])
+
+        value_t = ValueTracker(0.)
+        val_op = ValueTracker(1.)
+        val_op2 = ValueTracker(1.)
+        do_complex = [False]
+
+        def get_obj():
+            t = value_t.get_value()
+            yvals2 = evolver.evolve((t - evolver.time)*PI/4)
+            evolver.time = t
+            opac = min(val_op.get_value(), val_op2.get_value())
+            plt2 = ax.plot_line_graph(xvals, yvals2.real, stroke_color=BLUE, stroke_width=6, add_vertex_dots=False,
+                                      stroke_opacity=opac).set_z_index(4)
+            area2 = ax.plot_line_graph(np.concatenate(([-xmax], xvals, [xmax])),
+                                       np.concatenate(([0], yvals2.real, [0])), stroke_width=0, stroke_opacity=0,
+                                       fill_opacity=0.3*opac, fill_color=BLUE, add_vertex_dots=False)
+            res = VGroup(plt2['line_graph'], area2['line_graph'], ax.x_axis.copy())
+
+            if do_complex[0]:
+                plt2 = ax.plot_line_graph(xvals, yvals2.imag, stroke_color=ORANGE, stroke_width=6, add_vertex_dots=False,
+                                          stroke_opacity=opac).set_z_index(4)
+                area2 = ax.plot_line_graph(np.concatenate(([-xmax], xvals, [xmax])),
+                                           np.concatenate(([0], yvals2.imag, [0])), stroke_width=0, stroke_opacity=0,
+                                           fill_opacity=0.3 * opac, fill_color=ORANGE, add_vertex_dots=False)
+                res += plt2
+                res += area2
+
+            shift = rotate_vector(v.copy(), -t*theta) - v
+            res.shift(shift)
+
+            return res
+
+
+
+        if self.plot_num == 1:
+            obj1 = get_obj()
+            self.add(obj1)
+        if self.plot_num == 2:
+            yvals = (np.abs(xvals) < PI) * math.sqrt(2 / PI)
+            plt2_ = ax.plot_line_graph(xvals, yvals, stroke_color=BLUE, stroke_width=6,
+                                       add_vertex_dots=False).set_z_index(4)
+            area2_ = ax.plot_line_graph(np.concatenate(([-xmax], xvals, [xmax])),
+                                        np.concatenate(([0], yvals, [0])), stroke_width=0, stroke_opacity=0,
+                                        fill_opacity=0.3, fill_color=BLUE, add_vertex_dots=False)
+            self.add(plt2_, area2_)
+        if self.plot_num == 3:
+            do_complex[0] = True
+            value_t.set_value(1.)
+            obj1 = get_obj()
+            self.add(obj1)
+
+class Thumb_Plot2(Thumb_Plot1):
+    plot_num = 2
+
+class Thumb_Plot3(Thumb_Plot1):
+    plot_num = 3
