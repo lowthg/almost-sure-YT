@@ -4,25 +4,7 @@ import os
 
 import numpy as np
 from scipy.special import expi
-
-from manim import (
-    BLUE_C,
-    DOWN,
-    LEFT,
-    ORANGE,
-    RIGHT,
-    UP,
-    Axes,
-    Integer,
-    Line,
-    MathTex,
-    Rectangle,
-    Scene,
-    Text,
-    VGroup,
-    ValueTracker,
-    linear,
-)
+from manim import *
 
 
 def li(x: np.ndarray) -> np.ndarray:
@@ -111,6 +93,41 @@ def maximum_prefix_density(indices: np.ndarray, weights: np.ndarray, n_min, n_ma
 
     return np.ceil(maximum * 2) / 2
 
+class Histogram:
+    def __init__(self, bin_min, bin_max, bin_width, y_scale=1., x_scale=1.):
+        bar_width = bin_width * x_scale * 0.94
+        self.bin_min = bin_min
+        self.bin_max = bin_max
+        self.bin_width = bin_width
+        self.bin_edges = np.arange(bin_min, bin_max + bin_width / 2, bin_width)
+        self.bin_count = len(self.bin_edges) - 1
+        self.bars = VGroup(
+            *[
+                Rectangle(width=bar_width, height=1e-4, stroke_width=0,
+                    fill_color=BLUE_C, fill_opacity=0.58,
+                )
+                for _ in range(self.bin_count)
+            ]
+        )
+        self.y_scale=y_scale
+        for i in range(len(self.bars)):
+            x_center = (self.bin_edges[i] + self.bin_edges[i + 1]) / 2
+            self.bars[i].move_to(x_center * x_scale * RIGHT)
+        self.bars.move_to(ORIGIN)
+
+
+    def update_bars(self, samples, weights):
+        counts = np.bincount(
+            samples,
+            weights=weights,
+            minlength=self.bin_count,
+        )
+        densities = counts / (weights.sum() * self.bin_width)
+
+        for i, (bar, density) in enumerate(zip(self.bars, densities)):
+            scene_height = abs(self.y_scale * density)
+            bar.stretch_to_fit_height(max(scene_height, 1e-4), about_edge=DOWN)
+
 
 class HistogramAnimation(Scene):
     log_weighting = True
@@ -131,6 +148,10 @@ class HistogramAnimation(Scene):
     def construct(self) -> None:
         bin_edges = np.arange(self.bin_min, self.bin_max + self.bin_width / 2, self.bin_width)
         bin_count = len(bin_edges) - 1
+        xlen = 11.2
+        ylen = 5.5
+        x_scale = xlen / (self.bin_max - self.bin_min)
+        hist = Histogram(self.bin_min, self.bin_max, self.bin_width, x_scale=x_scale)
 
         errors = self.normalized_errors()
         indices = bin_indices(errors, self.bin_min, self.bin_width, bin_count)
@@ -138,14 +159,18 @@ class HistogramAnimation(Scene):
         y_max = maximum_prefix_density(indices, weights, self.n_min, self.n_max, self.bin_width, bin_count)
         y_tick = 0.5 if y_max > 3 else 0.25
 
+        hist.y_scale = ylen / y_max
+
         axes = Axes(
             x_range=[self.bin_min, self.bin_max, 1],
             y_range=[0, y_max, y_tick],
-            x_length=11.2,
-            y_length=5.5,
+            x_length=xlen,
+            y_length=ylen,
             tips=False,
             axis_config={"include_numbers": True, "font_size": 22},
         ).shift(DOWN * 0.45)
+
+        hist.bars.next_to(axes.c2p(self.bin_min, 0), UR, buff=0)
 
         x_label = axes.get_x_axis_label(MathTex(r"\text{normalized error}"))
         y_label = axes.get_y_axis_label(MathTex(r"\text{density}"))
@@ -162,41 +187,13 @@ class HistogramAnimation(Scene):
 
         counter_value.add_updater(update_counter)
 
-        bar_width = abs(axes.c2p(self.bin_width, 0)[0] - axes.c2p(0, 0)[0]) * 0.94
-        bars = VGroup(
-            *[
-                Rectangle(
-                    width=bar_width,
-                    height=1e-4,
-                    stroke_width=0,
-                    fill_color=BLUE_C,
-                    fill_opacity=0.58,
-                )
-                for _ in range(bin_count)
-            ]
-        )
-
         def update_bars(group: VGroup) -> None:
             n_max = int(round(tracker.get_value()))
             prefix_length = n_max - self.n_min + 1
-            prefix_weights = weights[:prefix_length]
-            counts = np.bincount(
-                indices[:prefix_length],
-                weights=prefix_weights,
-                minlength=bin_count,
-            )
-            densities = counts / (prefix_weights.sum() * self.bin_width)
+            hist.update_bars(indices[:prefix_length], weights[:prefix_length])
 
-            for i, (bar, density) in enumerate(zip(group, densities)):
-                x_center = (bin_edges[i] + bin_edges[i + 1]) / 2
-                scene_height = abs(
-                    axes.c2p(0, density)[1] - axes.c2p(0, 0)[1]
-                )
-                bar.stretch_to_fit_height(max(scene_height, 1e-4))
-                bar.move_to(axes.c2p(x_center, density / 2))
-
-        update_bars(bars)
-        bars.add_updater(update_bars)
+        update_bars(hist.bars)
+        hist.bars.add_updater(update_bars)
 
         normal_curve = axes.plot(
             normal_density,
@@ -226,7 +223,7 @@ class HistogramAnimation(Scene):
             axes,
             x_label,
             y_label,
-            bars,
+            hist.bars,
             normal_curve,
             counter,
             legend,
