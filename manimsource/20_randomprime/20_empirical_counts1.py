@@ -6,6 +6,16 @@ import numpy as np
 from scipy.special import expi
 from manim import *
 
+def rate_func_log(x1, x2):
+    """
+    x1 * exp(at), x1 * exp(a) = x2
+    """
+    a = np.log(x2/x1)
+    def rate_func(t):
+        print(x1 * np.exp(a*t))
+        return (np.exp(a*t) - 1) / (x2/x1-1)
+
+    return rate_func
 
 def li(x: np.ndarray) -> np.ndarray:
     """Principal-value logarithmic integral for x > 1."""
@@ -40,7 +50,7 @@ def empirical_prime_counting(n) -> np.ndarray:
     return np.cumsum(is_prime, dtype=np.int64)
 
 
-def cramer_prime_counting(seed, n_max) -> np.ndarray:
+def cramer_prime_counting(seed, n_min, n_max) -> np.ndarray:
     """One Cramér path, with no residue-class or Chebyshev weighting."""
     rng = np.random.default_rng(seed)
     n = np.arange(n_max + 1)
@@ -50,8 +60,9 @@ def cramer_prime_counting(seed, n_max) -> np.ndarray:
     probabilities[3:] = 1.0 / np.log(n[3:])
 
     selected = rng.random(n_max + 1) < probabilities
-    return np.cumsum(selected, dtype=np.int64)
-
+    count = np.cumsum(selected)[n_min:]
+    mean = np.cumsum(probabilities)[n_min:]
+    return (count - mean) / np.sqrt(mean)
 
 def normal_density(z: float) -> float:
     return np.exp(-(z**2) / 2) / np.sqrt(2 * np.pi)
@@ -94,13 +105,14 @@ def maximum_prefix_density(indices: np.ndarray, weights: np.ndarray, n_min, n_ma
     return np.ceil(maximum * 2) / 2
 
 class Histogram:
-    def __init__(self, bin_min, bin_max, bin_width, y_scale=1., x_scale=1.):
+    def __init__(self, bin_min, bin_max, bin_count, y_scale=1., x_scale=1.):
+        bin_width = (bin_max - bin_min) / bin_count
         bar_width = bin_width * x_scale * 0.94
         self.bin_min = bin_min
         self.bin_max = bin_max
         self.bin_width = bin_width
-        self.bin_edges = np.arange(bin_min, bin_max + bin_width / 2, bin_width)
-        self.bin_count = len(self.bin_edges) - 1
+        self.bin_edges = np.linspace(bin_min, bin_max, bin_count+1)
+        self.bin_count = bin_count
         self.bars = VGroup(
             *[
                 Rectangle(width=bar_width, height=1e-4, stroke_width=0,
@@ -137,7 +149,8 @@ class HistogramAnimation(Scene):
     animation_seconds = 14
     bin_min = -3.5
     bin_max = 3.5
-    bin_width = 0.05
+    bin_count = 31
+    y_max = 1.5
     bias = True
 
     title = ""
@@ -146,24 +159,17 @@ class HistogramAnimation(Scene):
         raise NotImplementedError
 
     def construct(self) -> None:
-        bin_edges = np.arange(self.bin_min, self.bin_max + self.bin_width / 2, self.bin_width)
-        bin_count = len(bin_edges) - 1
         xlen = 11.2
         ylen = 5.5
         x_scale = xlen / (self.bin_max - self.bin_min)
-        hist = Histogram(self.bin_min, self.bin_max, self.bin_width, x_scale=x_scale)
+        hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
+                         y_scale=ylen / self.y_max)
 
-        errors = self.normalized_errors()
-        indices = bin_indices(errors, self.bin_min, self.bin_width, bin_count)
-        weights = x_sampling_weights(self.log_weighting, self.n_min, self.n_max_end)
-        y_max = maximum_prefix_density(indices, weights, self.n_min, self.n_max, self.bin_width, bin_count)
-        y_tick = 0.5 if y_max > 3 else 0.25
-
-        hist.y_scale = ylen / y_max
+        y_tick = 0.5
 
         axes = Axes(
             x_range=[self.bin_min, self.bin_max, 1],
-            y_range=[0, y_max, y_tick],
+            y_range=[0, self.y_max, y_tick],
             x_length=xlen,
             y_length=ylen,
             tips=False,
@@ -187,6 +193,10 @@ class HistogramAnimation(Scene):
 
         counter_value.add_updater(update_counter)
 
+        errors = self.normalized_errors()
+        indices = bin_indices(errors, self.bin_min, hist.bin_width, hist.bin_count)
+        weights = x_sampling_weights(self.log_weighting, self.n_min, self.n_max_end)
+
         def update_bars(group: VGroup) -> None:
             n_max = int(round(tracker.get_value()))
             prefix_length = n_max - self.n_min + 1
@@ -202,21 +212,11 @@ class HistogramAnimation(Scene):
             stroke_width=4,
         )
 
-        empirical_key = VGroup(
-            Rectangle(
-                width=0.34,
-                height=0.15,
-                stroke_width=0,
-                fill_color=BLUE_C,
-                fill_opacity=0.58,
-            ),
-            Text("histogram density", font_size=21),
-        ).arrange(RIGHT, buff=0.12)
         normal_key = VGroup(
             Line(LEFT * 0.17, RIGHT * 0.17, color=ORANGE, stroke_width=4),
             MathTex(r"N(0,1)", font_size=26),
         ).arrange(RIGHT, buff=0.12)
-        legend = VGroup(empirical_key, normal_key).arrange(RIGHT, buff=0.35)
+        legend = VGroup(normal_key).arrange(RIGHT, buff=0.35)
         legend.next_to(axes, UP, buff=0.12).align_to(axes, RIGHT)
 
         self.add(
@@ -232,7 +232,7 @@ class HistogramAnimation(Scene):
         self.play(
             tracker.animate.set_value(self.n_max_end),
             run_time=self.animation_seconds,
-            rate_func=linear,
+            rate_func=rate_func_log(self.n_max, self.n_max_end),
         )
         self.wait(1)
 
@@ -268,6 +268,6 @@ class CramerPrimesHistogramLog(HistogramAnimation):
     bias = False
 
     def normalized_errors(self) -> np.ndarray:
-        count = cramer_prime_counting(20_260_823, self.n_max_end)
-        errors = normalized_error(count, self.n_min, self.n_max_end, self.bias)
+        errors = cramer_prime_counting(20_260_823, self.n_min, self.n_max_end)
+        # errors = normalized_error(count, self.n_min, self.n_max_end, self.bias)
         return errors
