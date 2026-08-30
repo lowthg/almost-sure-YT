@@ -6,16 +6,17 @@ import numpy as np
 from scipy.special import expi
 from manim import *
 
+import sys
+sys.path.append('../../')
+import manimhelper as mh
+
 def rate_func_log(x1, x2):
     """
     x1 * exp(at), x1 * exp(a) = x2
     """
     a = np.log(x2/x1)
-    def rate_func(t):
-        print(x1 * np.exp(a*t))
-        return (np.exp(a*t) - 1) / (x2/x1-1)
-
-    return rate_func
+    b = x2/x1 - 1
+    return lambda t: (np.exp(a*t) - 1) / b
 
 def li(x: np.ndarray) -> np.ndarray:
     """Principal-value logarithmic integral for x > 1."""
@@ -24,7 +25,7 @@ def li(x: np.ndarray) -> np.ndarray:
 
 def normalized_error(counting_function: np.ndarray, n_min, n_max_end, bias) -> np.ndarray:
     x = np.arange(n_min, n_max_end + 1, dtype=float)
-    li_x = li(x)
+    li_x = expi(np.log(x))
     if bias:
         return (
             counting_function[n_min:]
@@ -77,12 +78,12 @@ def x_sampling_weights(log_weighting, n_min, n_max) -> np.ndarray:
 
 
 def bin_indices(values: np.ndarray, bin_min, bin_width, bin_count) -> np.ndarray:
-    indices = np.floor((values - bin_min) / bin_width).astype(int)
-    if indices.min() < 0 or indices.max() >= bin_count:
-        raise ValueError(
-            "A value falls outside the histogram range. "
-            "Increase BIN_MIN or BIN_MAX."
-        )
+    indices = np.floor((values - bin_min) / bin_width).astype(int).clip(-1, bin_count)
+    # if indices.min() < 0 or indices.max() >= bin_count:
+    #     raise ValueError(
+    #         "A value falls outside the histogram range. "
+    #         "Increase BIN_MIN or BIN_MAX."
+    #     )
     return indices
 
 
@@ -105,9 +106,9 @@ def maximum_prefix_density(indices: np.ndarray, weights: np.ndarray, n_min, n_ma
     return np.ceil(maximum * 2) / 2
 
 class Histogram:
-    def __init__(self, bin_min, bin_max, bin_count, y_scale=1., x_scale=1.):
+    def __init__(self, bin_min, bin_max, bin_count, y_scale=1., x_scale=1., use_depth=False, rel_width=0.9):
         bin_width = (bin_max - bin_min) / bin_count
-        bar_width = bin_width * x_scale * 0.94
+        bar_width = bin_width * x_scale * rel_width
         self.bin_min = bin_min
         self.bin_max = bin_max
         self.bin_width = bin_width
@@ -115,7 +116,7 @@ class Histogram:
         self.bin_count = bin_count
         self.bars = VGroup(
             *[
-                Rectangle(width=bar_width, height=1e-4, stroke_width=0,
+                Rectangle(width=bar_width, height=1e-4, stroke_width=2, stroke_color=BLUE, stroke_opacity=1,
                     fill_color=BLUE_C, fill_opacity=0.58,
                 )
                 for _ in range(self.bin_count)
@@ -126,34 +127,91 @@ class Histogram:
             x_center = (self.bin_edges[i] + self.bin_edges[i + 1]) / 2
             self.bars[i].move_to(x_center * x_scale * RIGHT)
         self.bars.move_to(ORIGIN)
+        self.bar_weights = np.zeros(self.bin_count+2)
+        self.use_depth = use_depth
 
-
-    def update_bars(self, samples, weights):
-        counts = np.bincount(
-            samples,
-            weights=weights,
-            minlength=self.bin_count,
-        )
-        densities = counts / (weights.sum() * self.bin_width)
+    def update_bars(self):
+        densities = self.bar_weights[1:-1] / (self.bar_weights.sum() * self.bin_width)
 
         for i, (bar, density) in enumerate(zip(self.bars, densities)):
             scene_height = abs(self.y_scale * density)
-            bar.stretch_to_fit_height(max(scene_height, 1e-4), about_edge=DOWN)
+            if self.use_depth:
+                bar.stretch_to_fit_depth(max(scene_height, 1e-4), about_edge=IN)
+            else:
+                bar.stretch_to_fit_height(max(scene_height, 1e-4), about_edge=DOWN)
+
+    def set_data(self, samples, weights=None):
+        indices = bin_indices(samples, self.bin_min, self.bin_width, self.bin_count)
+        self.bar_weights[:] = np.bincount(indices+1, weights=weights, minlength=self.bin_count+2)
+        self.update_bars()
+
+    def add_data(self, samples, weights=None):
+        indices = bin_indices(samples, self.bin_min, self.bin_width, self.bin_count)
+        self.bar_weights += np.bincount(indices+1, weights=weights, minlength=self.bin_count+2)
+        self.update_bars()
 
 
-class HistogramAnimation(Scene):
-    log_weighting = True
-    n_min = 10
-    n_max = 100
-    n_max_end = 10_000
+
+class CramerCount:
+    def __init__(self, seed=1, n_max=1000, n_min = 1, nstep=100, uniform=False):
+        """One Cramér path, with no residue-class or Chebyshev weighting."""
+        self.rng = rng = np.random.default_rng(seed)
+        n = np.arange(1, n_max+1)
+
+        probabilities = np.zeros(n_max, dtype=float)
+        probabilities[1] = 1.0
+        probabilities[2:] = 1.0 / np.log(n[2:])
+
+        selected = rng.random(n_max) < probabilities
+        count = np.cumsum(selected)
+        mean = np.cumsum(probabilities)
+        self.count = (count - mean) / np.sqrt(mean.clip(1))
+        self.weights = x_sampling_weights(not uniform, 1, n_max)
+        self.x0 = float(n_min)
+        self.n_max = n_max
+        self.count0 = count[-1] - mean[-1]
+        self.mean0 = mean[-1]
+        self.nstep = nstep
+        self.uniform = uniform
+
+    def new_samples(self, x):
+        count = []
+        weights = []
+        if self.x0 < self.n_max:
+            n_max = int(round(x)) - 1
+            n0 = int(round(self.x0)) - 1
+            count.append(self.count[n0:n_max])
+            weights.append(self.weights[n0:n_max])
+        if self.n_max < x:
+            x0 = max(self.x0, self.n_max)
+            xvec = np.exp(np.linspace(np.log(x0), np.log(x), self.nstep+1))
+            livec = li(xvec)
+            li_diff = livec[1:] - livec[:-1]
+            count_diffs = self.rng.normal(loc=0, scale=np.sqrt(li_diff))
+            count_vec = np.cumsum(count_diffs) + self.count0
+            means = livec[1:] - livec[0] + self.mean0
+            weight_vec = xvec if self.uniform else np.log(xvec)
+            self.count0 = count_vec[-1]
+            self.mean0 = means[-1]
+            count.append(count_vec / np.sqrt(means))
+            weights.append(weight_vec[1:] - weight_vec[:-1])
+
+        self.x0 = x
+        return np.concatenate(count), np.concatenate(weights)
+
+
+class CramerPrimesHistogramLog(Scene):
     animation_seconds = 14
-    bin_min = -3.5
-    bin_max = 3.5
-    bin_count = 31
-    y_max = 1.5
-    bias = True
-
-    title = ""
+    y_max = 0.7
+    log_weighting = True
+    bin_count = 15
+    n_min = 1000
+    n_max = 10_000
+    n_max_end = 10_000_000_000_000
+    bias = False
+    bin_min = -3.
+    bin_max = 3.
+    counter = CramerCount(seed=1, n_min=1000, n_max=1_000_000, nstep=1000)
 
     def normalized_errors(self) -> np.ndarray:
         raise NotImplementedError
@@ -167,13 +225,9 @@ class HistogramAnimation(Scene):
 
         y_tick = 0.5
 
-        axes = Axes(
-            x_range=[self.bin_min, self.bin_max, 1],
-            y_range=[0, self.y_max, y_tick],
-            x_length=xlen,
-            y_length=ylen,
-            tips=False,
-            axis_config={"include_numbers": True, "font_size": 22},
+        axes = Axes(x_range=[self.bin_min, self.bin_max, 1], y_range=[0, self.y_max, y_tick],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_numbers": True, "font_size": 35},
         ).shift(DOWN * 0.45)
 
         hist.bars.next_to(axes.c2p(self.bin_min, 0), UR, buff=0)
@@ -184,8 +238,8 @@ class HistogramAnimation(Scene):
         tracker = ValueTracker(self.n_max)
         counter_label = MathTex(r"n_{\max}=").scale(0.8)
         counter_value = Integer(self.n_max, group_with_commas=True).scale(0.8)
-        counter = VGroup(counter_label, counter_value).arrange(RIGHT, buff=0.12)
-        counter.next_to(axes, UP, buff=0.12).align_to(axes, LEFT)
+        counter_obj = VGroup(counter_label, counter_value).arrange(RIGHT, buff=0.12)
+        counter_obj.next_to(axes, UP, buff=0.12).align_to(axes, LEFT)
 
         def update_counter(number: Integer) -> None:
             number.set_value(int(round(tracker.get_value())))
@@ -193,24 +247,15 @@ class HistogramAnimation(Scene):
 
         counter_value.add_updater(update_counter)
 
-        errors = self.normalized_errors()
-        indices = bin_indices(errors, self.bin_min, hist.bin_width, hist.bin_count)
-        weights = x_sampling_weights(self.log_weighting, self.n_min, self.n_max_end)
-
         def update_bars(group: VGroup) -> None:
-            n_max = int(round(tracker.get_value()))
-            prefix_length = n_max - self.n_min + 1
-            hist.update_bars(indices[:prefix_length], weights[:prefix_length])
+            errors, weights = self.counter.new_samples(tracker.get_value())
+            hist.add_data(errors, weights)
 
-        update_bars(hist.bars)
         hist.bars.add_updater(update_bars)
 
-        normal_curve = axes.plot(
-            normal_density,
+        normal_curve = axes.plot(normal_density,
             x_range=[self.bin_min, self.bin_max, 0.02],
-            color=ORANGE,
-            stroke_width=4,
-        )
+            color=ORANGE, stroke_width=4)
 
         normal_key = VGroup(
             Line(LEFT * 0.17, RIGHT * 0.17, color=ORANGE, stroke_width=4),
@@ -219,25 +264,158 @@ class HistogramAnimation(Scene):
         legend = VGroup(normal_key).arrange(RIGHT, buff=0.35)
         legend.next_to(axes, UP, buff=0.12).align_to(axes, RIGHT)
 
-        self.add(
-            axes,
-            x_label,
-            y_label,
-            hist.bars,
-            normal_curve,
-            counter,
-            legend,
-        )
-        self.wait(0.5)
+        self.add(axes.x_axis, x_label, y_label, hist.bars, normal_curve, counter_obj,legend)
+
         self.play(
             tracker.animate.set_value(self.n_max_end),
             run_time=self.animation_seconds,
             rate_func=rate_func_log(self.n_max, self.n_max_end),
         )
+        print(hist.bar_weights/hist.bar_weights.sum())
+        self.wait(1)
+
+class NormalUniform(Scene):
+    bgcol = GREY
+    trcol = BLACK
+
+    def __init__(self, *args, **kwargs):
+        config.background_color = self.trcol if config.transparent else self.bgcol
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        xlen = 5.
+        ylen = 2.
+        bin_max = 3.
+        bin_min = -3.
+        x_scale = xlen / (bin_max - bin_min)
+        y_max = 0.9
+        rng = np.random.default_rng(2)
+
+        hist = Histogram(bin_min, bin_max, bin_count=11, x_scale=x_scale,
+                         y_scale=ylen / y_max * 5.5, rel_width=0.8)
+        axes = Axes(x_range=[bin_min, bin_max], y_range=[0, y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False},
+        ).set_z_index(2)
+        axes.y_axis.set_opacity(0)
+        box = SurroundingRectangle(axes, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                   buff=0.2, corner_radius=0.15)
+        hist.bars.next_to(axes.c2p(bin_min, 0), UR, buff=0).set_z_index(1)
+        hist.set_data((hist.bin_edges[1:] + hist.bin_edges[:-1])/2, np.ones(hist.bin_count))
+
+        normal_curve = axes.plot(normal_density,
+            x_range=[bin_min, bin_max, 0.02],
+            color=ORANGE, stroke_width=4).set_z_index(5)
+        area = axes.get_area(normal_curve, (bin_min, bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
+
+        self.add(axes, box)
+        bars = hist.bars.copy()
+        self.play(FadeIn(bars))
+        self.wait(0.1)
+        hist.y_scale /= 5.5
+        hist.set_data(rng.normal(loc=0, scale=1, size=10))
+        self.play(mh.transform(bars, hist.bars.copy()))
+        self.wait(0.1)
+        for _ in range(6):
+            hist.add_data(rng.normal(loc=0, scale=1, size=1))
+            self.play(mh.transform(bars, hist.bars.copy(), run_time=0.5))
+
+        self.play(Create(normal_curve, rate_func=linear),
+                  Succession(Wait(0.5), FadeIn(area)))
+
+        sample_tracker = ValueTracker(0)
+        n0 = [0.]
+
+        self.remove(bars)
+        self.add(hist.bars)
+
+        def update_bars(obj):
+            n1 = sample_tracker.get_value()
+            n = int(n1) - int(n0[0])
+            n0[0] = n1
+            hist.add_data(rng.normal(loc=0, scale=1, size=n))
+
+        hist.bars.add_updater(update_bars)
+
+        self.play(sample_tracker.animate.set_value(1500), run_time=15, rate_func=linear)
+
+
+
+class CramerHistogramUniform(ThreeDScene):
+    counter = CramerCount(seed=1, n_min=1000, n_max=1_000_000, nstep=1000, uniform=True)
+
+    def construct(self):
+        xlen = 11.2
+        ylen = 5.5
+        bin_max = 2.5
+        bin_min = -2.5
+        x_scale = xlen / (bin_max - bin_min)
+        y_max = 1.5
+        n_max_end=1_000_000_000
+        hist = Histogram(bin_min, bin_max, bin_count=21, x_scale=x_scale,
+                         y_scale=ylen / y_max, use_depth=True)
+        axes = Axes(x_range=[bin_min, bin_max], y_range=[0, y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_numbers": False, "include_ticks": False},
+        )
+        # print('included', axes.x_axis.numbers_to_include)
+        hist.bars.next_to(axes.c2p(bin_min, 0), UR, buff=0)
+        axes.y_axis.set_opacity(0)
+
+        n_max = 10000
+        tracker = ValueTracker(n_max)
+        bar_shift_val = ValueTracker(0.)
+        counter_label = MathTex(r"n=").scale(0.8).rotate(90*DEGREES, RIGHT)
+        counter_label.move_to(axes.c2p(-2, 0.5))
+        counter_value = always_redraw(
+            lambda: Integer(round(tracker.get_value()), group_with_commas=True)
+            .scale(0.8).rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12)
+        )
+
+        VGroup(axes, hist.bars).rotate(90*DEGREES, RIGHT)
+        self.camera.set_phi(90*DEGREES)
+
+        normal_curve = axes.plot(normal_density,
+            x_range=[bin_min, bin_max, 0.02],
+            color=ORANGE, stroke_width=4)
+        normal_curve.set_fill(color=ORANGE, opacity=0.2)
+
+        bar_shift = 5*UP + 2*LEFT
+        def update_bars():
+            errors, weights = self.counter.new_samples(tracker.get_value())
+            hist.add_data(errors, weights)
+            return hist.bars.copy().shift(bar_shift_val.get_value()*bar_shift)
+
+        # update_bars(hist.bars)
+        # hist.bars.add_updater(update_bars)
+        bars = always_redraw(update_bars)
+
+        # errors, weights = self.counter.new_samples(10000)
+        # hist.add_data(errors, weights)
+
+        # counter_value.set_value(n_max_end)
+
+        self.add(axes.x_axis, counter_label, counter_value, normal_curve, bars)
+
+        rate_func=rate_func_log(n_max, n_max_end)
+        self.play(
+            tracker.animate(run_time=8, rate_func=rate_func).set_value(n_max_end),
+            # counter_value.animate(run_time=8, rate_func=rate_func).set_value(n_max_end),
+
+            Succession(Wait(2),
+                       AnimationGroup(
+                           self.camera.phi_tracker.animate.set_value(70 * DEGREES), # view from above
+                           self.camera.theta_tracker.animate.set_value(-60 * DEGREES),
+                           bar_shift_val.animate.set_value(1),
+                           VGroup(axes, normal_curve, counter_label).animate.shift(bar_shift)
+                           # run_time=2.
+                       )),
+        )
+        print(hist.bar_weights/hist.bar_weights.sum())
         self.wait(1)
 
 
-class EmpiricalPrimesHistogramLog(HistogramAnimation):
+class EmpiricalPrimesHistogramLog(CramerPrimesHistogramLog):
     log_weighting = True
     bin_width = 0.05
     n_min = 1000
@@ -258,16 +436,3 @@ class EmpiricalPrimesHistogramLog(HistogramAnimation):
 
         return errors
 
-
-class CramerPrimesHistogramLog(HistogramAnimation):
-    log_weighting = True
-    bin_width = 0.2
-    n_min = 1000
-    n_max = 10_000
-    n_max_end = 1_000_000
-    bias = False
-
-    def normalized_errors(self) -> np.ndarray:
-        errors = cramer_prime_counting(20_260_823, self.n_min, self.n_max_end)
-        # errors = normalized_error(count, self.n_min, self.n_max_end, self.bias)
-        return errors
