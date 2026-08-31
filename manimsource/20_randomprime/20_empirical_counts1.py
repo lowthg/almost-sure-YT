@@ -7,6 +7,7 @@ from scipy.special import expi
 from manim import *
 
 import sys
+
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
@@ -358,7 +359,7 @@ class CramerHistogramUniform(ThreeDScene):
     counter = CramerCount(seed=1, n_min=2, n_max=1_000_000, nstep=1000, uniform=True, store=True)
 
     def construct(self):
-        xlen = 11.2
+        xlen = 12
         ylen = 5.5
         bin_max = 2.5
         bin_min = -2.5
@@ -370,7 +371,12 @@ class CramerHistogramUniform(ThreeDScene):
         axes = Axes(x_range=[bin_min, bin_max], y_range=[0, y_max],
             x_length=xlen, y_length=ylen, tips=False,
             axis_config={"include_numbers": False, "include_ticks": False},
-        )
+        ).set_z_index(5)
+        tick = Line(ORIGIN, DOWN*0.1, stroke_width=4, stroke_color=WHITE).set_z_index(5)
+        ticks = VGroup(*[tick.copy().shift(axes.c2p(i)) for i in [-2, -1, 0, 1, 2]]).set_z_index(5)
+        xlabels = VGroup(*[MathTex('{}'.format(i), font_size=40)[0] for i in [-2, -1, 0, 1, 2]])
+        for t, l in zip(ticks[:], xlabels): mh.align_sub(l, l[-1], t, DOWN, buff=0.1)
+
         ax2 = Axes(x_range=[0,1], y_range=[bin_min,bin_max], x_length=10, y_length=xlen).rotate(PI/2).set_opacity(0)
         rect0 = SurroundingRectangle(ax2, buff=0, stroke_width=0, stroke_opacity=0, fill_color=GREY,
                                      fill_opacity=0.)
@@ -388,18 +394,19 @@ class CramerHistogramUniform(ThreeDScene):
         counter_label[0][0].set_color(col_var)
         counter_label.move_to(axes.c2p(-1.4, 0.2))
         counter_value = always_redraw(
-            lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True)
-            .rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12)
+            lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
+            .rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12).set_z_index(10)
         )
 
-        VGroup(axes, hist.bars).rotate(90*DEGREES, RIGHT)
+        VGroup(axes, hist.bars, ticks, xlabels).rotate(90*DEGREES, RIGHT, about_point=ORIGIN)
         VGroup(ax2, rect1).next_to(axes.x_axis, DOWN, buff=0)
         self.camera.set_phi(90*DEGREES)
 
         normal_curve = axes.plot(normal_density,
             x_range=[bin_min, bin_max, 0.02],
-            color=ORANGE, stroke_width=4)
-        normal_curve.set_fill(color=ORANGE, opacity=0.2)
+            color=ORANGE, stroke_width=4).set_z_index(4)
+        # normal_curve.set_fill(color=ORANGE, opacity=0.2)
+        area = axes.get_area(normal_curve, (bin_min, bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
 
         bar_shift = 5*UP + 2*LEFT
         def update_bars():
@@ -407,29 +414,29 @@ class CramerHistogramUniform(ThreeDScene):
             errors, weights = self.counter.new_samples(x)
             hist.add_data(errors, weights)
             res = hist.bars.copy().shift(bar_shift_val.get_value()*bar_shift)
-            xvals = np.linspace(10, x, 400)
+            xvals = np.linspace(10, x, 800)
             yvals = np.interp(xvals, self.counter.xvals, self.counter.values)
             op = bar_shift_val.get_value()
-            plt = ax2.plot_line_graph(xvals/xvals[-1], -yvals, add_vertex_dots=False, stroke_width=6,
+            plt = ax2.plot_line_graph(xvals/xvals[-1], -yvals, add_vertex_dots=False, stroke_width=4,
                                       stroke_color=BLUE, stroke_opacity=op).set_z_index(10)
             return VGroup(res, plt['line_graph'])
 
         bars = always_redraw(update_bars)
 
-        self.add(axes.x_axis, counter_label, counter_value, normal_curve, bars)
+        self.add(axes.x_axis, counter_label, counter_value, normal_curve, area, bars, ticks, xlabels)
         self.add(ax2)
 
         rate_func=rate_func_log(n_max, n_max_end)
         self.play(
             tracker.animate(run_time=12, rate_func=rate_func).set_value(n_max_end),
-            # counter_value.animate(run_time=8, rate_func=rate_func).set_value(n_max_end),
 
             Succession(Wait(2),
                        AnimationGroup(
                            self.camera.phi_tracker.animate.set_value(70 * DEGREES), # view from above
                            self.camera.theta_tracker.animate.set_value(-60 * DEGREES),
                            bar_shift_val.animate.set_value(1),
-                           VGroup(axes, normal_curve, counter_label, ax2).animate.shift(bar_shift),
+                           VGroup(axes, normal_curve, area, counter_label, ax2).animate.shift(bar_shift),
+                           VGroup(ticks, xlabels).animate.shift(bar_shift).set_opacity(0),
                            rect1.animate.shift(bar_shift).set_fill(opacity=0.3)
                            # run_time=2.
                        )),

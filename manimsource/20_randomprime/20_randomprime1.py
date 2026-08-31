@@ -560,3 +560,4 @@ class PiPlot(Scene):
                   plt_line20.animate.shift(ax.c2p(0, 0.8 - 0.7) - origin))
 
         self.wait()
+
