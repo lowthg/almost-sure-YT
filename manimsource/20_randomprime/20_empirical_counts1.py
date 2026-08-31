@@ -9,6 +9,9 @@ from manim import *
 import sys
 sys.path.append('../../')
 import manimhelper as mh
+from common.wigner import *
+
+col_txt = ManimColor( r'#FFAC2B')
 
 def rate_func_log(x1, x2):
     """
@@ -153,7 +156,7 @@ class Histogram:
 
 
 class CramerCount:
-    def __init__(self, seed=1, n_max=1000, n_min = 1, nstep=100, uniform=False):
+    def __init__(self, seed=1, n_max=1000, n_min = 1, nstep=100, uniform=False, store=False):
         """One Cramér path, with no residue-class or Chebyshev weighting."""
         self.rng = rng = np.random.default_rng(seed)
         n = np.arange(1, n_max+1)
@@ -173,6 +176,11 @@ class CramerCount:
         self.mean0 = mean[-1]
         self.nstep = nstep
         self.uniform = uniform
+        self.values = self.xvals = None
+        if store:
+            self.values = self.count[::10]
+            self.xvals = n[::10]
+            assert len(self.values) == len(self.xvals)
 
     def new_samples(self, x):
         count = []
@@ -193,8 +201,13 @@ class CramerCount:
             weight_vec = xvec if self.uniform else np.log(xvec)
             self.count0 = count_vec[-1]
             self.mean0 = means[-1]
-            count.append(count_vec / np.sqrt(means))
+            count_norm = count_vec / np.sqrt(means)
+            count.append(count_norm)
             weights.append(weight_vec[1:] - weight_vec[:-1])
+            if self.xvals is not None:
+                self.xvals = np.concatenate((self.xvals, xvec[1:][5::10]))
+                self.values = np.concatenate((self.values, count_norm[5::10]))
+                assert len(self.values) == len(self.xvals)
 
         self.x0 = x
         return np.concatenate(count), np.concatenate(weights)
@@ -342,7 +355,7 @@ class NormalUniform(Scene):
 
 
 class CramerHistogramUniform(ThreeDScene):
-    counter = CramerCount(seed=1, n_min=1000, n_max=1_000_000, nstep=1000, uniform=True)
+    counter = CramerCount(seed=1, n_min=2, n_max=1_000_000, nstep=1000, uniform=True, store=True)
 
     def construct(self):
         xlen = 11.2
@@ -358,21 +371,29 @@ class CramerHistogramUniform(ThreeDScene):
             x_length=xlen, y_length=ylen, tips=False,
             axis_config={"include_numbers": False, "include_ticks": False},
         )
+        ax2 = Axes(x_range=[0,1], y_range=[bin_min,bin_max], x_length=10, y_length=xlen).rotate(PI/2).set_opacity(0)
+        rect0 = SurroundingRectangle(ax2, buff=0, stroke_width=0, stroke_opacity=0, fill_color=GREY,
+                                     fill_opacity=0.)
+        rect_txt = (Tex(r'\sf normalized error', color=col_txt, stroke_width=2, font_size=70)
+                    .move_to(ax2.c2p(0.5,bin_max*0.9)).set_opacity(0).rotate(90*DEGREES).shift(OUT*0.05))
+        rect1 = VGroup(rect0, rect_txt.set_z_index(5))
         # print('included', axes.x_axis.numbers_to_include)
         hist.bars.next_to(axes.c2p(bin_min, 0), UR, buff=0)
         axes.y_axis.set_opacity(0)
 
-        n_max = 10000
+        n_max = 1000
         tracker = ValueTracker(n_max)
         bar_shift_val = ValueTracker(0.)
-        counter_label = MathTex(r"n=").scale(0.8).rotate(90*DEGREES, RIGHT)
-        counter_label.move_to(axes.c2p(-2, 0.5))
+        counter_label = MathTex(r"n=", font_size=50, stroke_width=2).rotate(90*DEGREES, RIGHT)
+        counter_label[0][0].set_color(col_var)
+        counter_label.move_to(axes.c2p(-1.4, 0.2))
         counter_value = always_redraw(
-            lambda: Integer(round(tracker.get_value()), group_with_commas=True)
-            .scale(0.8).rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12)
+            lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True)
+            .rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12)
         )
 
         VGroup(axes, hist.bars).rotate(90*DEGREES, RIGHT)
+        VGroup(ax2, rect1).next_to(axes.x_axis, DOWN, buff=0)
         self.camera.set_phi(90*DEGREES)
 
         normal_curve = axes.plot(normal_density,
@@ -382,24 +403,25 @@ class CramerHistogramUniform(ThreeDScene):
 
         bar_shift = 5*UP + 2*LEFT
         def update_bars():
-            errors, weights = self.counter.new_samples(tracker.get_value())
+            x = tracker.get_value()
+            errors, weights = self.counter.new_samples(x)
             hist.add_data(errors, weights)
-            return hist.bars.copy().shift(bar_shift_val.get_value()*bar_shift)
+            res = hist.bars.copy().shift(bar_shift_val.get_value()*bar_shift)
+            xvals = np.linspace(10, x, 400)
+            yvals = np.interp(xvals, self.counter.xvals, self.counter.values)
+            op = bar_shift_val.get_value()
+            plt = ax2.plot_line_graph(xvals/xvals[-1], -yvals, add_vertex_dots=False, stroke_width=6,
+                                      stroke_color=BLUE, stroke_opacity=op).set_z_index(10)
+            return VGroup(res, plt['line_graph'])
 
-        # update_bars(hist.bars)
-        # hist.bars.add_updater(update_bars)
         bars = always_redraw(update_bars)
 
-        # errors, weights = self.counter.new_samples(10000)
-        # hist.add_data(errors, weights)
-
-        # counter_value.set_value(n_max_end)
-
         self.add(axes.x_axis, counter_label, counter_value, normal_curve, bars)
+        self.add(ax2)
 
         rate_func=rate_func_log(n_max, n_max_end)
         self.play(
-            tracker.animate(run_time=8, rate_func=rate_func).set_value(n_max_end),
+            tracker.animate(run_time=12, rate_func=rate_func).set_value(n_max_end),
             # counter_value.animate(run_time=8, rate_func=rate_func).set_value(n_max_end),
 
             Succession(Wait(2),
@@ -407,7 +429,8 @@ class CramerHistogramUniform(ThreeDScene):
                            self.camera.phi_tracker.animate.set_value(70 * DEGREES), # view from above
                            self.camera.theta_tracker.animate.set_value(-60 * DEGREES),
                            bar_shift_val.animate.set_value(1),
-                           VGroup(axes, normal_curve, counter_label).animate.shift(bar_shift)
+                           VGroup(axes, normal_curve, counter_label, ax2).animate.shift(bar_shift),
+                           rect1.animate.shift(bar_shift).set_fill(opacity=0.3)
                            # run_time=2.
                        )),
         )
