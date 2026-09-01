@@ -5,6 +5,7 @@ import os
 import numpy as np
 from scipy.special import expi
 from manim import *
+import primecountpy as primecount
 
 import sys
 
@@ -130,7 +131,7 @@ class Histogram:
         for i in range(len(self.bars)):
             x_center = (self.bin_edges[i] + self.bin_edges[i + 1]) / 2
             self.bars[i].move_to(x_center * x_scale * RIGHT)
-        self.bars.move_to(ORIGIN)
+        self.bars.next_to(RIGHT * bin_width * x_scale * (1 - rel_width)/2, UR, buff=0)
         self.bar_weights = np.zeros(self.bin_count+2)
         self.use_depth = use_depth
 
@@ -214,79 +215,78 @@ class CramerCount:
         return np.concatenate(count), np.concatenate(weights)
 
 
-class CramerPrimesHistogramLog(Scene):
-    animation_seconds = 14
-    y_max = 0.7
-    log_weighting = True
-    bin_count = 15
-    n_min = 1000
-    n_max = 10_000
-    n_max_end = 10_000_000_000_000
-    bias = False
-    bin_min = -3.
-    bin_max = 3.
-    counter = CramerCount(seed=1, n_min=1000, n_max=1_000_000, nstep=1000)
+class EmpiricalCount:
+    def __init__(self, n_max=1000, n_min = 1, nstep=100):
+        """One Cramér path, with no residue-class or Chebyshev weighting."""
+        is_prime = np.ones(n_max + 1, dtype=bool)
+        is_prime[:2] = False
+        is_prime[4::2] = False
 
-    def normalized_errors(self) -> np.ndarray:
-        raise NotImplementedError
+        for p in range(3, int(np.sqrt(n_max)) + 1, 2):
+            if is_prime[p]:
+                is_prime[p * p:: 2 * p] = False
 
-    def construct(self) -> None:
-        xlen = 11.2
-        ylen = 5.5
-        x_scale = xlen / (self.bin_max - self.bin_min)
-        hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
-                         y_scale=ylen / self.y_max)
+        count = np.cumsum(is_prime, dtype=np.int64)[1:]
 
-        y_tick = 0.5
+        n = np.arange(1, n_max+1)
+        x = n[1:]
 
-        axes = Axes(x_range=[self.bin_min, self.bin_max, 1], y_range=[0, self.y_max, y_tick],
-            x_length=xlen, y_length=ylen, tips=False,
-            axis_config={"include_numbers": True, "font_size": 35},
-        ).shift(DOWN * 0.45)
+        li_x = li(x)
+        mean = li(x) - li(np.sqrt(x))/2 - li(np.cbrt(x))/3
 
-        hist.bars.next_to(axes.c2p(self.bin_min, 0), UR, buff=0)
+        mean = np.concatenate([[0], mean])
+        errors = (count - mean) / np.concatenate([[1], np.sqrt(li_x)])
 
-        x_label = axes.get_x_axis_label(MathTex(r"\text{normalized error}"))
-        y_label = axes.get_y_axis_label(MathTex(r"\text{density}"))
+        self.count = errors
+        self.weights = x_sampling_weights(True, 1, n_max)
+        self.x0 = float(n_min)
+        self.n_max = n_max
+        self.nstep = nstep
 
-        tracker = ValueTracker(self.n_max)
-        counter_label = MathTex(r"n_{\max}=").scale(0.8)
-        counter_value = Integer(self.n_max, group_with_commas=True).scale(0.8)
-        counter_obj = VGroup(counter_label, counter_value).arrange(RIGHT, buff=0.12)
-        counter_obj.next_to(axes, UP, buff=0.12).align_to(axes, LEFT)
+    def initial_samples(self, x_min):
+        n_min = int(math.ceil(x_min))
+        assert 1 <= n_min < self.n_max
+        return self.count[n_min-1:], self.weights[n_min-1:], np.arange(n_min, self.n_max+1)
 
-        def update_counter(number: Integer) -> None:
-            number.set_value(int(round(tracker.get_value())))
-            number.next_to(counter_label, RIGHT, buff=0.12)
+    def new_samples(self, x, do_xvals=False):
+        count = []
+        weights = []
+        xvals = []
+        if self.x0 < self.n_max:
+            n_max = min(int(round(x)) - 1, len(self.count))
+            n0 = int(round(self.x0)) - 1
+            count.append(self.count[n0:n_max])
+            weights.append(self.weights[n0:n_max])
+            assert n_max <= len(self.count)
+            if do_xvals: xvals.append(np.arange(n0+1, n_max+1))
+            print('len', len(xvals[0]), len(weights[0]), len(count[0]))
 
-        counter_value.add_updater(update_counter)
+        # assert self.n_max >= x
+        if self.n_max < x:
+            x0 = max(self.x0, self.n_max)
+            xvec0 = np.exp(np.linspace(np.log(x0), np.log(x), self.nstep+1))
+            xvec = xvec0[1:]
+            livec = li(xvec)
+            mean = livec - li(np.sqrt(xvec))/2 - li(np.cbrt(xvec))/3
 
-        def update_bars(group: VGroup) -> None:
-            errors, weights = self.counter.new_samples(tracker.get_value())
-            hist.add_data(errors, weights)
+            count_vec = np.fromiter((primecount.prime_pi(int(x)) for x in xvec), dtype=np.int64)
 
-        hist.bars.add_updater(update_bars)
+            errors = mean - count_vec
 
-        normal_curve = axes.plot(normal_density,
-            x_range=[self.bin_min, self.bin_max, 0.02],
-            color=ORANGE, stroke_width=4)
+            weight_vec = np.log(xvec0)
 
-        normal_key = VGroup(
-            Line(LEFT * 0.17, RIGHT * 0.17, color=ORANGE, stroke_width=4),
-            MathTex(r"N(0,1)", font_size=26),
-        ).arrange(RIGHT, buff=0.12)
-        legend = VGroup(normal_key).arrange(RIGHT, buff=0.35)
-        legend.next_to(axes, UP, buff=0.12).align_to(axes, RIGHT)
+            count_norm = errors / np.sqrt(livec)
+            count.append(count_norm)
+            weights.append(weight_vec[1:] - weight_vec[:-1])
+            if do_xvals: xvals.append(xvec)
+            print('len', len(xvec), len(weight_vec)-1, len(count_norm))
 
-        self.add(axes.x_axis, x_label, y_label, hist.bars, normal_curve, counter_obj,legend)
+        self.x0 = x
 
-        self.play(
-            tracker.animate.set_value(self.n_max_end),
-            run_time=self.animation_seconds,
-            rate_func=rate_func_log(self.n_max, self.n_max_end),
-        )
-        print(hist.bar_weights/hist.bar_weights.sum())
-        self.wait(1)
+        if do_xvals:
+            return np.concatenate(count), np.concatenate(weights), np.concatenate(xvals)
+        return np.concatenate(count), np.concatenate(weights)
+
 
 class NormalUniform(Scene):
     bgcol = GREY
@@ -314,7 +314,7 @@ class NormalUniform(Scene):
         axes.y_axis.set_opacity(0)
         box = SurroundingRectangle(axes, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
                                    buff=0.2, corner_radius=0.15)
-        hist.bars.next_to(axes.c2p(bin_min, 0), UR, buff=0).set_z_index(1)
+        hist.bars.shift(axes.c2p(bin_min, 0)).set_z_index(1)
         hist.set_data((hist.bin_edges[1:] + hist.bin_edges[:-1])/2, np.ones(hist.bin_count))
 
         normal_curve = axes.plot(normal_density,
@@ -354,7 +354,6 @@ class NormalUniform(Scene):
         self.play(sample_tracker.animate.set_value(1500), run_time=15, rate_func=linear)
 
 
-
 class CramerHistogramUniform(ThreeDScene):
     counter = CramerCount(seed=1, n_min=2, n_max=1_000_000, nstep=1000, uniform=True, store=True)
 
@@ -383,8 +382,7 @@ class CramerHistogramUniform(ThreeDScene):
         rect_txt = (Tex(r'\sf normalized error', color=col_txt, stroke_width=2, font_size=70)
                     .move_to(ax2.c2p(0.5,bin_max*0.9)).set_opacity(0).rotate(90*DEGREES).shift(OUT*0.05))
         rect1 = VGroup(rect0, rect_txt.set_z_index(5))
-        # print('included', axes.x_axis.numbers_to_include)
-        hist.bars.next_to(axes.c2p(bin_min, 0), UR, buff=0)
+        hist.bars.shift(axes.c2p(bin_min, 0))
         axes.y_axis.set_opacity(0)
 
         n_max = 1000
@@ -405,7 +403,6 @@ class CramerHistogramUniform(ThreeDScene):
         normal_curve = axes.plot(normal_density,
             x_range=[bin_min, bin_max, 0.02],
             color=ORANGE, stroke_width=4).set_z_index(4)
-        # normal_curve.set_fill(color=ORANGE, opacity=0.2)
         area = axes.get_area(normal_curve, (bin_min, bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
 
         bar_shift = 5*UP + 2*LEFT
@@ -441,28 +438,135 @@ class CramerHistogramUniform(ThreeDScene):
                            # run_time=2.
                        )),
         )
-        print(hist.bar_weights/hist.bar_weights.sum())
+        # self.remove(bars)
+        # bars = update_bars()
+        self.play(
+            self.camera.phi_tracker.animate.set_value(90 * DEGREES),  # view from above
+            self.camera.theta_tracker.animate.set_value(-90 * DEGREES),
+            VGroup(axes, normal_curve, area, counter_label, bars[0]).animate.shift(-bar_shift),
+            VGroup(rect1, bars[1]).animate.shift(-bar_shift).set_opacity(0),
+            VGroup(ticks, xlabels).animate.shift(-bar_shift).set_opacity(1),
+        )
         self.wait(1)
 
 
-class EmpiricalPrimesHistogramLog(CramerPrimesHistogramLog):
-    log_weighting = True
-    bin_width = 0.05
-    n_min = 1000
-    n_max = 10_000
-    n_max_end = 1_000_000
-    bias = True
+class CramerHistogramLog(Scene):
+    animation_seconds = 14
+    y_max = 0.7
+    bin_count = 11
+    n_max = 1500
+    n_max_end = 100_000_000_000_000
+    bin_min = -2.5
+    bin_max = 2.5
+    counter = CramerCount(seed=1, n_min=500, n_max=1_000_000, nstep=500)
+    rel_width = 0.9
 
     def normalized_errors(self) -> np.ndarray:
-        count = empirical_prime_counting(self.n_max_end)
-        x = np.arange(self.n_min, self.n_max_end + 1, dtype=float)
-        li_x = li(x)
-        errors = (
-                count[self.n_min:]
-                - li_x
-                + li(np.sqrt(x)) / 2
-                + li(np.cbrt(x)) / 3
-        ) / np.sqrt(li(x))
+        raise NotImplementedError
 
-        return errors
+    def construct(self) -> None:
+        xlen = 12
+        ylen = 5.5
+        x_scale = xlen / (self.bin_max - self.bin_min)
+        hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
+                         y_scale=ylen / self.y_max, rel_width=self.rel_width)
 
+        axes = Axes(x_range=[self.bin_min, self.bin_max], y_range=[0, self.y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False},
+        ).shift(DOWN * 0.45).set_z_index(5)
+        tick = Line(ORIGIN, DOWN*0.1, stroke_width=4, stroke_color=WHITE).set_z_index(5)
+        ticks = VGroup(*[tick.copy().shift(axes.c2p(i)) for i in [-2, -1, 0, 1, 2]]).set_z_index(5)
+        xlabels = VGroup(*[MathTex('{}'.format(i), font_size=40)[0] for i in [-2, -1, 0, 1, 2]])
+        for t, l in zip(ticks[:], xlabels): mh.align_sub(l, l[-1], t, DOWN, buff=0.1)
+
+        hist.bars.shift(axes.c2p(self.bin_min, 0))
+
+        tracker = ValueTracker(self.n_max)
+        counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
+        counter_label[0][0].set_color(col_var)
+        counter_label.move_to(axes.c2p(0.8 * self.bin_min, 5/7 * self.y_max))
+        counter_value = always_redraw(
+            lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
+            .next_to(counter_label[0][-1], RIGHT, buff=0.15).set_z_index(10)
+        )
+
+        def update_bars(group: VGroup) -> None:
+            errors, weights = self.counter.new_samples(tracker.get_value())
+            hist.add_data(errors, weights)
+            # print('weights', hist.bar_weights)
+
+        # hist.bars.set_z_index(6)
+
+        hist.bars.add_updater(update_bars)
+
+        normal_curve = axes.plot(normal_density,
+            x_range=[self.bin_min, self.bin_max, 0.02],
+            color=ORANGE, stroke_width=4).set_z_index(4)
+        area = axes.get_area(normal_curve, (self.bin_min, self.bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
+
+        self.add(axes.x_axis, ticks, xlabels, hist.bars, normal_curve, area, counter_label, counter_value)
+
+        self.play(
+            tracker.animate.set_value(self.n_max_end),
+            run_time=self.animation_seconds,
+            rate_func=rate_func_log(self.n_max, self.n_max_end),
+        )
+        # print(hist.bar_weights/hist.bar_weights.sum())
+        self.wait(1)
+
+
+class EmpiricalHistogramLog(CramerHistogramLog):
+    animation_seconds = 14
+    y_max = 4.6
+    bin_count = 31
+    n_max = 1500
+    n_max_end = 100_000_000
+    bin_min = -1.5
+    bin_max = 1.5
+    rel_width = 0.8
+    counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=500)
+
+class EmpiricalVarPlot(Scene):
+    def construct(self):
+        axes = Axes(x_range=[0, 1], y_range=[0, 1.1],
+            x_length=12, y_length=6, tips=False,
+            axis_config={"include_ticks": False, "stroke_width": 4},
+        ).set_z_index(5)
+
+        line1 = DashedLine(axes.c2p(0,1), axes.c2p(1,1), stroke_color=GREEN, stroke_width=6).set_z_index(2)
+
+        counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=100_000)
+
+        samples, weights, xvals = counter.new_samples(1e9, do_xvals=True)
+        cumweights = np.cumsum(weights)
+        samples_exp2 = np.cumsum(samples * samples * weights) / cumweights
+
+        xvals_log = np.log(xvals)
+        xplot_1 = np.linspace(np.log(1000), np.log(1e6), 1000)
+        xplot_2 = np.linspace(np.log(1e6), np.log(1e9), 1000)[1:]
+        xplot = np.concatenate([xplot_1, xplot_2])
+        yplot = np.interp(xplot, xvals_log, samples_exp2)
+        xplot_scale = (xplot - xplot_1[0]) / (xplot_1[-1] - xplot_1[0])
+
+        yplotlog = np.log(yplot * 1e5) / np.log(1e5)
+
+        plt1 = axes.plot_line_graph(xplot_scale, yplot, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
+        plt2 = axes.plot_line_graph(xplot_scale, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
+
+        print('yvals', yplot[0], yplot[-1])
+
+        self.add(axes, line1)
+
+        self.play(Create(plt1, rate_func=linear))
+        self.wait(0.1)
+        self.play(mh.rtransform(plt1, plt2))
+
+        xplot_scale2 = (xplot - xplot[0]) / (xplot[-1] - xplot[0])
+        plt4 = axes.plot_line_graph(xplot_scale2, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
+
+        self.play(mh.rtransform(plt2, plt4))
+
+
+
+        self.wait()
