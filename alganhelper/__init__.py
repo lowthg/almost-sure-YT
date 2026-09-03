@@ -55,6 +55,8 @@ def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, s
 def curve_surface_loc(pts, normals=None, tangents=None, resolution=8, width=0.03, closed=True):
     if normals is None:
         normals = pts
+    elif normals.shape == (3,):
+        normals = normals.unsqueeze(0).expand(pts.shape[0],3).clone()
     if tangents is None:
         if closed:
             tangents = torch.roll(pts, shifts=1, dims=0) - torch.roll(pts, shifts=-1, dims=0)
