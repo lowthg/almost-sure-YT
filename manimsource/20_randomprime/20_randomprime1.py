@@ -17,21 +17,6 @@ col_trig = PURPLE_A#*0.5+WHITE*0.5
 col_txt = ManimColor( r'#FFAC2B')
 
 
-def rate_func_quad(a=0., b=0.):
-    assert a + b <= 1.
-
-    def f(t):
-        if t < a:
-            res = t * t / (2 - a - b) / a
-        elif t > 1 - b:
-            res = 1. - (1 - t) * (1 - t) / (2 - a - b) / b
-        else:
-            res = (a + (t - a) * 2) / (2 - a - b)
-        return res
-
-    return f
-
-
 class Eratosthenes(Scene):
     def construct(self):
         n_rows = 5
@@ -357,7 +342,7 @@ class PiPlot(Scene):
         eps = 0.1
 
         self.play(mh.rtransform(plt6, plt7, ticks2, ticks3[:-2],
-                                ticksy2[:], ticksy3[:-2], run_time=3., rate_func=rate_func_quad(0.2, 0.5)))
+                                ticksy2[:], ticksy3[:-2], run_time=3., rate_func=mh.rate_func_quad(0.2, 0.5)))
 
         xvals1 = np.linspace(0., 60., 1000)
         yvals1 = xvals1
@@ -408,7 +393,7 @@ class PiPlot(Scene):
 
         self.play(mh.rtransform(plt8, plt9, plt_line5, plt_line6, plt_line7, plt_line8, plt_line9, plt_line10,
                                 ticks3[-4:], ticks4[-6:-2], ticksy3[-4:], ticksy4[:-2],
-                                run_time=3., rate_func=rate_func_quad(0.2, 0.2)))
+                                run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
         self.wait(0.1)
 
         i = np.searchsorted(x, 10050., side='right')
@@ -457,7 +442,7 @@ class PiPlot(Scene):
 
         self.play(mh.rtransform(plt10, plt11, plt_line11, plt_line12, plt_line13, plt_line14, plt_line15, plt_line16,
                                 ticks4[1:], ticks5[:-2], ticksy4[1:], ticksy5[:],
-                                run_time=3., rate_func=rate_func_quad(0.2, 0.2)))
+                                run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
 
         self.wait(0.1)
         self.play(FadeOut(plt_line12, plt_line16),FadeOut(plt11), FadeIn(plt12))
@@ -511,7 +496,7 @@ class PiPlot(Scene):
         self.remove(plt14)
         self.add(plt15)
         self.play(mh.rtransform(plt15, plt17, ticks5[2:], ticks6[:-2], ticksy7[:], ticksy8[1:-1],
-                                run_time=3., rate_func = rate_func_quad(0.2, 0.2)))
+                                run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
 
         scalex7 = 1/1e6
         scaley8 = 1.4/100
@@ -541,7 +526,7 @@ class PiPlot(Scene):
         self.add(plt18)
 
         self.play(mh.rtransform(plt18, plt19, ticks6[2:], ticks7[:], ticksy8, ticksy9[1:],
-                                run_time=3., rate_func = rate_func_quad(0.2, 0.2)))
+                                run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
 
 
         scaley9 = 5/1000
