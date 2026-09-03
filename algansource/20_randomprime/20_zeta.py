@@ -121,10 +121,15 @@ def zeta_surf_setup(xrange=(-16, 16), yrange=(-16, 16), shift=1., clip=False, eq
     eq2 = ManimMob(mn.MathTex(r'y')).move_to(origin + ymax * 1.4 * yscale + zscale * 0.3)
     eq2.orbit_around_point(eq2.get_center(), -90, axis=yscale)
     eq2.orbit_around_point(eq2.get_center(), -45, axis=zscale)
-    eq3 = ManimMob(mn.MathTex(eq3_txt)).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
+    pos3 = origin+zmax * zscale * 1.4 + xscale*5+yscale*2.7
+    eq3_= mn.MathTex(eq3_txt)
+    eq3_[0][0].set_color(col_WVD)
+    eq3_[0][2::3].set_color(col_x)
+    eq3_[0][4].set_color(col_i)
+    eq3 = ManimMob(eq3_).move_to(pos3)
     eq3.orbit_around_point(eq3.get_center(), -90, axis=yscale)
     eq3.orbit_around_point(eq3.get_center(), -45, axis=zscale)
-    eq4 = ManimMob(mn.MathTex(eq3_txt, stroke_width=10, stroke_color=mn.BLACK)).move_to(origin+zmax * zscale * 1.4 + xscale*4+yscale*3)
+    eq4 = ManimMob(mn.MathTex(eq3_txt, stroke_width=12, stroke_color=mn.BLACK)).move_to(pos3)
     eq4.move(IN * 0.01)
     eq4.orbit_around_point(eq3.get_center(), -90, axis=yscale)
     eq4.orbit_around_point(eq3.get_center(), -45, axis=zscale)
@@ -167,37 +172,42 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, **kwargs):
     start = ((1 - xcoord) / (1 - xmin)).clamp(0, 1)
     starty = (torch.abs(ycoord) / ymax).clamp(0, 1)
 
-    if anim == 1:
-        ylen=2.5
-        xlen=8 * xmax*1.05/(xmax*1.05 - xmin)
-        ymax3 = ylen/zscale[2]
-        ax3 = mn.Axes(x_range=[0, xmax*1.05], y_range=[0, ymax3], x_length=xlen,
-                      y_length=ylen,
-                      axis_config={'color': mn.WHITE, 'stroke_width': 8, 'include_ticks': False,
-                                   "tip_width": 0.3 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                   "tip_height": 0.3 * mn.DEFAULT_ARROW_TIP_LENGTH,
-                                   },
-                      )
-        yaxis = mn.NumberLine(length=8*1.025, stroke_width=8, include_ticks=False, include_tip=True,
-                              tip_width=0.3 * mn.DEFAULT_ARROW_TIP_LENGTH, tip_height=0.3 * mn.DEFAULT_ARROW_TIP_LENGTH)
-        yaxis.move_to(ax3.c2p(0,0)).shift(4*0.05*mn.RIGHT)
-        xvals = torch.linspace(1.354, xmax, 600)
-        yvals = torch.special.zeta(xvals, 1.) + 0.05
-        xvals2 = torch.linspace(1.2, xmax, 600)
-        yvals2 = torch.special.zeta(xvals2, 1.) + 0.05
-        xticks = mh.get_xticks(ax3, [0,1, 5, 10, 15], length=0.08, buff=0.12, font_size=20, label_color=col_num)
-        yticks = mh.get_yticks(ax3, [0,1,2,3], length=0.08, buff=0.12, font_size=20, label_color=col_num)
-        dashed = mn.DashedLine(ax3.c2p(1,0), ax3.c2p(1,ymax3), color=mn.GREY, stroke_width=6)
-        dashed2 = mn.DashedLine(ax3.c2p(0,1), ax3.c2p(xmax*1.,1), color=mn.GREY, stroke_width=6)
-        eqx = mn.MathTex(r'x', font_size=26, color=col_x).next_to(ax3.x_axis.get_right(), mn.RIGHT, buff=0.1)
-        eqy = mn.MathTex(r'y', font_size=26, color=col_x).next_to(yaxis.get_right(), mn.RIGHT, buff=0.1)
-        eqz = mn.MathTex(r'\zeta(x)', font_size=30, stroke_width=1.5).move_to(ax3.c2p(3., 2.5))
-        gp2 = VGroup(yaxis, eqy)
-        gp2.rotate(PI/2, mn.DOWN, about_point=ax3.c2p(0,0,0))
-        eqz[0][0].set_color(col_WVD)
-        eqz[0][2].set_color(col_x)
+    ylen=2.5
+    xlen=8 * xmax*1.05/(xmax*1.05 - xmin)
+    ymax3 = ylen/zscale[2]
+    ax3 = mn.Axes(x_range=[0, xmax*1.05], y_range=[0, ymax3], x_length=xlen,
+                  y_length=ylen,
+                  axis_config={'color': mn.WHITE, 'stroke_width': 8, 'include_ticks': False,
+                               "tip_width": 0.3 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.3 * mn.DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  )
+    yaxis = mn.NumberLine(length=8*1.025, stroke_width=8, include_ticks=False, include_tip=True,
+                          tip_width=0.3 * mn.DEFAULT_ARROW_TIP_LENGTH, tip_height=0.3 * mn.DEFAULT_ARROW_TIP_LENGTH)
+    xaxis = yaxis.copy()
+    VGroup(xaxis, yaxis).move_to(ax3.c2p(0,0)).shift(4*0.05*mn.RIGHT)
+    xvals = torch.linspace(1.354, xmax, 600)
+    yvals = torch.special.zeta(xvals, 1.) + 0.05
+    xvals2 = torch.linspace(1.2, xmax, 600)
+    yvals2 = torch.special.zeta(xvals2, 1.) + 0.05
+    xticks = mh.get_xticks(ax3, [0,1, 5, 10, 15], length=0.08, buff=0.12, font_size=20, label_color=col_num)
+    yticks = mh.get_yticks(ax3, [0,1,2,3], length=0.08, buff=0.12, font_size=20, label_color=col_num)
+    dashed = mn.DashedLine(ax3.c2p(1,0), ax3.c2p(1,ymax3), color=mn.GREY, stroke_width=6)
+    dashed2 = mn.DashedLine(ax3.c2p(0,1), ax3.c2p(xmax*1.,1), color=mn.GREY, stroke_width=6)
+    eqx = mn.MathTex(r'x', font_size=26, color=col_x).next_to(ax3.x_axis.get_right(), mn.RIGHT, buff=0.1)
+    eqy = mn.MathTex(r'y', font_size=26, color=col_x).next_to(yaxis.get_right(), mn.RIGHT, buff=0.1)
+    eqz = mn.MathTex(r'\zeta(x)', font_size=30, stroke_width=1.5).move_to(ax3.c2p(3., 2.5))
+    gp2 = VGroup(yaxis, eqy)
+    gp2.rotate(PI/2, mn.DOWN, about_point=ax3.c2p(0,0,0))
+    eqz[0][0].set_color(col_WVD)
+    eqz[0][2].set_color(col_x)
 
-        gp = mn.VGroup(ax3, xticks, yticks, eqx, dashed, dashed2, eqz, gp2)
+    gp = mn.VGroup(ax3, xticks, yticks, eqx, dashed, dashed2, eqz, xaxis, gp2)
+    gp.rotate(90 * mn.DEGREES, mn.UP)
+    gp.rotate(90 * mn.DEGREES, mn.RIGHT)
+    gp.shift(origin0 - ax3.c2p(0, 0, 0))
+
+    if anim == 1:
         pts = xvals.unsqueeze(-1) * right + yvals.unsqueeze(-1) * zscale + origin
         pts2 = xvals2.unsqueeze(-1) * right + yvals2.unsqueeze(-1) * zscale + origin
         crv = ah.curve_surface(pts, width=0.04, normals=up, closed=False, color=zeta_col(2.))
@@ -211,10 +221,7 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, **kwargs):
             cam.move(shift)
 
 
-        gp.rotate(90*mn.DEGREES, mn.UP)
-        gp.rotate(90*mn.DEGREES, mn.RIGHT)
-        gp.shift(origin0-ax3.c2p(0,0,0))
-        ax3_ = ManimMob(gp[:-1])
+        ax3_ = ManimMob(gp[:-2])
         with Off():
             ax3_.spawn()
             crv.spawn()
@@ -232,7 +239,6 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, **kwargs):
         with Off():
             mob1.spawn()
         with Sync():
-            # ManimMob(ax3.x_axis.copy().rotate(PI/2, mn.OUT, origin0)).spawn()
             with Sync(run_time=2):
                 crv2.despawn()
                 for i in range(4,7):
@@ -244,28 +250,31 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, **kwargs):
                     with frame.context:
                         p.set_non_recursive(color=col3)
 
-        # with Off():
-        #     p.set_non_recursive(color=col2)
-
-        # with Sync():
-        #     mob1.spawn()
-
-    ax1 = ManimMob(ax1)
-
     if anim >= 2:
+        gp = mn.VGroup(ax3.y_axis, xticks, yticks, eqx, yaxis, eqy)
+        ax3_ = ManimMob(gp)
         with Off():
-            cam.set_distance_to_screen(12)
+            cam.set_distance_to_screen(100)
             cam.orbit_around_point(ORIGIN, -120, RIGHT)
             cam.orbit_around_point(ORIGIN, 45, OUT)
-            ax2.spawn()
+            ax3_.spawn()
             mob1.spawn()
-            eqs.spawn()
+            eqs[2:].spawn()
 
     if anim == 2:
+        xax = ManimMob(xaxis)
+        xaxis1 = ax3.x_axis
+        xaxis1_ = ManimMob(xaxis1)
+        with Off():
+            xaxis1_.spawn()
+        rate_func = rate_funcs.smooth
+        run_time=2.
+
         with Sync():
-            ax2.submobjects[1].become(ax1.submobjects[1])
+            with Seq(rate_func=rate_func, run_time=run_time):
+                xaxis1_.become(xax)
             with Seq():
-                for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=1., rate_func=mh.rate_func_quad(0.3,0.)):
+                for frame in ah.FrameStepper(fps=quality.frames_per_second, rate_func=rate_func, run_time=run_time):
                     col2 = col.clone()
                     s = frame.u
                     col2[start.gt(s)] = 0
@@ -282,4 +291,4 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 6
 
-    zeta_plot(quality=HD, bgcol=BLACK, anim=1)
+    zeta_plot(quality=HD, bgcol=BLACK, anim=2)
