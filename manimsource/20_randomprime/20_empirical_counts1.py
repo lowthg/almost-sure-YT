@@ -161,7 +161,24 @@ class Histogram:
 class CramerCount:
     def __init__(self, seed=1, n_max=1000, n_min = 1, nstep=100, uniform=False, store=False):
         """One Cramér path, with no residue-class or Chebyshev weighting."""
-        self.rng = rng = np.random.default_rng(seed)
+        self.seed = seed
+        self.rng = None
+        self.count = None
+        self.weights = None
+        self.count0 = None
+        self.mean0 = None
+        self.store = store
+
+        self.x0 = float(n_min)
+        self.n_max = n_max
+        self.nstep = nstep
+        self.uniform = uniform
+        self.values = self.xvals = None
+
+    def init(self):
+        self.rng = rng = np.random.default_rng(self.seed)
+        n_max = self.n_max
+        uniform = self.uniform
         n = np.arange(1, n_max+1)
 
         probabilities = np.zeros(n_max, dtype=float)
@@ -173,20 +190,12 @@ class CramerCount:
         mean = np.cumsum(probabilities)
         self.count = (count - mean) / np.sqrt(mean.clip(1))
         self.weights = x_sampling_weights(not uniform, 1, n_max)
-        self.x0 = float(n_min)
-        self.n_max = n_max
         self.count0 = count[-1] - mean[-1]
         self.mean0 = mean[-1]
-        self.nstep = nstep
-        self.uniform = uniform
-        self.values = self.xvals = None
-        if store:
+        if self.store:
             self.values = self.count[::10]
             self.xvals = n[::10]
             assert len(self.values) == len(self.xvals)
-
-    def init(self):
-        pass
 
     def new_samples(self, x):
         count = []
@@ -220,13 +229,14 @@ class CramerCount:
 
 
 class EmpiricalCount:
-    def __init__(self, n_max=1000, n_min = 2, nstep=100, new_norm=False):
+    def __init__(self, n_max=1000, n_min = 2, nstep=100, new_norm=False, offset=True):
         self.count = None
         self.weights = None
         self.x0 = float(n_min-1)
         self.n_max = n_max
         self.nstep = nstep
         self.new_norm = new_norm
+        self.offset = offset
 
     def init(self):
         n_max = self.n_max
@@ -244,14 +254,16 @@ class EmpiricalCount:
         x = n[1:]
 
         li_x = li(x)
-        mean = li(x) - li(np.sqrt(x))/2 - li(np.cbrt(x))/3
+        mean = li_x.copy()
+        if self.new_norm:
+            if self.offset:
+                mean += np.sqrt(x) / np.log(x) - li(np.sqrt(x))/2 - li(np.cbrt(x))/3
+        else:
+            mean += - li(np.sqrt(x))/2 - li(np.cbrt(x))/3
 
         mean = np.concatenate([[0], mean])
-        # norm = np.log(x) / np.sqrt(x) if new_norm else 1. / np.sqrt(li_x)
-        norm = 2 / li(np.sqrt(x)) if self.new_norm else 1. / np.sqrt(li_x)
+        norm = np.log(x) / np.sqrt(x) if self.new_norm else 1. / np.sqrt(li_x)
         errors = (count - mean) * np.concatenate([[1], norm])
-        if self.new_norm:
-            errors -= 1
         self.count = errors
         self.weights = x_sampling_weights(True, 1, n_max)
         print('len count', len(self.count))
@@ -265,11 +277,11 @@ class EmpiricalCount:
         count = []
         weights = []
         xvals = []
-        print('new_samples:', self.x0, self.n_max, x)
+        # print('new_samples:', self.x0, self.n_max, x)
         if self.x0 < self.n_max:
             n_max = min(int(round(x)), len(self.count))
             n0 = int(round(self.x0))
-            print(np.array([n0+1, n_max]))
+            # print(np.array([n0+1, n_max]))
             count.append(self.count[n0:n_max])
             weights.append(self.weights[n0:n_max])
             assert n_max <= len(self.count)
@@ -281,9 +293,14 @@ class EmpiricalCount:
             x0 = max(self.x0, self.n_max)
             xvec0 = np.exp(np.linspace(np.log(x0), np.log(x), self.nstep+1))
             xvec = xvec0[1:]
-            print(xvec)
+            # print(xvec)
             livec = li(xvec)
-            mean = livec - li(np.sqrt(xvec))/2 - li(np.cbrt(xvec))/3
+            mean = livec.copy()
+            if self.new_norm:
+                if self.offset:
+                    mean += np.sqrt(xvec) / np.log(xvec) - li(np.sqrt(xvec))/2 - li(np.cbrt(xvec))/3
+            else:
+                mean += -li(np.sqrt(xvec))/2 - li(np.cbrt(xvec))/3
 
             count_vec = np.fromiter((primecount.prime_pi(int(x)) for x in xvec), dtype=np.int64)
 
@@ -294,8 +311,6 @@ class EmpiricalCount:
             norm = np.log(xvec) / np.sqrt(xvec) if self.new_norm else 1. / np.sqrt(livec)
 
             count_norm = errors * norm
-            if self.new_norm:
-                count_norm -= 1
             count.append(count_norm)
             weights.append(weight_vec[1:] - weight_vec[:-1])
             if do_xvals: xvals.append(xvec)
@@ -526,8 +541,6 @@ class CramerHistogramLog(Scene):
     def construct(self) -> None:
         xlen = self.xlen
         ylen = self.ylen
-        # hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
-        #                  y_scale=ylen / self.y_max, rel_width=self.rel_width)
 
         axes = Axes(x_range=[self.bin_min, self.bin_max], y_range=[0, self.y_max],
             x_length=xlen, y_length=ylen, tips=False,
@@ -538,37 +551,13 @@ class CramerHistogramLog(Scene):
         xlabels = VGroup(*[MathTex('{}'.format(i), font_size=40)[0] for i in [-2, -1, 0, 1, 2]])
         for t, l in zip(ticks[:], xlabels): mh.align_sub(l, l[-1], t, DOWN, buff=0.1)
 
-
-        # hist.bars.shift(axes.c2p(self.bin_min, 0))
-
-        # tracker = ValueTracker(self.n_max)
-        # counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
-        # counter_label[0][0].set_color(col_var)
-        # counter_label.move_to(axes.c2p(0.8 * self.bin_min, 5/7 * self.y_max))
-        # counter_value = always_redraw(
-        #     lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
-        #     .next_to(counter_label[0][-1], RIGHT, buff=0.15).set_z_index(10)
-        # )
-
-        # def update_bars(group: VGroup) -> None:
-        #     errors, weights = self.counter.new_samples(tracker.get_value())
-        #     hist.add_data(errors, weights)
-        #     # print('weights', hist.bar_weights)
-
-        # hist.bars.set_z_index(6)
-
-        # hist.bars.add_updater(update_bars)
-
         normal_curve = axes.plot(normal_density,
             x_range=[self.bin_min, self.bin_max, 0.02],
             color=ORANGE, stroke_width=4).set_z_index(4)
         area = axes.get_area(normal_curve, (self.bin_min, self.bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
 
         self.add(axes.x_axis, ticks, xlabels, normal_curve, area)
-
         self.do_histogram(axes)
-
-        # print(hist.bar_weights/hist.bar_weights.sum())
         self.wait(1)
 
 
@@ -716,13 +705,12 @@ class EmpiricalHistogramNew(CramerHistogramLog):
     bin_min = -2.1
     bin_count = 21
     y_max = 2.
-    n_max = 1_000_000
-    n_max_end = 10_000_000_000
-    # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=500, new_norm=True)
-    counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
-    # animation_seconds = 14
-
-    animation_seconds = 1
+    n_max = 700_000
+    n_max_end = 100_000_000_000
+    counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=500, new_norm=True, offset=True)
+    # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
+    animation_seconds = 14
+    # animation_seconds = 1
 
 
     def construct(self):
@@ -788,3 +776,13 @@ class EmpiricalHistogramNew(CramerHistogramLog):
         self.wait(0.1)
         self.do_histogram(axes)
         self.wait()
+
+class EmpiricalHistogramNew2(EmpiricalHistogramNew):
+    n_max = 700_000
+    n_max_end = 100_000_000_000
+    counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=500, new_norm=True, offset=False)
+    # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
+    animation_seconds = 14
+    # animation_seconds = 1
+
+    print((li(np.sqrt(1e9))/2+li(np.cbrt(1e9))/3)/np.sqrt(1e9)*np.log(1e9)-1)
