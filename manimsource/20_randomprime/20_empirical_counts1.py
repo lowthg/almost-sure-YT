@@ -532,9 +532,56 @@ class EmpiricalVarPlot(Scene):
         axes = Axes(x_range=[0, 1], y_range=[0, 1.1],
             x_length=12, y_length=6, tips=False,
             axis_config={"include_ticks": False, "stroke_width": 4},
+                    y_axis_config={'include_tip': True,
+                                   "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                                   "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                                   }
         ).set_z_index(5)
 
-        line1 = DashedLine(axes.c2p(0,1), axes.c2p(1,1), stroke_color=GREEN, stroke_width=6).set_z_index(2)
+        labelx = MathTex(r'N', stroke_width=1.5, font_size=40, color=col_x)
+        labely = MathTex(r'\mathbb E[Z^2]', stroke_width=1.5, font_size=40)
+        labely[0][0].set_color(col_WVD)
+        labely[0][2:4].set_color(col_p)
+        labely.next_to(axes.y_axis.get_end(), RIGHT, buff=0.2)
+        labelx.next_to(axes.x_axis.get_end(), UR, buff=0.14)
+        title = Tex(r'\sf Expected Square Error ', r'$(N_0=500)$', stroke_width=2, font_size=60)
+        title[0].set_color(col_txt)
+        title[1][1:3].set_color(col_x)
+        title[1][4:7].set_color(col_num)
+        title.to_edge(UP, buff=0.4).shift(RIGHT)
+
+        # mh.align_sub(title, title[0], mh.pos(UP), DOWN, buff=0.2)
+
+        eq1 = Tex(r'\sf Cram\'er prediction', color=ORANGE, font_size=50, stroke_width=2)
+        eq1.next_to(axes.c2p(0.5, 1), DOWN, buff=0.1)
+        eq2 = Tex(r'\sf Empirical value', color=BLUE, font_size=50, stroke_width=2)
+        eq2.move_to(axes.c2p(0.5, 0.2))
+        arr1 = Arrow(eq2[0][-1].get_right()+RIGHT*0.1, axes.c2p(0.7, 0.02), buff=0, color=BLUE, stroke_width=8, path_arc=-PI/6,
+                     max_tip_length_to_length_ratio=10, max_stroke_width_to_length_ratio=20)
+
+        xtickvals = np.log([1e3, 1e4, 1e5, 1e6, 1e7, 1e9])
+        xtickstrs = ['1\,000', r'10\,000', r'100\,000', r'\!1\,000\,000', r'10\,000\,000', r'1\,000\,000\,000']
+        xtickvals1 = (xtickvals - xtickvals[0]) / (xtickvals[3] - xtickvals[0])
+        xtickvals2 = (xtickvals - xtickvals[0]) / (xtickvals[-1] - xtickvals[0])
+        xticks1 = mh.get_xticks(axes, vals=xtickvals1, label_color=col_num, strs=xtickstrs, buff=0.4)
+        xticks2 = mh.get_xticks(axes, vals=xtickvals2, label_color=col_num, strs=xtickstrs, buff=0.4)
+        VGroup(xticks2[1], xticks2[3]).set_opacity(0)
+        xticks1[3][1].to_edge(RIGHT, buff=0.2)
+        xticks2[-1][1].to_edge(RIGHT, buff=0.2)
+
+        ytickvals = np.array([0., 1e-4, 0.001, 0.01, 0.1, 1.])
+        ystrs = [r'0', r'10^{-4}', r'10^{-3}', r'10^{-2}', r'.1', r'1']
+        ytickvals2 = np.log(ytickvals[1:] * 1e5) / np.log(1e5)
+        tick_width = (axes.get_left() - mh.pos(LEFT))[0] - 0.4
+        yticks1 = mh.get_yticks(axes, vals=ytickvals, strs=ystrs, max_width=tick_width, label_color=col_num)
+        yticks2 = mh.get_yticks(axes, vals=ytickvals2, strs=ystrs[1:], max_width=tick_width, label_color=col_num)
+        yticks1[1:-1].set_opacity(0)
+        ylines1 = VGroup(*[Line(axes.c2p(0, y), axes.c2p(1, y), stroke_width=3, stroke_color=GREY, stroke_opacity=0)
+                           for y in ytickvals[1:-1]])
+        ylines2 = VGroup([Line(axes.c2p(0, y), axes.c2p(1, y), stroke_width=3, stroke_color=GREY, stroke_opacity=0.5)
+                          for y in ytickvals2[:-1]])
+
+        line1 = DashedLine(axes.c2p(0,1), axes.c2p(1,1), stroke_color=ORANGE, stroke_width=6, dash_length=0.15, dashed_ratio=0.7).set_z_index(2)
 
         counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=100_000)
 
@@ -543,7 +590,8 @@ class EmpiricalVarPlot(Scene):
         samples_exp2 = np.cumsum(samples * samples * weights) / cumweights
 
         xvals_log = np.log(xvals)
-        xplot_1 = np.linspace(np.log(1000), np.log(1e6), 1000)
+        n1 = 1000
+        xplot_1 = np.linspace(np.log(1000), np.log(1e6), n1)
         xplot_2 = np.linspace(np.log(1e6), np.log(1e9), 1000)[1:]
         xplot = np.concatenate([xplot_1, xplot_2])
         yplot = np.interp(xplot, xvals_log, samples_exp2)
@@ -551,21 +599,55 @@ class EmpiricalVarPlot(Scene):
 
         yplotlog = np.log(yplot * 1e5) / np.log(1e5)
 
-        plt1 = axes.plot_line_graph(xplot_scale, yplot, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
-        plt2 = axes.plot_line_graph(xplot_scale, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
+        plt1 = axes.plot_line_graph(xplot_scale[:n1], yplot[:n1], add_vertex_dots=False, stroke_color=BLUE, stroke_width=8)
+        plt2 = axes.plot_line_graph(xplot_scale[:n1], yplotlog[:n1], add_vertex_dots=False, stroke_color=BLUE, stroke_width=8)
+        plt3 = axes.plot_line_graph(xplot_scale, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=8)
+        box1 = Rectangle(width=3, height=2, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=1)
+        box1.next_to(plt2.get_right(), RIGHT, buff=0).set_z_index(2)
+
+        tracker = ValueTracker(0.)
+        x0 = xplot_scale[n1-1]
+        x1 = xplot_scale[-1]
+
+        def get_tracker_obj():
+            t = tracker.get_value()
+            x2 = x1 * (1-t) + x0 * t
+            x3 = x0 / x2 * x1
+            y3 = np.interp(x3, xplot_scale, yplot)
+            y3log = np.log(y3*1e5) / np.log(1e5)
+            # y = yplot[n1-1]
+            # ylog = np.log(y * 1e5) / np.log(1e5)
+            val_right = DecimalNumber(y3, 4, font_size=40, stroke_width=1.5, color=BLUE)
+            val_right[1:].next_to(axes.c2p(1, y3log), RIGHT, buff=0.1).set_z_index(3)
+            return val_right[1:]
 
         print('yvals', yplot[0], yplot[-1])
 
-        self.add(axes, line1)
+        self.add(axes, xticks1, yticks1, ylines1, labely, labelx, title)
 
-        self.play(Create(plt1, rate_func=linear))
+        self.play(FadeIn(eq1), Create(line1, rate_func=linear))
         self.wait(0.1)
-        self.play(mh.rtransform(plt1, plt2))
+
+        self.play(Create(plt1, rate_func=linear, run_time=2),
+                  Succession(Wait(1), FadeIn(eq2, arr1)))
+        self.wait(0.1)
+        self.play(Succession(Wait(0.5),
+                             AnimationGroup(mh.rtransform(plt1, plt2, yticks1[1:], yticks2[:], ylines1, ylines2),
+                             eq2.animate.move_to(axes.c2p(0, 0.61), coor_mask=UP))
+                             ),
+                  FadeOut(yticks1[0]),
+                  FadeOut(arr1),
+                  )
+        self.remove(plt2)
+        self.add(plt3, box1)
+        tracker_obj = always_redraw(get_tracker_obj)
+        self.play(FadeIn(tracker_obj))
 
         xplot_scale2 = (xplot - xplot[0]) / (xplot[-1] - xplot[0])
-        plt4 = axes.plot_line_graph(xplot_scale2, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=6)
+        plt4 = axes.plot_line_graph(xplot_scale2, yplotlog, add_vertex_dots=False, stroke_color=BLUE, stroke_width=8)
 
-        self.play(mh.rtransform(plt2, plt4))
+        self.play(mh.rtransform(plt3, plt4, xticks1, xticks2),
+                  tracker.animate.set_value(1.), run_time=3)
 
 
 
