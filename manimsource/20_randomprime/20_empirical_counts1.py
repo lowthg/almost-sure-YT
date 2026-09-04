@@ -12,6 +12,7 @@ import sys
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
+import mpmath as mp
 
 col_txt = ManimColor( r'#FFAC2B')
 
@@ -184,6 +185,9 @@ class CramerCount:
             self.xvals = n[::10]
             assert len(self.values) == len(self.xvals)
 
+    def init(self):
+        pass
+
     def new_samples(self, x):
         count = []
         weights = []
@@ -216,8 +220,16 @@ class CramerCount:
 
 
 class EmpiricalCount:
-    def __init__(self, n_max=1000, n_min = 1, nstep=100):
-        """One Cramér path, with no residue-class or Chebyshev weighting."""
+    def __init__(self, n_max=1000, n_min = 2, nstep=100, new_norm=False):
+        self.count = None
+        self.weights = None
+        self.x0 = float(n_min-1)
+        self.n_max = n_max
+        self.nstep = nstep
+        self.new_norm = new_norm
+
+    def init(self):
+        n_max = self.n_max
         is_prime = np.ones(n_max + 1, dtype=bool)
         is_prime[:2] = False
         is_prime[4::2] = False
@@ -235,13 +247,14 @@ class EmpiricalCount:
         mean = li(x) - li(np.sqrt(x))/2 - li(np.cbrt(x))/3
 
         mean = np.concatenate([[0], mean])
-        errors = (count - mean) / np.concatenate([[1], np.sqrt(li_x)])
-
+        # norm = np.log(x) / np.sqrt(x) if new_norm else 1. / np.sqrt(li_x)
+        norm = 2 / li(np.sqrt(x)) if self.new_norm else 1. / np.sqrt(li_x)
+        errors = (count - mean) * np.concatenate([[1], norm])
+        if self.new_norm:
+            errors -= 1
         self.count = errors
         self.weights = x_sampling_weights(True, 1, n_max)
-        self.x0 = float(n_min)
-        self.n_max = n_max
-        self.nstep = nstep
+        print('len count', len(self.count))
 
     def initial_samples(self, x_min):
         n_min = int(math.ceil(x_min))
@@ -252,36 +265,48 @@ class EmpiricalCount:
         count = []
         weights = []
         xvals = []
+        print('new_samples:', self.x0, self.n_max, x)
         if self.x0 < self.n_max:
-            n_max = min(int(round(x)) - 1, len(self.count))
-            n0 = int(round(self.x0)) - 1
+            n_max = min(int(round(x)), len(self.count))
+            n0 = int(round(self.x0))
+            print(np.array([n0+1, n_max]))
             count.append(self.count[n0:n_max])
             weights.append(self.weights[n0:n_max])
             assert n_max <= len(self.count)
             if do_xvals: xvals.append(np.arange(n0+1, n_max+1))
-            print('len', len(xvals[0]), len(weights[0]), len(count[0]))
+            # print('len', len(xvals[0]), len(weights[0]), len(count[0]))
 
         # assert self.n_max >= x
         if self.n_max < x:
             x0 = max(self.x0, self.n_max)
             xvec0 = np.exp(np.linspace(np.log(x0), np.log(x), self.nstep+1))
             xvec = xvec0[1:]
+            print(xvec)
             livec = li(xvec)
             mean = livec - li(np.sqrt(xvec))/2 - li(np.cbrt(xvec))/3
 
             count_vec = np.fromiter((primecount.prime_pi(int(x)) for x in xvec), dtype=np.int64)
 
-            errors = mean - count_vec
+            errors = count_vec - mean
 
             weight_vec = np.log(xvec0)
 
-            count_norm = errors / np.sqrt(livec)
+            norm = np.log(xvec) / np.sqrt(xvec) if self.new_norm else 1. / np.sqrt(livec)
+
+            count_norm = errors * norm
+            if self.new_norm:
+                count_norm -= 1
             count.append(count_norm)
             weights.append(weight_vec[1:] - weight_vec[:-1])
             if do_xvals: xvals.append(xvec)
-            print('len', len(xvec), len(weight_vec)-1, len(count_norm))
+            # print('len', len(xvec), len(weight_vec)-1, len(count_norm))
 
         self.x0 = x
+
+        if len(count) == 0:
+            if do_xvals:
+                return np.empty(0, dtype=float), np.empty(0, dtype=float), np.empty(0, dtype=float)
+            return np.empty(0, dtype=float), np.empty(0, dtype=float)
 
         if do_xvals:
             return np.concatenate(count), np.concatenate(weights), np.concatenate(xvals)
@@ -418,6 +443,7 @@ class CramerHistogramUniform(ThreeDScene):
                                       stroke_color=BLUE, stroke_opacity=op).set_z_index(10)
             return VGroup(res, plt['line_graph'])
 
+        self.counter.init()
         bars = always_redraw(update_bars)
 
         self.add(axes.x_axis, counter_label, counter_value, normal_curve, area, bars, ticks, xlabels)
@@ -458,34 +484,21 @@ class CramerHistogramLog(Scene):
     n_max_end = 100_000_000_000_000
     bin_min = -2.5
     bin_max = 2.5
-    counter = CramerCount(seed=1, n_min=500, n_max=1_000_000, nstep=500)
+    counter = CramerCount(seed=1, n_min=500, n_max=1_000_000, nstep=1000)
     rel_width = 0.9
+    xlen = 12
+    ylen = 5.5
 
-    def normalized_errors(self) -> np.ndarray:
-        raise NotImplementedError
-
-    def construct(self) -> None:
-        xlen = 12
-        ylen = 5.5
-        x_scale = xlen / (self.bin_max - self.bin_min)
+    def do_histogram(self, axes):
+        x_scale = self.xlen / (self.bin_max - self.bin_min)
         hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
-                         y_scale=ylen / self.y_max, rel_width=self.rel_width)
-
-        axes = Axes(x_range=[self.bin_min, self.bin_max], y_range=[0, self.y_max],
-            x_length=xlen, y_length=ylen, tips=False,
-            axis_config={"include_ticks": False},
-        ).shift(DOWN * 0.45).set_z_index(5)
-        tick = Line(ORIGIN, DOWN*0.1, stroke_width=4, stroke_color=WHITE).set_z_index(5)
-        ticks = VGroup(*[tick.copy().shift(axes.c2p(i)) for i in [-2, -1, 0, 1, 2]]).set_z_index(5)
-        xlabels = VGroup(*[MathTex('{}'.format(i), font_size=40)[0] for i in [-2, -1, 0, 1, 2]])
-        for t, l in zip(ticks[:], xlabels): mh.align_sub(l, l[-1], t, DOWN, buff=0.1)
-
+                         y_scale=self.ylen / self.y_max, rel_width=self.rel_width)
         hist.bars.shift(axes.c2p(self.bin_min, 0))
 
         tracker = ValueTracker(self.n_max)
         counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
         counter_label[0][0].set_color(col_var)
-        counter_label.move_to(axes.c2p(0.8 * self.bin_min, 5/7 * self.y_max))
+        counter_label.move_to(axes.c2p(0.9 * self.bin_min + 0.1 * self.bin_max, 5/7 * self.y_max))
         counter_value = always_redraw(
             lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
             .next_to(counter_label[0][-1], RIGHT, buff=0.15).set_z_index(10)
@@ -496,22 +509,65 @@ class CramerHistogramLog(Scene):
             hist.add_data(errors, weights)
             # print('weights', hist.bar_weights)
 
-        # hist.bars.set_z_index(6)
+        self.counter.init()
+
+        update_bars(hist.bars)
+        self.play(FadeIn(counter_label, counter_value, hist.bars))
 
         hist.bars.add_updater(update_bars)
+        print('running histogram')
+        self.play(
+            tracker.animate.set_value(self.n_max_end),
+            run_time=self.animation_seconds,
+            rate_func=rate_func_log(self.n_max, self.n_max_end),
+        )
+
+
+    def construct(self) -> None:
+        xlen = self.xlen
+        ylen = self.ylen
+        # hist = Histogram(self.bin_min, self.bin_max, self.bin_count, x_scale=x_scale,
+        #                  y_scale=ylen / self.y_max, rel_width=self.rel_width)
+
+        axes = Axes(x_range=[self.bin_min, self.bin_max], y_range=[0, self.y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False},
+        ).shift(DOWN * 0.45).set_z_index(5)
+        tick = Line(ORIGIN, DOWN*0.1, stroke_width=4, stroke_color=WHITE).set_z_index(5)
+        ticks = VGroup(*[tick.copy().shift(axes.c2p(i)) for i in [-2, -1, 0, 1, 2]]).set_z_index(5)
+        xlabels = VGroup(*[MathTex('{}'.format(i), font_size=40)[0] for i in [-2, -1, 0, 1, 2]])
+        for t, l in zip(ticks[:], xlabels): mh.align_sub(l, l[-1], t, DOWN, buff=0.1)
+
+
+        # hist.bars.shift(axes.c2p(self.bin_min, 0))
+
+        # tracker = ValueTracker(self.n_max)
+        # counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
+        # counter_label[0][0].set_color(col_var)
+        # counter_label.move_to(axes.c2p(0.8 * self.bin_min, 5/7 * self.y_max))
+        # counter_value = always_redraw(
+        #     lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
+        #     .next_to(counter_label[0][-1], RIGHT, buff=0.15).set_z_index(10)
+        # )
+
+        # def update_bars(group: VGroup) -> None:
+        #     errors, weights = self.counter.new_samples(tracker.get_value())
+        #     hist.add_data(errors, weights)
+        #     # print('weights', hist.bar_weights)
+
+        # hist.bars.set_z_index(6)
+
+        # hist.bars.add_updater(update_bars)
 
         normal_curve = axes.plot(normal_density,
             x_range=[self.bin_min, self.bin_max, 0.02],
             color=ORANGE, stroke_width=4).set_z_index(4)
         area = axes.get_area(normal_curve, (self.bin_min, self.bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
 
-        self.add(axes.x_axis, ticks, xlabels, hist.bars, normal_curve, area, counter_label, counter_value)
+        self.add(axes.x_axis, ticks, xlabels, normal_curve, area)
 
-        self.play(
-            tracker.animate.set_value(self.n_max_end),
-            run_time=self.animation_seconds,
-            rate_func=rate_func_log(self.n_max, self.n_max_end),
-        )
+        self.do_histogram(axes)
+
         # print(hist.bar_weights/hist.bar_weights.sum())
         self.wait(1)
 
@@ -560,7 +616,7 @@ class EmpiricalVarPlot(Scene):
                      max_tip_length_to_length_ratio=10, max_stroke_width_to_length_ratio=20)
 
         xtickvals = np.log([1e3, 1e4, 1e5, 1e6, 1e7, 1e9])
-        xtickstrs = ['1\,000', r'10\,000', r'100\,000', r'\!1\,000\,000', r'10\,000\,000', r'1\,000\,000\,000']
+        xtickstrs = [r'1\,000', r'10\,000', r'100\,000', r'\!1\,000\,000', r'10\,000\,000', r'1\,000\,000\,000']
         xtickvals1 = (xtickvals - xtickvals[0]) / (xtickvals[3] - xtickvals[0])
         xtickvals2 = (xtickvals - xtickvals[0]) / (xtickvals[-1] - xtickvals[0])
         xticks1 = mh.get_xticks(axes, vals=xtickvals1, label_color=col_num, strs=xtickstrs, buff=0.4)
@@ -584,6 +640,7 @@ class EmpiricalVarPlot(Scene):
         line1 = DashedLine(axes.c2p(0,1), axes.c2p(1,1), stroke_color=ORANGE, stroke_width=6, dash_length=0.15, dashed_ratio=0.7).set_z_index(2)
 
         counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=100_000)
+        counter.init()
 
         samples, weights, xvals = counter.new_samples(1e9, do_xvals=True)
         cumweights = np.cumsum(weights)
@@ -651,4 +708,83 @@ class EmpiricalVarPlot(Scene):
 
 
 
+        self.wait()
+
+
+class EmpiricalHistogramNew(CramerHistogramLog):
+    bin_max = 0.1
+    bin_min = -2.1
+    bin_count = 21
+    y_max = 2.
+    n_max = 1_000_000
+    n_max_end = 10_000_000_000
+    # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=500, new_norm=True)
+    counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
+    # animation_seconds = 14
+
+    animation_seconds = 1
+
+
+    def construct(self):
+        xlen = self.xlen
+        ylen = self.ylen
+        bin_max = self.bin_max
+        bin_min = self.bin_min
+        y_max = self.y_max
+        nzeros = 100
+        ntheory = 100_000
+        theory_center = -1.
+
+        rng = np.random.default_rng(4)
+
+        print('theory samples')
+        gammas = np.array([float(mp.im(mp.zetazero(k))) for k in range(1, nzeros + 1) ])
+        coeff = 2.0 / np.sqrt(0.25 + gammas ** 2)
+        print(coeff[0])
+
+        oscillation = np.zeros(ntheory, dtype=float)
+        for a in coeff:
+            theta = rng.uniform(0.0, 2.0 * np.pi, ntheory)
+            oscillation += a * np.cos(theta)
+        variance_total = (2.0 + np.euler_gamma - np.log(4.0 * np.pi))
+        variance_explicit = 0.5 * np.sum(coeff ** 2)
+        variance_tail = variance_total - variance_explicit
+        print('tail width', np.sqrt(variance_tail))
+
+        print('building curve')
+        ntheoryplot = 200
+        xtheory = np.linspace(bin_min, bin_max, ntheoryplot, dtype=float)
+        ytheory = np.zeros(ntheoryplot, dtype=float)
+        xtheory2 = xtheory - theory_center
+        for x in oscillation:
+            ytheory += np.exp(-(xtheory2-x)**2 / (2*variance_tail))
+            ytheory += np.exp(-(xtheory2 + x) ** 2 / (2 * variance_tail))
+        ytheory /= np.sqrt(2*np.pi*variance_tail) * ntheory * 2
+
+        print('built curve')
+
+        axes = Axes(x_range=[bin_min, bin_max], y_range=[0, y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False, 'stroke_width': 4},
+        ).set_z_index(2)
+        xticks = mh.get_xticks(axes, vals=[-2, -1, 0], label_color=col_num)
+        yticks = mh.get_yticks(axes, [1, 2, 3, 4], label_color=col_num, side=RIGHT)
+
+        plt = axes.plot_line_graph(xtheory, ytheory, add_vertex_dots=False, stroke_width=6, stroke_color=ORANGE).set_z_index(4)
+        plt_ = axes.plot_line_graph(xtheory, ytheory, add_vertex_dots=False, stroke_width=0, stroke_opacity=0,
+                                   fill_color=ORANGE, fill_opacity=0.2).set_z_index(3.9)
+        var = variance_total
+        ynormal = np.exp(-(xtheory-theory_center)**2/(2*var)) / np.sqrt(2*np.pi*var)
+        plt2 = axes.plot_line_graph(xtheory, ynormal, add_vertex_dots=False, stroke_width=8, stroke_color=BLUE).set_z_index(5)
+
+        self.add(axes, plt, xticks, yticks)
+        self.play(Create(plt, rate_func=linear, run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(plt_)))
+        self.wait(0.1)
+
+        self.play(FadeIn(plt2))
+        self.wait(0.1)
+        self.play(FadeOut(plt2))
+        self.wait(0.1)
+        self.do_histogram(axes)
         self.wait()
