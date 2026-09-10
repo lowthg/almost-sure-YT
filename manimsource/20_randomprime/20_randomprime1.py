@@ -5,7 +5,7 @@ from manim import *
 import sys
 from manim import ManimColor
 from scipy.special import expi
-
+from common_randomprime import *
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
@@ -147,76 +147,6 @@ class Eratosthenes(Scene):
                   run_time=2, rate_func=smooth)
 
         self.wait()
-
-
-def build_prime_count(limit=1_000_000):
-    # is_prime[n] is 1 if n is prime
-    is_prime = bytearray(b"\x01") * (limit + 1)
-    is_prime[0:2] = b"\x00\x00"
-
-    # Sieve of Eratosthenes
-    for p in range(2, int(limit**0.5) + 1):
-        if is_prime[p]:
-            start = p * p
-            count = ((limit - start) // p) + 1
-            is_prime[start : limit + 1 : p] = b"\x00" * count
-
-    # prime_count[n] = number of primes <= n
-    prime_count = [0] * (limit + 1)
-    total = 0
-
-    for n in range(limit + 1):
-        total += is_prime[n]
-        prime_count[n] = total
-
-    return prime_count
-
-
-def prime_counting_step_vectors(pi):
-    pi = np.asarray(pi)
-
-    # n is prime exactly when pi(n) - pi(n-1) = 1
-    primes = np.flatnonzero(np.diff(pi) == 1) + 1
-
-    x = np.empty(2 * len(primes) + 1, dtype=np.int64)
-    y = np.empty(2 * len(primes) + 1, dtype=np.int64)
-
-    x[0] = 0
-    y[0] = 0
-
-    # Include each prime twice
-    x[1:] = np.repeat(primes, 2)
-
-    # For each prime n, include pi(n-1), then pi(n)
-    y[1::2] = pi[primes - 1]
-    y[2::2] = pi[primes]
-
-    return x, y
-
-def prime_counting_vectors(pi, max_n):
-    pi_n = np.asarray(pi[:max_n + 1])
-    integers = np.arange(max_n + 1)
-
-    # Treat pi(-1) as zero
-    pi_previous = np.concatenate(([0], pi_n[:-1]))
-
-    # Primes need two points; other integers need one
-    is_prime = pi_n != pi_previous
-    point_counts = 1 + is_prime.astype(int)
-
-    x = np.repeat(integers, point_counts)
-    y = np.empty(point_counts.sum(), dtype=pi_n.dtype)
-
-    # Index of the first point for each integer
-    starts = np.cumsum(point_counts) - point_counts
-
-    # First point: (n, pi(n-1))
-    y[starts] = pi_previous
-
-    # Second point for primes: (n, pi(n))
-    y[starts[is_prime] + 1] = pi_n[is_prime]
-
-    return x, y
 
 
 def get_xticks(ax, vals=[], strs=None, scalex=1.):

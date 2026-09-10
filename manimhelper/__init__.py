@@ -171,19 +171,19 @@ def get_xticks(ax, vals, strs=None, scalex=1., label_color=WHITE, buff=0.3, font
     for _ in range(len(vals)): tick_eqs[_].move_to(ticks[_], coor_mask=RIGHT)
     return VGroup(*[VGroup(tick, eq) for tick, eq in zip(ticks, tick_eqs[:])]).set_z_index(0.5)
 
-def get_yticks(ax, vals, strs=None, scaley=1., max_width=0.9, center=0., label_color=WHITE, buff=0.3, length=0.2, font_size=50):
+def get_yticks(ax, vals, strs=None, scaley=1., max_width=0.9, center=0., label_color=WHITE, buff=0.3, length=0.2, font_size=50, side=LEFT):
     if strs is None:
         strs = [r'{}'.format(_) for _ in vals]
     tick_eqs = [MathTex(str, font_size=font_size, stroke_width=1.5, color=label_color)[0] for str in strs]
     origin = ax.c2p(0, 0)
-    for eq in tick_eqs: eq.next_to(origin, LEFT, buff=buff)
-    tick0 = Line(origin, origin + LEFT * length, stroke_width=6, stroke_color=WHITE)
+    for eq in tick_eqs: eq.next_to(origin, side, buff=buff)
+    tick0 = Line(origin, origin + side * length, stroke_width=6, stroke_color=WHITE)
     ticks = [tick0.copy().shift(ax.c2p(0, _ * scaley + center) - origin) for _ in vals]
     for _ in range(len(vals)):
         tick_eqs[_].move_to(ticks[_], coor_mask=UP)
         w = tick_eqs[_].width
         if w > max_width:
-            tick_eqs[_].scale(max_width/w, about_edge=RIGHT)
+            tick_eqs[_].scale(max_width/w, about_edge=-side)
     return VGroup(*[VGroup(tick, eq) for tick, eq in zip(ticks, tick_eqs[:])]).set_z_index(0.3)
 
 
