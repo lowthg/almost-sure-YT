@@ -15,6 +15,14 @@ from pathlib import Path
 
 col_txt = ManimColor( r'#FFAC2B')
 
+def compose(*functions):
+    def result(x):
+        for function in reversed(functions):
+            x = function(x)
+        return x
+    return result
+
+
 def rate_func_log(x1, x2):
     """
     x1 * exp(at), x1 * exp(a) = x2
@@ -954,6 +962,26 @@ def zeros(i): return r'0' * (i % 3) + r'\,000' * (i // 3)
 
 def get_tick_strs(i): return [r'5' + zeros(i-1), r'1' + zeros(i)]
 
+def animation_scale_redraw(x_scale, y_scale, obj_scale, obj1x, obj2x, obj1y, obj2y, origin=ORIGIN):
+    anim_tracker = ValueTracker(0.)
+    animationx = mh.rtransform(obj1x, obj2x, rate_func=linear)
+    animationy = mh.rtransform(obj1y, obj2y, rate_func=linear)
+    animationx.begin()
+    animationy.begin()
+
+    def obj_func1():
+        u = anim_tracker.get_value()
+        scalex = np.exp(np.log(x_scale) * u)
+        scaley = np.exp(np.log(y_scale) * u)
+        scale = np.array([scalex, scaley, 1])
+        tx = (1-scalex) / (1-x_scale)
+        ty = (1-scaley) / (1-y_scale)
+        obj_scale2 = obj_scale.copy().apply_points_function_about_point(lambda p: p * scale, origin)
+        animationx.interpolate(tx)
+        animationy.interpolate(ty)
+        return VGroup(obj_scale2, obj1x.copy(), obj1y.copy())
+    return anim_tracker, always_redraw(obj_func1)
+
 class EmpiricalPath(Scene):
     def construct(self):
         nplt = 1000
@@ -987,7 +1015,6 @@ class EmpiricalPath(Scene):
 
         scalex3 = 1/100
         scaley3 = 3./100
-        plt7 = ax.plot_line_graph(x[:127]*scalex3, y[:127]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
 
         ticks3 = mh.get_xticks(ax, [2, 3, 5, 7, 11, 13, 17, 19, 50, 100, 500, 1000], scalex=scalex3)
         ticks3[:-4].set_opacity(0)
@@ -997,7 +1024,19 @@ class EmpiricalPath(Scene):
 
         self.add(ax, eqx, box1, box2, ticks3, ticksy3)
 
-        self.play(Create(plt7, rate_func=linear))
+        """
+        plot prime counting and Li
+        """
+
+        plt7 = ax.plot_line_graph(x[:127]*scalex3, y[:127]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
+
+        label_size = 55
+        eq_pi1 = MathTex(r'\pi(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.7, 0.45))
+        eq_li1 = MathTex(r'{\rm Li}(x)', stroke_width=1.5, color=ORANGE, font_size=label_size).move_to(ax.c2p(0.4, 0.58))
+        eq_pi1 = mh.eq_shadow(eq_pi1, bg_z_index=5, fg_z_index=6)
+        eq_li1 = mh.eq_shadow(eq_li1, bg_z_index=5, fg_z_index=6)
+
+        self.play(Create(plt7, rate_func=linear), FadeIn(eq_pi1))
 
         xvals2 = np.linspace(4., 101., 1000)
         yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
@@ -1005,20 +1044,24 @@ class EmpiricalPath(Scene):
         plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
         self.wait(0.1)
-        self.play(Create(plt_line4))
-        self.wait(0.1)
+        self.play(Create(plt_line4), FadeIn(eq_li1))
+
+        """
+        initial zoom out
+        """
 
         scalex4 = 1/1000
-        scaley4 = 5/1000
+        scalex_new = 1/10000
+        scaley5 = 8/10000
+        scaley4 = np.sqrt(scaley5/scaley3)*scaley3
+
         xvals3 = np.linspace(4., 1001., 4000)
         yvals6 = expi(np.log(xvals3)) - expi(np.log(2.))
 
         i = np.searchsorted(x, 1050., side='right')
 
         plt8 = ax.plot_line_graph(x[:i]*scalex3, y[:i]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
-        plt9 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
         plt_line7 = ax.plot_line_graph(xvals3 * scalex3, yvals6 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
-        plt_line8 = ax.plot_line_graph(xvals3 * scalex4, yvals6 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
 
         ticks4 = mh.get_xticks(ax, [50, 100, 500, 1000, 5000, 10000],
                                [item for i in [2,3,4] for item in get_tick_strs(i)], scalex4)
@@ -1027,69 +1070,114 @@ class EmpiricalPath(Scene):
                                   prime_count[5000], prime_count[10000]], scaley=scaley4)
         ticksy4[0].set_opacity(0)
 
-        i = np.searchsorted(x, 10050., side='right')
+        rate_func = lambda t: 10 * (1 - np.exp(-np.log(10) * t)) / 9
+        pi_shift=0.5 * UP
 
-        scalex5 = 1/10000
-        scaley5 = 8/10000
+        self.wait(0.1)
+        self.remove(plt7, plt_line4, ticks3, ticksy3)
+
+        tracker, plt = animation_scale_redraw(scalex4/scalex3, scaley4/scaley3, VGroup(plt_line7, plt8),
+                                                 ticks3[-4:], ticks4[-6:-2].copy(),
+                                                 ticksy3[-4:], ticksy4[:-2].copy(), origin=origin)
+
+        self.add(plt)
+        dt = 1.
+        self.play(tracker.animate.set_value(1),
+                  eq_pi1.animate.shift(pi_shift),
+                  run_time=1.2 * dt, rate_func=mh.rate_func_quad(0.2, 0.))
+        self.remove(plt)
+
+        """
+        further zoom out
+        """
 
         xvals_new = np.linspace(4., 10010, nplt)
         yvals8 = expi(np.log(xvals_new)) - expi((np.log(2)))  # Li up to 10k
 
+        i = np.searchsorted(x, 10050., side='right')
         plt10 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
-        plt11 = ax.plot_line_graph(x[:i]*scalex5, y[:i]*scaley5, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
         plt_line13 = ax.plot_line_graph(xvals_new * scalex4, yvals8 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
-        plt_line14 = ax.plot_line_graph(xvals_new * scalex5, yvals8 * scaley5, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
-
-        scaley6 = 3/100
-        yvals9 = np.interp(xvals_new+0.5, x, y, left=0, right=y[-1])  # pi up to 10k
-        yvals10 = yvals9 - yvals8  # pi - Li up to 20k
-        plt12 = ax.plot_line_graph(xvals_new*scalex5, yvals9*scaley5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(0.2)
-        plt13 = ax.plot_line_graph(xvals_new*scalex5, yvals10*scaley6+0.8, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(0.2)
-        plt_line17 = ax.plot_line_graph(xvals_new * scalex5, xvals_new * 0 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
 
         tick_vals_new = [100, 500, 1000, 5000, 10_000, 50_000, 100_000]
         tick_strs_new = ['100'] + [item for i in [3, 4, 5] for item in get_tick_strs(i)]
-        ticks5 = mh.get_xticks(ax, tick_vals_new, tick_strs_new, scalex5)
+        ticks5 = mh.get_xticks(ax, tick_vals_new, tick_strs_new, scalex_new)
         ticks5[:2].set_opacity(0)
         ticks5[4][1].next_to(box2, LEFT, coor_mask=RIGHT, buff=0.01)
         ticksy5 = mh.get_yticks(ax, [prime_count[100], prime_count[500], prime_count[1000],
                                   prime_count[5000], prime_count[10000]], scaley=scaley5)
         ticksy5[:2].set_opacity(0)
 
+        tracker, plt = animation_scale_redraw(scalex_new/scalex4, scaley5/scaley4, VGroup(plt_line13, plt10),
+                                                 ticks4[1:], ticks5[:-2].copy(),
+                                                 ticksy4[1:], ticksy5[:].copy(), origin=origin)
+
+        self.add(plt)
+
+        self.play(tracker.animate.set_value(1),
+                  eq_pi1.animate.shift(pi_shift),
+                  run_time=1.4 * dt, rate_func=mh.rate_func_quad(0, 0.4))
+        self.remove(plt)
+        plt_line14, plt11 = tuple(plt[0][:])
+        self.add(ticksy5, ticks5[:-2], plt11, plt_line14)
+
+        self.wait(0.1)
+
+        """
+        do diff with Li
+        """
+
+        scaley6 = 3/100
+        yvals9 = np.interp(xvals_new+0.5, x, y, left=0, right=y[-1])  # pi up to 10k
+        yvals10 = yvals9 - yvals8  # pi - Li up to 20k
+        plt13 = ax.plot_line_graph(xvals_new*scalex_new, yvals10*scaley6+0.8, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(0.2)
+        plt_line17 = ax.plot_line_graph(xvals_new * scalex_new, xvals_new * 0 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
+
         ticksy6 = mh.get_yticks(ax, [-20, -10, 0, 10], scaley=scaley6, center=0.8)
         ticksy6[-1].set_opacity(0)
 
-        rate_func = lambda t: 10 * (1 - np.exp(-np.log(10) * t)) / 9
-        self.remove(plt7, plt_line4)
-        self.add(plt8, plt_line7)
-        self.play(mh.rtransform(plt8, plt9, plt_line7, plt_line8,
-                                ticks3[-4:], ticks4[-6:-2], ticksy3[-4:], ticksy4[:-2],
-                                run_time=1., rate_func=rate_func
-                                ))
-        self.remove(plt9, plt_line8)
-        self.add(plt10, plt_line13)
-        self.play(mh.rtransform(plt10, plt11, plt_line13, plt_line14,
-                                ticks4[1:], ticks5[:-2], ticksy4[1:], ticksy5[:],
-                                run_time=1.,
-                                rate_func=rate_func
-                                ))
+        eq_pi2 = MathTex(r'\pi(x)', r'-', r'{\rm Li}(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.4, 0.2))
+        eq_pi2 = mh.eq_shadow(eq_pi2, bg_z_index=5, fg_z_index=6)
+
+        # self.play(FadeOut(plt11), FadeIn(plt12))
+        self.play(AnimationGroup(mh.rtransform(plt11, plt13, plt_line14, plt_line17, ticksy[0], ticksy6[-2]),
+                  FadeOut(ticksy5),
+                  mh.rtransform(eq_pi1[0], eq_pi2[0], eq_li1[0], eq_pi2[2]), run_time=2),
+                  Succession(Wait(1.5), FadeIn(eq_pi2[1])),
+                  Succession(Wait(1.5), FadeIn(ticksy6[:-2])),
+                  run_time=2)
 
         self.wait(0.1)
 
-        self.play(FadeOut(plt11), FadeIn(plt12))
-        self.play(mh.rtransform(plt12, plt13, plt_line14, plt_line17, ticksy[0], ticksy6[-2]),
-                  FadeOut(ticksy5), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
+        """
+        bias calculation
+        """
 
-        self.wait(0.1)
+        pos1 = ax.c2p(0.67, 0.9)
+        pos2 = ax.c2p(0.67, 0.55)
+        eq_li2 = MathTex(r'-\frac12{\rm Li}(\sqrt{x})-\frac13{\rm Li}(\sqrt[3]{x})', stroke_width=1.5, color=ORANGE,
+                         font_size=label_size).move_to(pos2)
+        eq_li2 = mh.eq_shadow(eq_li2, bg_z_index=5, fg_z_index=6)
 
         yvals11 = count_mean(xvals_new) - yvals8
 
-        plt_line19 = ax.plot_line_graph(xvals_new * scalex5, yvals11 * scaley6 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
+        plt_line19 = ax.plot_line_graph(xvals_new * scalex_new, yvals11 * scaley6 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
 
         plt_line17_ = plt_line17.copy().set_stroke(color=GREY).set_opacity(0.48)
         self.add(plt_line17_)
-        self.play(mh.rtransform(plt_line17, plt_line19))
+        self.play(mh.rtransform(plt_line17, plt_line19), FadeIn(eq_li2, shift=pos2-pos1))
         self.wait(0.1)
+
+        """
+        subtract bias
+        """
+
+        eq_pi3 = MathTex(r'\pi(x)', r'-', r'\left(', r'{\rm Li}(x)', r'-\frac12{\rm Li}(\sqrt{x})-\frac13{\rm Li}(\sqrt[3]{x})', r'\right)',
+                         stroke_width=1.5, color=BLUE, font_size=label_size)
+        eq_pi3 = mh.eq_shadow(eq_pi3, bg_z_index=5, fg_z_index=6)
+        eq_pi3.next_to(ax.c2p(0,0.8), RIGHT, buff=0.4)
+        eq_pi4 = MathTex(r'\pi(x)', r'-', r'\hat\pi(x)', stroke_width=1.5, color=BLUE, font_size=label_size)
+        eq_pi4 = mh.eq_shadow(eq_pi4, bg_z_index=5, fg_z_index=6)
+        mh.align_sub(eq_pi4, eq_pi4[1], eq_pi3[1]).move_to(ax.c2p(0.3,0), coor_mask=RIGHT)
 
         yvals_new = yvals10 - yvals11
         t_5 = 1e4
@@ -1097,15 +1185,26 @@ class EmpiricalPath(Scene):
         scaley_new = np.log(t_5) / np.sqrt(t_5) * scaley
         ticksy7 = mh.get_yticks(ax, [-0.5, 0, 0.5], scaley=scaley, center=0.5)
 
-        plt14 = ax.plot_line_graph(xvals_new*scalex5, yvals_new*scaley_new+0.5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(0.2)
-        plt_line20 = ax.plot_line_graph(xvals_new * scalex5, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
-        self.play(mh.rtransform(plt13, plt14, plt_line19, plt_line20, ticksy6[2], ticksy7[1]),
+        plt14 = ax.plot_line_graph(xvals_new*scalex_new, yvals_new*scaley_new+0.5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(0.2)
+        plt_line20 = ax.plot_line_graph(xvals_new * scalex_new, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
+        self.play(AnimationGroup(mh.rtransform(plt13, plt14, plt_line19, plt_line20, ticksy6[2], ticksy7[1]),
                                 plt_line17_.animate.shift(ax.c2p(0, 0.5 - 0.8)-origin),
+                  mh.rtransform(eq_pi2[:2], eq_pi3[:2], eq_pi2[2], eq_pi3[3], eq_li2[0], eq_pi3[4]),
                   FadeOut(ticksy6[:2], ticksy6[-1]),
-                  FadeIn(ticksy7[::2]))
+                  FadeIn(ticksy7[::2]),
+                  run_time=1.6),
+                  Succession(Wait(1.2), FadeIn(eq_pi3[2], eq_pi3[-1]))
+                  )
         self.remove(plt_line17_)
+        self.wait(0.1)
+        eq_pi4_ = eq_pi4[2].copy().move_to(eq_pi3[2:], coor_mask=RIGHT)
+        self.play(FadeOut(eq_pi3[2:]), FadeIn(eq_pi4_))
+        self.play(mh.rtransform(eq_pi3[:2], eq_pi4[:2], eq_pi4_, eq_pi4[2]))
+        self.wait(0.1)
 
-        # bring in theoretical
+        """
+        bring in theoretical sample path
+        """
 
         sw = 5
         ax2 = Axes(y_length=3.5, **ax_args).set_z_index(1).to_edge(DOWN, buff=0.5)
@@ -1113,63 +1212,86 @@ class EmpiricalPath(Scene):
         ax3 = Axes(y_length=3.5, **ax_args).set_z_index(1).to_edge(DOWN, buff=0.5)
         ax3.next_to(ax2, UP, buff=0.1)
 
-        plt_new = ax2.plot_line_graph(xvals_new*scalex5, yvals_new*scaley_new+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(0.2)
-        plt_line21 = ax2.plot_line_graph(xvals_new[::] * scalex5, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=sw, line_color=ORANGE).set_z_index(0.19)
-        plt_line22 = ax3.plot_line_graph(xvals_new[::] * scalex5, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=sw, line_color=ORANGE).set_z_index(0.19)
+        plt_new = ax2.plot_line_graph(xvals_new*scalex_new, yvals_new*scaley_new+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(0.2)
+        plt_line21 = ax2.plot_line_graph(xvals_new[::] * scalex_new, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=sw, line_color=ORANGE).set_z_index(0.19)
+        plt_line22 = ax3.plot_line_graph(xvals_new[::] * scalex_new, xvals_new * 0 + 0.5, add_vertex_dots=False, stroke_width=sw, line_color=ORANGE).set_z_index(0.19)
         ticksy8 = mh.get_yticks(ax2, [-0.5, 0, 0.5], scaley=scaley, center=0.5)
         ticksy9 = mh.get_yticks(ax3, [-0.5, 0, 0.5], scaley=scaley, center=0.5)
-        ticks_new = mh.get_xticks(ax2, tick_vals_new, tick_strs_new, scalex5, buff=0.15, font_size=40, length=0.1)
+        ticks_new = mh.get_xticks(ax2, tick_vals_new, tick_strs_new, scalex_new, buff=0.15, font_size=40, length=0.1)
         ticks_new[:2].set_opacity(0)
-        # ticks_new[4][1].next_to(box2, LEFT, coor_mask=RIGHT, buff=0.01)
+
+        txt1 = Tex(r'\sf Empirical:\ ', r'$\pi(x)-\hat\pi(x)$', font_size=label_size, stroke_width=2)
+        txt2 = Tex(r'\sf Random sample path', r':\ random walk', font_size=label_size, stroke_width=2)
+        VGroup(txt2, txt1[0]).set_color(col_txt)
+        VGroup(txt1[1][0], txt1[1][5:7]).set_color(col_WVD)
+        VGroup(txt1[1][2], txt1[1][8]).set_color(col_x)
+        txt1 = mh.eq_shadow(txt1, bg_z_index=5, fg_z_index=6)
+        txt2 = mh.eq_shadow(txt2, bg_z_index=5, fg_z_index=6)
+        txt1.next_to(ax2.c2p(0,0.95), DR, buff=0).shift(RIGHT*0.3)
+        txt2.next_to(ax3.c2p(0,0.95), DR, buff=0).shift(RIGHT*0.3)
 
         self.play(mh.rtransform(ax, ax2, plt14, plt_new, plt_line20, plt_line21, ticksy7, ticksy8, ticks5, ticks_new,
                                 ax.y_axis.copy(), ax3.y_axis, ticksy7.copy(), ticksy9, plt_line20.copy(), plt_line22),
+                  mh.rtransform(eq_pi4[0][:], txt1[1][:4], eq_pi4[1][0], txt1[1][4], eq_pi4[2][:], txt1[1][5:]),
                   eqx.animate.next_to(ax2.x_axis.get_right(), RIGHT, buff=0.2),
                   box2.animate.next_to(ax2.c2p(1.06, 0.02), DR, buff=0),
-                  # box1.animate.next_to(ax2.c2p(1., 0.), UR, buff=0).next_to(ax2.x_axis.tip, UP, buff=0.005, coor_mask=UP)
+                  Succession(Wait(0.4), FadeIn(txt1[0], txt2[0]))
         )
+
+        """
+        random walk
+        """
 
         rng = np.random.default_rng(4)
         nzeros = 2000
 
         print('theory samples')
-        gammas = load_gammas(nzeros)
-        coeffs = 2.0 / np.sqrt(0.25 + gammas ** 2)
+        variance_total = 2.0 + np.euler_gamma - np.log(4.0 * np.pi)
+        print('std dev', np.sqrt(variance_total))
         path_cols = [BLUE]
         path_z = [.2]
         path_ops = [1]
-        thetas = [rng.uniform(0.0, 2.0 * np.pi, nzeros) for _ in path_cols]
-        # thetas = np.acos(coeffs/4)
-        variance_total = 2.0 + np.euler_gamma - np.log(4.0 * np.pi)
-        variance_explicit = 0.5 * np.sum(coeffs ** 2)
-        variance_tail = variance_total - variance_explicit
-        print('std dev', np.sqrt(variance_total))
-        print('tail width', np.sqrt(variance_tail))
-        t = 1e4
-        yvec_scale = np.sqrt(xvals_new) / np.log(xvals_new)
         noise = [np.cumsum(np.random.normal(0, 1, size=nplt-1) * np.sqrt((xvals_new[1] - xvals_new[0])*variance_total)) for _ in path_cols]
+        yvec_scale = np.sqrt(xvals_new) / np.log(xvals_new)
         yvals_theory = [np.concat(([0], _))/np.log(xvals_new) for _ in noise]
-        plt = [ax3.plot_line_graph(xvals_new * scalex5, yvals_ * scaley_new + 0.5, line_color=col, stroke_opacity=op,
+
+        plt = [ax3.plot_line_graph(xvals_new * scalex_new, yvals_ * scaley_new + 0.5, line_color=col, stroke_opacity=op,
                                       stroke_width=sw, add_vertex_dots=False).set_z_index(z)
                for yvals_, op, col, z in zip(yvals_theory, path_ops, path_cols, path_z)]
-        self.play(*[Create(_, rate_func=linear) for _ in plt])
+        self.play(*[Create(_, rate_func=linear) for _ in plt],
+                  FadeIn(txt2[1], rate_func=linear, run_time=0.5))
         self.wait(0.1)
+
+        """
+        zeta zeros sample path
+        """
+
+        gammas = load_gammas(nzeros)
+        coeffs = 2.0 / np.sqrt(0.25 + gammas ** 2)
+        thetas = [rng.uniform(0.0, 2.0 * np.pi, nzeros) for _ in path_cols]
+        # thetas = np.acos(coeffs/4)
+        variance_explicit = 0.5 * np.sum(coeffs ** 2)
+        variance_tail = variance_total - variance_explicit
+        print('tail width', np.sqrt(variance_tail))
+        t = 1e4
         yvals_theory = [_*np.sqrt(variance_tail/variance_total) for _ in yvals_theory]
         for j, yval in enumerate(yvals_theory):
             yval *= np.sqrt(variance_tail/variance_total)
             for i in range(nzeros):
                 yval += coeffs[i]*np.cos(gammas[i]*np.log(xvals_new)+thetas[j][i]) * yvec_scale
-        plt_theory = [ax3.plot_line_graph(xvals_new * scalex5, yvals_ * scaley_new + 0.5, line_color=col, stroke_opacity=op,
+        plt_theory = [ax3.plot_line_graph(xvals_new * scalex_new, yvals_ * scaley_new + 0.5, line_color=col, stroke_opacity=op,
                                       stroke_width=sw, add_vertex_dots=False).set_z_index(z)
                for yvals_, op, col, z in zip(yvals_theory, path_ops, path_cols, path_z)]
-        self.play(*[mh.rtransform(p1, p2) for p1, p2 in zip(plt, plt_theory)])
+        self.play(*[mh.rtransform(p1, p2) for p1, p2 in zip(plt, plt_theory)],
+                  FadeOut(txt2[1], rate_func=linear, run_time=0.5))
 
-        # final zooming out
+        """
+        final zooming out
+        """
 
-        scalex_new = scalex5
         self.wait(0.1)
 
-        for i_exp in [5, 6, 7, 8, 9, 10]:
+        for i_exp in [5]:#, 6, 7, 8, 9, 10, 11]:
             xvals_old = xvals_new
             plt_old = plt_new
             ticks_old = ticks_new
