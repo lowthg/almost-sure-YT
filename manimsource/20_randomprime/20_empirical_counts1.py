@@ -962,24 +962,38 @@ def zeros(i): return r'0' * (i % 3) + r'\,000' * (i // 3)
 
 def get_tick_strs(i): return [r'5' + zeros(i-1), r'1' + zeros(i)]
 
-def animation_scale_redraw(x_scale, y_scale, obj_scale, obj1x, obj2x, obj1y, obj2y, origin=ORIGIN):
+def animation_scale_redraw(x_scale=1., y_scale=1., obj_scale=None, obj1x=None, obj2x=None, obj1y=None, obj2y=None,
+                           origin=ORIGIN, y_scale_func=None, x_scale_func=None, obj2_scale=None):
     anim_tracker = ValueTracker(0.)
-    animationx = mh.rtransform(obj1x, obj2x, rate_func=linear)
-    animationy = mh.rtransform(obj1y, obj2y, rate_func=linear)
-    animationx.begin()
-    animationy.begin()
+    if obj1x is not None:
+        animationx = ReplacementTransform(obj1x, obj2x, rate_func=linear)
+        animationx.begin()
+    if obj1y is not None:
+        animationy = ReplacementTransform(obj1y, obj2y, rate_func=linear)
+        animationy.begin()
+    if obj2_scale is not None:
+        animation = ReplacementTransform(obj_scale, obj2_scale, rate_func=linear)
+        animation.begin()
 
     def obj_func1():
+        res = VGroup()
         u = anim_tracker.get_value()
-        scalex = np.exp(np.log(x_scale) * u)
-        scaley = np.exp(np.log(y_scale) * u)
+        scalex = np.exp(np.log(x_scale) * u) if x_scale_func is None else x_scale_func(u)
+        scaley = np.exp(np.log(y_scale) * u) if y_scale_func is None else y_scale_func(u)
         scale = np.array([scalex, scaley, 1])
-        tx = (1-scalex) / (1-x_scale)
-        ty = (1-scaley) / (1-y_scale)
-        obj_scale2 = obj_scale.copy().apply_points_function_about_point(lambda p: p * scale, origin)
-        animationx.interpolate(tx)
-        animationy.interpolate(ty)
-        return VGroup(obj_scale2, obj1x.copy(), obj1y.copy())
+        if obj2_scale is not None:
+            animation.interpolate(u)
+        res.add(obj_scale.copy().apply_points_function_about_point(lambda p: p * scale, origin))
+        if obj1x is not None:
+            tx = (1 - scalex) / (1 - x_scale)
+            animationx.interpolate(tx)
+            res.add(obj1x.copy())
+        if obj1y is not None:
+            ty = (1 - scaley) / (1 - y_scale)
+            animationy.interpolate(ty)
+            res.add(obj1y.copy())
+        return res
+
     return anim_tracker, always_redraw(obj_func1)
 
 class EmpiricalPath(Scene):
@@ -1006,12 +1020,6 @@ class EmpiricalPath(Scene):
         box2 = Rectangle(width=2, height=config.frame_height/2, stroke_width=0, stroke_opacity=0,
                          fill_color=BLACK, fill_opacity=1).set_z_index(0.6)
         box2.next_to(ax.c2p(1.06, 0.02), DR, buff=0)
-        # box3 = Rectangle(height=2, width=config.frame_width, stroke_width=0, stroke_opacity=0,
-        #                  fill_color=BLACK, fill_opacity=1).set_z_index(0.6)
-        # box3.next_to(ax.c2p(0.1, 1.0), UR, buff=0)
-        # box4 = Rectangle(height=2, width=config.frame_width/4, stroke_width=0, stroke_opacity=0,
-        #                  fill_color=BLACK, fill_opacity=1).set_z_index(0.4)
-        # box4.next_to(ax.c2p(0,1.04), UL, buff=0)
 
         scalex3 = 1/100
         scaley3 = 3./100
@@ -1070,7 +1078,6 @@ class EmpiricalPath(Scene):
                                   prime_count[5000], prime_count[10000]], scaley=scaley4)
         ticksy4[0].set_opacity(0)
 
-        rate_func = lambda t: 10 * (1 - np.exp(-np.log(10) * t)) / 9
         pi_shift=0.5 * UP
 
         self.wait(0.1)
@@ -1138,7 +1145,6 @@ class EmpiricalPath(Scene):
         eq_pi2 = MathTex(r'\pi(x)', r'-', r'{\rm Li}(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.4, 0.2))
         eq_pi2 = mh.eq_shadow(eq_pi2, bg_z_index=5, fg_z_index=6)
 
-        # self.play(FadeOut(plt11), FadeIn(plt12))
         self.play(AnimationGroup(mh.rtransform(plt11, plt13, plt_line14, plt_line17, ticksy[0], ticksy6[-2]),
                   FadeOut(ticksy5),
                   mh.rtransform(eq_pi1[0], eq_pi2[0], eq_li1[0], eq_pi2[2]), run_time=2),
@@ -1193,7 +1199,7 @@ class EmpiricalPath(Scene):
                   FadeOut(ticksy6[:2], ticksy6[-1]),
                   FadeIn(ticksy7[::2]),
                   run_time=1.6),
-                  Succession(Wait(1.2), FadeIn(eq_pi3[2], eq_pi3[-1]))
+                  Succession(Wait(0.6), FadeIn(eq_pi3[2], eq_pi3[-1]))
                   )
         self.remove(plt_line17_)
         self.wait(0.1)
@@ -1203,7 +1209,7 @@ class EmpiricalPath(Scene):
         self.wait(0.1)
 
         """
-        bring in theoretical sample path
+        bring in theoretical sample path axes
         """
 
         sw = 5
@@ -1242,7 +1248,7 @@ class EmpiricalPath(Scene):
         random walk
         """
 
-        rng = np.random.default_rng(4)
+        rng = np.random.default_rng(1)
         nzeros = 2000
 
         print('theory samples')
@@ -1284,16 +1290,16 @@ class EmpiricalPath(Scene):
                for yvals_, op, col, z in zip(yvals_theory, path_ops, path_cols, path_z)]
         self.play(*[mh.rtransform(p1, p2) for p1, p2 in zip(plt, plt_theory)],
                   FadeOut(txt2[1], rate_func=linear, run_time=0.5))
+        self.wait(0.1)
+        self.remove(plt_new, *plt_theory, ticks_new)
 
         """
         final zooming out
         """
 
-        self.wait(0.1)
-
-        for i_exp in [5]:#, 6, 7, 8, 9, 10, 11]:
+        first = True
+        for i_exp in [5, 6]:#, 6, 7, 8, 9, 10, 11]:
             xvals_old = xvals_new
-            plt_old = plt_new
             ticks_old = ticks_new
             scalex_old = scalex_new
             scaley_old = scaley_new
@@ -1301,7 +1307,6 @@ class EmpiricalPath(Scene):
             tick_strs_old = tick_strs_new
             yvals_old = yvals_new
             yvals_theory_old = yvals_theory
-            plt_theory_old = plt_theory
             noise_old = noise
 
             t_new = 10**i_exp
@@ -1309,7 +1314,6 @@ class EmpiricalPath(Scene):
             scaley_new = np.log(t_new) / np.sqrt(t_new) * scaley
 
             xvals_new2 = np.linspace(0., t_new * 10.01, nplt*10)
-            # xvals_new2 = np.linspace(4., t_new * 1.001, nplt)
             xvals_new2 = xvals_new2 * (xvals_old[1] - xvals_old[0]) / xvals_new2[1] + 4
             xvals_new = xvals_new2[::10]
             assert len(xvals_new) == nplt
@@ -1327,7 +1331,7 @@ class EmpiricalPath(Scene):
             yvals_new2 = np.concatenate((yvals_old, yvals_new3 - count_mean(xvals_new2[nplt:])))
             yvals_new = yvals_new2[::10]
             plt_new2 = ax2.plot_line_graph(xvals_new2*scalex_old, yvals_new2*scaley_old+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(.2)
-            plt_new = ax2.plot_line_graph(xvals_new*scalex_new, yvals_new*scaley_new+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(.2)
+            plt_new = ax2.plot_line_graph(xvals_new*scalex_old, yvals_new*scaley_old+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(.2)
 
             yvals_theory2 = [np.zeros(nplt*10)]
             noise = [np.random.normal(0, 1, size=nplt*10-nplt) * np.sqrt((xvals_new2[1] - xvals_new2[0]) * variance_tail) + _[-1] for _ in noise_old]
@@ -1345,16 +1349,37 @@ class EmpiricalPath(Scene):
                                     stroke_width=sw, add_vertex_dots=False).set_z_index(z)
                 for yvals_, op, col, z in zip(yvals_theory2, path_ops, path_cols, path_z)]
             plt_theory = [
-                ax3.plot_line_graph(xvals_new * scalex_new, yvals_ * scaley_new + 0.5, line_color=col, stroke_opacity=op,
+                ax3.plot_line_graph(xvals_new * scalex_old, yvals_ * scaley_old + 0.5, line_color=col, stroke_opacity=op,
                                     stroke_width=sw, add_vertex_dots=False).set_z_index(z)
                 for yvals_, op, col, z in zip(yvals_theory, path_ops, path_cols, path_z)]
 
-            self.remove(plt_old, *plt_theory_old)
-            self.add(plt_new2, *plt_theory2)
-            self.play(mh.rtransform(plt_new2, plt_new, ticks_old[2:], ticks_new[:-2]),
-                      *[mh.rtransform(p1, p2) for p1, p2 in zip(plt_theory2, plt_theory)],
-                                    run_time=3., rate_func = rate_func)
+            # self.remove(*plt_theory_old)
+            def y_scale_func(t):
+                scalex_ = np.exp(np.log(scalex_new/scalex_old) * t/2)
+                return scalex_ * (1+2*np.log(scalex_) / np.log(scalex_old))
+            tracker1, plt1 = animation_scale_redraw(scalex_new/scalex_old, scaley_new/scaley_old, plt_new2,
+                                                    obj1x=ticks_old[2:], obj2x=ticks_new[:-2].copy(),
+                                                    origin=ax2.c2p(0,0.5), y_scale_func=y_scale_func,
+                                                    obj2_scale=plt_new
+                                                    )
+            tracker2, plt2 = animation_scale_redraw(scalex_new/scalex_old, scaley_new/scaley_old, VGroup(*plt_theory2),
+                                                    origin=ax3.c2p(0,0.5), y_scale_func=y_scale_func,
+                                                    obj2_scale=VGroup(*plt_theory)
+                                                    )
+            self.add(plt1, plt2)
+            run_time = 4.
+            if first:
+                run_time *= 1.4
+                rate_func = mh.rate_func_quad(0.4, 0)
+                first = False
+            else:
+                rate_func = linear
+            self.play(tracker1.animate(rate_func=rate_func).set_value(1),
+                      tracker2.animate(rate_func=rate_func).set_value(1),
+                      run_time=run_time)
+            self.remove(plt1, plt2)
 
+        self.add(plt1, plt2)
         self.wait()
 
 def save_gammas(n):
