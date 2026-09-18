@@ -15,6 +15,7 @@ import matplotlib.cm as cm
 col_pi = col_special * 0.5 + ORANGE * 0.5
 col_trig = PURPLE_A#*0.5+WHITE*0.5
 col_txt = ManimColor( r'#FFAC2B')
+col_prime = BLUE
 
 
 class Eratosthenes(Scene):
@@ -65,7 +66,6 @@ class Eratosthenes(Scene):
             Line(box.get_corner(UR), box.get_corner(DL), **cross_args),
         ).set_z_index(6).set_opacity(0)
 
-        col_prime = BLUE
         sieve = np.ones(n_max + 1, dtype=bool)
         sieve[:2] = False  # not prime
         for i in range(2, n_max + 1):
@@ -355,7 +355,7 @@ class PiPlot(Scene):
         plt_line17 = ax.plot_line_graph(xvals5 * scalex5, xvals5 * 0 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
         ticks5 = get_xticks(ax, [100, 500, 1000, 5000, 10_000, 50_000, 100_000],
-                            ['100', '500', '1\,000', r'5\,000', r'10\,000', r'50\,1000', r'100\,1000'], scalex5)
+                            ['100', '500', r'1\,000', r'5\,000', r'10\,000', r'50\,1000', r'100\,1000'], scalex5)
         ticks5[:2].set_opacity(0)
         ticks5[4][1].shift(LEFT*0.1)
         ticksy5 = get_yticks(ax, [prime_count[100], prime_count[500], prime_count[1000],
@@ -476,3 +476,309 @@ class PiPlot(Scene):
 
         self.wait()
 
+class Narration1(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf The prime counting function is')
+        txt2 = Tex(r'\sf $\pi(x) =$', r' number of primes less than or equal to ', r'$x$')
+        txt3 = Tex(r'\sf According to the prime number theorem, it')
+        txt4 = Tex(r'\sf is approximated by the logarithmic integral')
+        eq5 = MathTex(r'\pi(x)', r'\sim', r'{\rm li}(x)', r'=', r'\int_0^x\frac{du}{\log u}', r'\sim', r'\frac{x}{\log x}')
+        VGroup(txt1[0], txt3, txt4).set_color(col_txt)
+        txt2[1].set_color((BLUE*0.4+WHITE*0.6))
+        VGroup(txt2[0][0], eq5[0][0], eq5[2][:2]).set_color(col_WVD)
+        VGroup(txt2[0][2], txt2[2], eq5[0][2], eq5[2][3], eq5[4][1], eq5[4][4], eq5[4][-1], eq5[6][0], eq5[6][-1]).set_color(col_x)
+        VGroup(eq5[4][-4:-1], eq5[6][-4:-1]).set_color(col_trig)
+        eq5[4][2].set_color(col_num)
+        VGroup(eq5[4][0], eq5[4][3], eq5[4][-5], eq5[6][-5]).set_color(col_op)
+
+        txt1 = mh.eq_shadow(txt1)
+        txt2 = mh.eq_shadow(txt2)
+        txt3 = mh.eq_shadow(txt3)
+        txt4 = mh.eq_shadow(txt4)
+        eq5 = mh.eq_shadow(eq5)
+
+        line_spacing = DOWN * 0.8
+        # txt1.to_edge(LEFT, buff=1.5)
+        mh.align_sub(txt2, txt2[1][0], txt1[0][1].get_bottom(), UP, buff=0, coor_mask=UP).shift(line_spacing*1.2)
+        mh.align_sub(txt3, txt3[0][0], txt2[1][0].get_bottom(), UP, buff=0, coor_mask=UP).shift(line_spacing*1.2)
+        mh.align_sub(txt4, txt4[0][0], txt3[0][0].get_bottom(), UP, buff=0, coor_mask=UP).shift(line_spacing).align_to(txt3, LEFT)
+        eq5.next_to(txt4, DOWN, buff=0.4)
+        VGroup(txt1, txt2, txt3, txt4, eq5).move_to(ORIGIN, coor_mask=UP)
+
+        self.add(txt1, txt2)
+        self.play(FadeIn(txt3, txt4))
+        self.wait(0.1)
+        eq5_1 = eq5[:3].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        eq5_2 = eq5[:5].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(FadeIn(eq5_1))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5_1, eq5_2[:3]),
+                  Succession(Wait(0.5), FadeIn(eq5_2[3:])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5_2, eq5[:5], eq5_2[-1][-5:-1].copy(), eq5[-1][-5:-1]),
+                  mh.fade_replace(eq5_2[-1][-6].copy(), eq5[-1][-6]),
+                  mh.fade_replace(eq5_2[-1][-1].copy(), eq5[-1][-1]),
+                  Succession(Wait(0.5), FadeIn(eq5[5])))
+        self.wait()
+
+class Narration2(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf relative error decreases at large $x$ ...', color=col_txt)
+        txt1[0][-4].set_color(col_x)
+        txt1 = mh.eq_shadow(txt1)
+        self.add(txt1)
+
+class Narration3(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r"\sf let's look at the difference", r"...", r"it's negative!", color=col_txt)
+        self.add(txt1[0])
+        self.play(FadeIn(txt1[1:]))
+        self.wait()
+
+class Narration4(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf people believed that ', r'$\pi(x) < {\rm li}(x)$', r' always holds')
+        txt2 = Tex(r'\sf then Littlewood showed that ', r'$\pi(x)-{\rm li}(x)$')
+        txt3 = Tex(r'\sf changes sign infinitely often')
+        txt4 = Tex(r'to this day, no-one has found a single value of ', r'$x$')
+        txt5 = Tex(r'with ', r'$\pi(x) > {\rm li}(x)$')
+        VGroup(txt1[0], txt1[2], txt2[0], txt3, txt4[0], txt5[0]).set_color(col_txt)
+        VGroup(txt1[1][0], txt1[1][5:7], txt2[1][0], txt2[1][5:7]).set_color(col_WVD)
+        VGroup(txt1[1][2], txt1[1][-2], txt2[1][-2], txt2[1][2], txt4[1]).set_color(col_x)
+        mh.copy_colors_eq(txt1[1], txt5[1])
+
+        txt2.next_to(txt1, DOWN, buff=0.6)
+        txt3.next_to(txt2, DOWN, buff=0.3)
+        txt4.next_to(txt3, DOWN, buff=1.2)
+        txt5.next_to(txt4, DOWN, buff=0.3)
+        VGroup(txt1, txt2, txt3, txt4, txt5).move_to(ORIGIN)
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=15)
+        txt2 = mh.eq_shadow(txt2, bg_stroke_width=15)
+        txt3 = mh.eq_shadow(txt3, bg_stroke_width=15)
+        txt4 = mh.eq_shadow(txt4, bg_stroke_width=15)
+        txt5 = mh.eq_shadow(txt5, bg_stroke_width=15)
+
+        self.add(txt1)
+        self.play(FadeIn(txt2, txt3))
+        self.wait(0.1)
+        self.play(FadeIn(txt4, txt5))
+        self.wait()
+
+class Narration5(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf a better asymptotic approximation is')
+        txt2 = MathTex(r'\pi(x)', r'\sim', r'{\rm li}(x)-\frac12{\rm li}(\sqrt x)-\frac13{\rm li}(\sqrt[3] x)',
+                       r'+\cdots', r'+\frac{\mu(r)}{r}{\rm li}(\sqrt[r] x)')
+        txt3 = Tex(r'\sf M\"obius function', r' $=0,-1,+1$')
+
+        txt1.set_color(col_txt)
+        VGroup(txt2[0][0], txt2[2][:2], txt2[2][9:11], txt2[2][20:22], txt2[-1][7:9]).set_color(col_WVD)
+        VGroup(txt2[0][2], txt2[2][3], txt2[2][14], txt2[2][26], txt2[-1][13]).set_color(col_x)
+        VGroup(txt2[2][12:14], txt2[2][24:26], txt2[-1][11:13],
+               txt2[2][7], txt2[2][18], txt2[-1][5]).set_color(col_op)
+        VGroup(txt2[2][6:9:2], txt2[2][17:20:2], txt2[-1][6], txt2[2][23],
+               txt3[1][1], txt3[1][3:5], txt3[1][6:]).set_color(col_num)
+        VGroup(txt2[-1][3:7:3], txt2[-1][10]).set_color(col_var)
+        txt2[-1][1].set_color(RED_C)
+        txt3[0].set_color(RED)
+
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=15)
+        txt2 = mh.eq_shadow(txt2, bg_stroke_width=15)
+        txt3 = mh.eq_shadow(txt3, bg_stroke_width=15)
+
+        txt2[-1].next_to(txt2[:-1], DOWN, buff=0.2).align_to(txt2[:-1], RIGHT)
+        txt2.next_to(txt1, DOWN)
+
+        VGroup(txt1, txt2).move_to(ORIGIN, coor_mask=UP)
+        txt3.next_to(txt2[-1][0], DL)
+        arr1 = Arrow(txt3[0].get_corner(UR), txt2[-1][1].get_left(), color=RED, stroke_width=8).set_z_index(10)
+
+        self.add(txt1, txt2)
+        self.play(FadeIn(txt3[0], arr1))
+        self.wait(0.1)
+        self.play(FadeIn(txt3[1]))
+        self.wait()
+
+class Narration6(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf scaling y-axis by ', r'$\frac{\displaystyle\log x_{\sf max}}{\displaystyle\sqrt x_{\sf max}}$')
+        txt1[0].set_color(col_txt)
+        txt1[1][:3].set_color(col_trig)
+        VGroup(txt1[1][3:7], txt1[1][10:]).set_color(col_x)
+        txt1[1][7:10].set_color(col_op)
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=15)
+
+        self.add(txt1)
+
+class Narration7(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = Tex(r'\sf model: ', r'random walk scaled to observed variances')
+        txt1.set_color(col_txt)
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=15)
+
+        line1 = Line(txt1[1][0].get_left()+LEFT*0.2, txt1[1][-1].get_right()+RIGHT*0.2, stroke_color=RED, stroke_width=8).set_z_index(10)
+
+        self.add(txt1)
+        self.play(Create(line1, rate_func=linear, run_time=0.6))
+        self.wait()
+
+class Narration8(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        txt1 = MathTex(r'{\sf model\!:\ }', r'\pi(x)-\hat\pi(x)', r'=', r'\frac{\sqrt x}{\log x}', r'\sum_\rho',
+                       r'\frac{2}{\lvert\rho\rvert}\sin(\gamma\log x+\theta)')
+        txt2 = Tex(r'where ', r'$\rho=\frac12+i\gamma$', r' are zeta zeros with ', r'$\gamma > 0$')
+        txt3 = Tex(r'and ', r'$\theta$', r' are independent random phases')
+        txt4 = Tex(r'uniform on ', r'$[0,2\pi]$')
+
+        VGroup(txt1[0], txt2[0], txt2[2], txt3[0], txt3[2], txt4[0]).set_color(col_txt)
+        VGroup(txt1[1][0], txt1[1][5:7]).set_color(col_WVD)
+        VGroup(txt1[1][2], txt1[1][-2], txt1[3][2], txt1[3][-1], txt1[5][13]).set_color(col_x)
+        VGroup(txt1[3][:2], txt1[3][3], txt1[4][0], txt1[5][1:3], txt1[5][4], txt2[1][3], txt4[1][0], txt4[1][2], txt4[1][-1]).set_color(col_op)
+        VGroup(txt1[5][5:8], txt1[5][10:13], txt1[3][4:7]).set_color(col_trig)
+        VGroup(txt1[5][0], txt2[1][2:5:2], txt2[3][-1], txt4[1][1]).set_color(col_num)
+        VGroup(txt1[5][-2], txt3[1]).set_color(col_angle)
+        txt2[1][-2].set_color(col_i)
+        VGroup(txt1[5][-8], txt2[1][-1], txt2[-1][0]).set_color(GREEN)
+        txt4[-1][-3:-1].set_color(col_pi)
+        VGroup(txt1[4][-1], txt1[5][3], txt2[1][0]).set_color(PINK)
+
+        txt2.next_to(txt1, DOWN, buff=0.5)
+        txt3.next_to(txt2, DOWN, buff=0.2)
+        txt4.next_to(txt3, DOWN, buff=0.2)
+        VGroup(txt1, txt2, txt3, txt4).move_to(ORIGIN, coor_mask=UP)
+
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=15)
+        txt2 = mh.eq_shadow(txt2, bg_stroke_width=15)
+        txt3 = mh.eq_shadow(txt3, bg_stroke_width=15)
+        txt4 = mh.eq_shadow(txt4, bg_stroke_width=15)
+        # box = SurroundingRectangle(VGroup(txt2, txt3, txt4).set_z_index(1), stroke_width=0, stroke_opacity=0,
+        #                            fill_color=BLACK, fill_opacity=0.7, corner_radius=0.2)
+
+        self.add(txt1)
+        self.play(FadeIn(txt2))
+        self.play(FadeIn(txt3, txt4))
+
+        self.wait()
+
+class PiDigits(Scene):
+    def __init__(self, *args, **kwargs):
+        if not config.transparent: config.background_color = GREY
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=3)
+        pi_str = '3.141592653589793238462643383279502884197169399375105820974944592307816406286' \
+                 '208998628034825342117067982148086513282306647093844609550582231725359408128481'
+                 # '117450284102701938521105559644622948954930381964428810975665933446128475648233'
+                 # '786783165271201909145648566923460348610454326648213393607260249141273724587006' \
+                 # '606315588174881520920962829254091715364367892590360011330530548820466521384146' \
+                 # '951941511609433057270365759591953092186117381932611793105118548074462379962749'
+        eq_pi = MathTex(r'\pi', r'=', pi_str).set_z_index(1)
+        eq_pi = mh.font_size_sub(eq_pi, 0, 120)
+        eq_pi[0].set_color(col_pi).move_to(eq_pi[2][0], coor_mask=UP)
+        eq_pi[2].set_color(col_num)
+        eq_pi= mh.eq_shadow(eq_pi, bg_stroke_width=16)
+        # box = SurroundingRectangle(eq_pi, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+        #                            corner_radius=0.15, buff=0.15)
+        obj = eq_pi #VGroup(box, eq_pi)
+        obj.next_to(mh.pos(RIGHT), RIGHT, buff=0)
+        self.add(obj)
+        self.play(obj.animate.next_to(mh.pos(RIGHT), LEFT, buff=0), rate_func=linear, run_time=13)
+
+class Logistic(Scene):
+    bgcol = GREY
+    trcol = BLACK
+    def __init__(self, *args, **kwargs):
+        config.background_color = self.trcol if config.transparent else self.bgcol
+        Scene.__init__(self, *args, **kwargs)
+
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        ax = Axes(x_range=[0, 1.08], y_range=[0, 1.05], x_length=5, y_length=3,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+        f = lambda x: 4 * x * (1-x)
+        plt1 = ax.plot(f, (0,1), stroke_width=6, stroke_color=BLUE).set_z_index(1.5)
+        # plt2 = ax.plot(lambda x: x, (0,1), stroke_width=6, stroke_color=(GREEN*0.5+BLACK*0.5))
+        plt2 = DashedLine(ax.c2p(0,0), ax.c2p(1,1), stroke_width=6, stroke_color=GREEN).set_z_index(1.3)
+
+        coords = [(0.2, 0.)]
+        lines = []
+        for _ in range(20):
+            x,_ = coords[-1]
+            z = f(x)
+            coords += [(x, z), (z,z)]
+        pts = [ax.c2p(*_) for _ in coords]
+        # anims = []
+        dot = Dot(radius=0.1, color=YELLOW).set_z_index(4)
+        dot.move_to(ax.c2p(*coords[0]))
+        box = SurroundingRectangle(ax, stroke_opacity=0, stroke_width=0, fill_color=BLACK, fill_opacity=0.5)
+        col_txt
+
+        self.add(ax, plt1, plt2, dot, box)
+
+        for i in range(len(pts)-1):
+            p = pts[i]
+            q = pts[i+1]
+            lines.append(Line(p, q, stroke_color=RED, stroke_width=4).set_z_index(1))
+            dt = max(abs(coords[i][0]-coords[i+1][0]), abs(coords[i][1]-coords[i+1][1])) * 0.5
+            anim = [Create(lines[-1])]
+            if i % 2 == 1:
+                dot1 = dot.copy().move_to(ax.c2p(coords[i][0], 0)).set_color(ORANGE).set_z_index(3)
+                dx = coords[i+1][0] - coords[i][0]
+                arc = PI/4 * (1 if dx > 0 else -1)
+                anim += [dot.animate(path_arc=arc).move_to(ax.c2p(coords[i+1][0],0))]
+                self.add(dot1)
+                for j in range(0, min(i,7)):
+                    anim.append(lines[i-1-j].animate.set_stroke(opacity=1-j*0.1))
+                dt *= 2
+            self.play(AnimationGroup(*anim, run_time=dt, rate_func=linear))
+            # anims.append(AnimationGroup(*anim, run_time=dt, rate_func=linear))
+
+        # self.play(Succession(*anims))
+        self.wait()
+
+class SimpleFactors(Logistic):
+    trcol = GREY
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        eq1 = Tex(r'\sf factors of ', r'$2$:', r' $1,2$').set_color(col_prime)
+        eq2 = Tex(r'\sf factors of ', r'$3$:', r' $1,3$').set_color(col_prime)
+        eq3 = Tex(r'\sf factors of ', r'$4$:', r' $1,2,4$').set_color(RED)
+        eq4 = Tex(r'\sf factors of ', r'$5$:', r' $1,5$').set_color(col_prime)
+        eq5 = Tex(r'\sf factors of ', r'$6$:', r' $1,2,3,6$').set_color(RED)
+
+        eq1.to_edge(DOWN)
+        mh.align_sub(eq2, eq2[0], eq1[0])
+        mh.align_sub(eq3, eq3[0], eq1[0])
+        mh.align_sub(eq4, eq4[0], eq1[0])
+        mh.align_sub(eq5, eq5[0], eq1[0])
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=12)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=12)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=12)
+        eq4 = mh.eq_shadow(eq4, bg_stroke_width=12)
+        eq5 = mh.eq_shadow(eq5, bg_stroke_width=12)
+        shift = UP * 0.8
+        gp = VGroup(eq1, eq2, eq3, eq4, eq5)
+
+        self.add(eq1)
+        self.play(gp[:1].animate(run_time=1).shift(shift),
+                  Succession(Wait(0.3), FadeIn(eq2, run_time=0.7, rate_func=linear)))
+        self.play(gp[:2].animate(run_time=1).shift(shift),
+                  Succession(Wait(0.3), FadeIn(eq3, run_time=0.7, rate_func=linear)))
+        self.play(gp[:3].animate(run_time=1).shift(shift),
+                  Succession(Wait(0.3), FadeIn(eq4, run_time=0.7, rate_func=linear)))
+        self.play(gp[:4].animate(run_time=1).shift(shift),
+                  Succession(Wait(0.3), FadeIn(eq5, run_time=0.7, rate_func=linear)))
+        self.wait()
