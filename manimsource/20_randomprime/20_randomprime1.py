@@ -176,34 +176,35 @@ def get_yticks(ax, vals=[], strs=None, scaley=1., max_width=0.9, center=0.):
     return VGroup(*[VGroup(tick, eq) for tick, eq in zip(ticks, tick_eqs[:])]).set_z_index(0.3)
 
 
-class PiPlot(Scene):
-    def construct(self):
+class PiPlot1(Scene):
+
+    @staticmethod
+    def eq_pi():
+        eq = MathTex(r'\pi(x)', font_size=60, stroke_width=1.5, color=BLUE).set_z_index(4)
+        eq.move_to(mh.pos(LEFT*0.45 + DOWN*0.27))
+        return eq
+
+    def setup(self):
         ax = Axes(x_range=[0, 1.05], y_range=[0, 1.05], x_length=12, y_length=6,
                   axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                },
                   ).set_z_index(1).shift(RIGHT*0.2)
-        origin = ax.coords_to_point(0,0)
-        eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
 
+        xvals2 = np.linspace(4., 101., 1000)
+        yvals3 = xvals2 / np.log(xvals2)
+        scalex3 = 1/100
+        scaley3 = 3./100
+        plt_line3 = ax.plot_line_graph(xvals2 * scalex3, yvals3 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREEN).set_z_index(0.49)
         prime_count = build_prime_count(1200001)
 
         x, y = prime_counting_vectors(prime_count, 1200001)
-        scalex1 = 0.1
-        scaley1 = 0.25
 
-        ticks = get_xticks(ax, [2, 3, 5, 7, 11, 13, 17, 19], scalex=scalex1)
-        ticksy = get_yticks(ax, [0, 1, 2, 3, 4, 5, 6, 7, 8], scaley=scaley1)
-        ticksy[0].set_z_index(0.5)
-
-        nplt = 1000
-
-        m = 15
-        eps = 0.01
-        plt1 = ax.plot_line_graph(x[:m+1]*scalex1, y[:m+1]*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-        plt2 = plt1.copy()
-        plt3 = plt1.copy()
+        plt7 = ax.plot_line_graph(x[:127]*scalex3, y[:127]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
+        xvals1 = np.linspace(0., 60., 1000)
+        yvals1 = xvals1
+        plt_line1 = ax.plot_line_graph(xvals1 * scalex3, yvals1 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.5)
         box1 = Rectangle(width=2, height=config.frame_height, stroke_width=0, stroke_opacity=0,
                          fill_color=BLACK, fill_opacity=1).set_z_index(3)
         box1.next_to(ax.c2p(1., 0.), UR, buff=0).next_to(ax.x_axis.tip, UP, buff=0.01, coor_mask=UP)
@@ -220,9 +221,28 @@ class PiPlot(Scene):
                          fill_color=BLACK, fill_opacity=1).set_z_index(0.4)
         box5.next_to(ax.c2p(0,0), DL, buff=0)
 
-        self.add(ax, eqx, box1, box2, box3, box4, box5, ticksy[0])
+        return ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5
 
-        plt_args = {'line_color': BLUE, }
+    def construct(self):
+        ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5 = self.setup()
+        eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
+
+        scalex1 = 0.1
+        scaley1 = 0.25
+
+        ticks = get_xticks(ax, [2, 3, 5, 7, 11, 13, 17, 19], scalex=scalex1)
+        ticksy = get_yticks(ax, [0, 1, 2, 3, 4, 5, 6, 7, 8], scaley=scaley1)
+        ticksy[0].set_z_index(0.5)
+
+        m = 15
+        eps = 0.01
+        plt1 = ax.plot_line_graph(x[:m+1]*scalex1, y[:m+1]*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
+        plt2 = plt1.copy()
+        plt3 = plt1.copy()
+
+        eq_pi = self.eq_pi()
+
+        self.add(ax, eqx, box1, box2, box3, box4, box5, ticksy[0])
 
 
         self.play(Create(plt1, run_time=1.5, rate_func=lambda t: (t+eps)*3/m),
@@ -230,7 +250,7 @@ class PiPlot(Scene):
         self.wait(0.1)
         self.remove(plt1)
         self.play(Create(plt2, run_time=1., rate_func=lambda t: (t+eps)*2/m+3/m),
-                  FadeIn(ticks[1], ticksy[2], run_time=1))
+                  FadeIn(ticks[1], ticksy[2], eq_pi, run_time=1))
         self.wait(0.1)
         self.remove(plt2)
         t0 = (5+eps*2)/m
@@ -251,46 +271,64 @@ class PiPlot(Scene):
         self.add(plt4)
 
         self.play(mh.rtransform(plt4, plt5, ticks[:], ticks2[:-2], ticksy[1:], ticksy2[:-2]),
+                  eq_pi.animate.shift(UP*0.3),
                   run_tim1=1.5)
 
         self.wait(0.1)
 
-        scalex3 = 1/100
-        scaley3 = 3./100
         plt6 = ax.plot_line_graph(x[:127]*scalex2, y[:127]*scaley2, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-        plt7 = ax.plot_line_graph(x[:127]*scalex3, y[:127]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
 
-        ticks3 = get_xticks(ax, [2, 3, 5, 7, 11, 13, 17, 19, 50, 100, 500, 1000], scalex=scalex3)
-        ticks3[:-4].set_opacity(0)
+        ticks3 = get_xticks(ax, [2, 3, 5, 7, 11, 13, 17, 19, 50, 100], scalex=scalex3)
+        ticks3[:-2].set_opacity(0)
         ticksy3 = get_yticks(ax, [1, 2, 3, 4, 5, 6, 7, 8, prime_count[50], prime_count[100],
-                                  prime_count[500], prime_count[1000]], scaley=scaley3)
-        ticksy3[:-4].set_opacity(0)
+                                  ], scaley=scaley3)
+        ticksy3[:-2].set_opacity(0)
 
         self.remove(plt5)
         self.add(plt6)
 
         eps = 0.1
 
-        self.play(mh.rtransform(plt6, plt7, ticks2, ticks3[:-2],
-                                ticksy2[:], ticksy3[:-2], run_time=3., rate_func=mh.rate_func_quad(0.2, 0.5)))
+        self.play(AnimationGroup(mh.rtransform(plt6, plt7, ticks2, ticks3[:],
+                                               ticksy2[:], ticksy3[:]),
+                                 eq_pi.animate.shift(DOWN*0.2),
+                                 run_time=3., rate_func=mh.rate_func_quad(0.2, 0.5)))
 
-        xvals1 = np.linspace(0., 60., 1000)
-        yvals1 = xvals1
+        eq_yex = MathTex(r'x', stroke_width=1.5, font_size=60, color=GREY).move_to(ax.c2p(0.17, 0.6))
 
-        plt_line1 = ax.plot_line_graph(xvals1 * scalex3, yvals1 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.5)
-
-        self.play(Create(plt_line1, run_time=1.4, rate_func=linear))
-
-        xvals2 = np.linspace(4., 101., 1000)
-        yvals3 = xvals2 / np.log(xvals2)
-        yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
+        self.play(Create(plt_line1, run_time=1.4, rate_func=linear),
+                  FadeIn(eq_yex))
 
         plt_line2 = ax.plot_line_graph(xvals2 * scalex3, xvals2 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
-        plt_line3 = ax.plot_line_graph(xvals2 * scalex3, yvals3 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREEN).set_z_index(0.49)
+
+        eq_pnt = MathTex(r'\pi(x)', r'\sim', r'\frac{x}{\log x}', stroke_width=1.5, font_size=60)
+        eq_pnt[0].set_color(BLUE)
+        eq_pnt[2].set_color(GREEN)
+        eq_pnt.move_to(ax.c2p(0.7, 0.3))
+
+        self.play(mh.rtransform(plt_line2, plt_line3),
+                  FadeOut(eq_yex),
+                  mh.rtransform(eq_pi[0], eq_pnt[0]),
+                  Succession(Wait(0.5), FadeIn(eq_pnt[1:])))
+
+        self.wait()
+
+class PiPlot2(PiPlot1):
+    def construct(self):
+        ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5 = self.setup()
+        origin = ax.coords_to_point(0,0)
+        nplt = 1000
+
+        yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
+        ticky0 = get_yticks(ax, [0])[0].set_z_index(0.5).set_opacity(0)
+        ticks3 = get_xticks(ax, [50, 100, 500, 1000], scalex=scalex3)
+        ticksy3 = get_yticks(ax, [prime_count[50], prime_count[100],
+                                  prime_count[500], prime_count[1000]], scaley=scaley3)
+
+        self.add(ax, plt_line3, plt_line1, plt7, box1, box2, box3, box4, box5, ticks3, ticksy3)
+
         plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
-        self.play(mh.rtransform(plt_line2, plt_line3))
-        self.wait(0.1)
         self.play(mh.rtransform(plt_line3.copy(), plt_line4))
         self.wait(0.1)
 
@@ -322,7 +360,7 @@ class PiPlot(Scene):
         self.add(plt8, plt_line5, plt_line7, plt_line9)
 
         self.play(mh.rtransform(plt8, plt9, plt_line5, plt_line6, plt_line7, plt_line8, plt_line9, plt_line10,
-                                ticks3[-4:], ticks4[-6:-2], ticksy3[-4:], ticksy4[:-2],
+                                ticks3[:], ticks4[:-2], ticksy3[:], ticksy4[:-2],
                                 run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
         self.wait(0.1)
 
@@ -376,7 +414,7 @@ class PiPlot(Scene):
 
         self.wait(0.1)
         self.play(FadeOut(plt_line12, plt_line16),FadeOut(plt11), FadeIn(plt12))
-        self.play(mh.rtransform(plt12, plt13, plt_line14, plt_line17, ticksy[0], ticksy6[-2]),
+        self.play(mh.rtransform(plt12, plt13, plt_line14, plt_line17, ticky0, ticksy6[-2]),
                   FadeOut(ticksy5), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
 
         self.wait(0.1)
@@ -781,4 +819,24 @@ class SimpleFactors(Logistic):
                   Succession(Wait(0.3), FadeIn(eq4, run_time=0.7, rate_func=linear)))
         self.play(gp[:4].animate(run_time=1).shift(shift),
                   Succession(Wait(0.3), FadeIn(eq5, run_time=0.7, rate_func=linear)))
+        self.wait()
+
+class PiDef(Logistic):
+    def construct(self):
+        MathTex.set_default(font_size=80, stroke_width=2)
+        eq1 = MathTex(r'\pi(x)', r'=', r'{\sf number\ of\ primes}', r'{}\le x')
+
+        VGroup(eq1[0][0]).set_color(col_WVD)
+        VGroup(eq1[0][2], eq1[-1][-1]).set_color(col_x)
+        VGroup(eq1[2], eq1[-1][0]).set_color(col_txt)
+
+        eq1.to_edge(DOWN, buff=0.4).set_z_index(2)
+        box = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.7,
+                                   buff=0.2, corner_radius=0.2)
+
+        eq_pi = PiPlot.eq_pi()
+
+        self.add(box, eq1)
+        self.play(mh.rtransform(eq1[0], eq_pi[0], run_time=2),
+                  FadeOut(box, eq1[1:]))
         self.wait()
