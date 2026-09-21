@@ -413,13 +413,29 @@ class PiPlot2(PiPlot1):
                                   prime_count[5000], prime_count[10000]], scaley=scaley4)
         ticksy4[0].set_opacity(0)
 
-        self.remove(plt7, plt_line3, plt_line4, plt_line1)
-        self.add(plt8, plt_line5, plt_line7, plt_line9)
+        self.remove(plt7, plt_line3, plt_line4, plt_line1, ticks3, ticksy3)
+        # self.add(plt_line5, plt_line7, plt_line9)
 
-        self.play(mh.rtransform(plt8, plt9, plt_line5, plt_line6, plt_line7, plt_line8, plt_line9, plt_line10,
-                                ticks3[:], ticks4[:-2], ticksy3[:], ticksy4[:-2],
-                                run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
+        # self.play(mh.rtransform(plt8, plt9, plt_line5, plt_line6, plt_line7, plt_line8, plt_line9, plt_line10,
+        #                         ticks3[:], ticks4[:-2], ticksy3[:], ticksy4[:-2],
+        #                         run_time=0.5, rate_func=mh.rate_func_quad(0.2, 0.2)))
+
+        #
+        tracker1, obj1 = animation_scale_redraw(scalex4 / scalex3, scaley4 / scaley3,
+                                                VGroup(plt8, plt_line5, plt_line7, plt_line9),
+                                                obj1x=ticks3[:], obj2x=ticks4[:-2].copy(),
+                                                obj1y=ticksy3[:], obj2y=ticksy4[:-1],
+                                                origin=origin,
+                                                # obj2_scale=plt17
+                                                )
+        self.add(obj1)
+        self.play(tracker1.animate().set_value(1),
+                  eq1.animate.shift(UP*0.3),
+                  eq2.animate.shift(DOWN*0.08),
+                  rate_func=mh.rate_func_quad(0.2, 0.2),
+                  run_time=3)
         self.wait(0.1)
+        self.remove(obj1)
 
         i = np.searchsorted(x, 10050., side='right')
 
@@ -441,11 +457,9 @@ class PiPlot2(PiPlot1):
         plt_line16 = ax.plot_line_graph(xvals6 * scalex5, xvals6 * scaley5, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
 
         scaley6 = 3/100
-        # yvals9 = y[:i] - expi(np.log(x[:i].clip(2.))) + expi(np.log(2.))
-
         yvals9 = np.interp(xvals5+0.5, x, y, left=0, right=y[-1])  # pi up to 10k
         yvals10 = yvals9 - yvals8  # pi - Li up to 20k
-        plt12 = ax.plot_line_graph(xvals5*scalex5, yvals9*scaley5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+        # plt12 = ax.plot_line_graph(xvals5*scalex5, yvals9*scaley5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt13 = ax.plot_line_graph(xvals5*scalex5, yvals10*scaley6+0.8, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt_line17 = ax.plot_line_graph(xvals5 * scalex5, xvals5 * 0 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
@@ -462,16 +476,31 @@ class PiPlot2(PiPlot1):
         ticksy6[-1].set_opacity(0)
         # print('error', prime_count[10_000] - expi(np.log(1e4)) + expi(np.log(2)))
 
-        self.remove(plt9, plt_line6, plt_line8, plt_line10)
-        self.add(plt10, plt_line11, plt_line13, plt_line15)
+        # self.remove(plt9, plt_line6, plt_line8, plt_line10)
+        # self.add(plt10, plt_line11, plt_line13, plt_line15)
 
-        self.play(mh.rtransform(plt10, plt11, plt_line11, plt_line12, plt_line13, plt_line14, plt_line15, plt_line16,
-                                ticks4[1:], ticks5[:-2], ticksy4[1:], ticksy5[:],
-                                run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
+        # self.play(mh.rtransform(plt10, plt11, plt_line11, plt_line12, plt_line13, plt_line14, plt_line15, plt_line16,
+        #                         ticks4[1:], ticks5[:-2], ticksy4[1:], ticksy5[:],
+        #                         run_time=3, rate_func=mh.rate_func_quad(0.2, 0.2)))
+        tracker1, obj1 = animation_scale_redraw(scalex5 / scalex4, scaley5 / scaley4,
+                                                VGroup(plt10, plt_line11, plt_line13, plt_line15),
+                                                obj1x=ticks4[1:], obj2x=ticks5[:-2].copy(),
+                                                obj1y=ticksy4[1:], obj2y=ticksy5[:],
+                                                origin=origin,
+                                                # obj2_scale=plt17
+                                                )
+        self.add(obj1)
+        self.play(tracker1.animate().set_value(1),
+                  eq1.animate.shift(UP*0.6),
+                  eq2.animate.shift(UP*0.4),
+                  rate_func=mh.rate_func_quad(0.2, 0.2),
+                  run_time=3)
+        self.remove(obj1)
 
+        self.add(plt_line12, plt_line16, eq1, plt11, plt_line14, ticks5, ticksy5)
         self.wait(0.1)
-        self.play(FadeOut(plt_line12, plt_line16, eq1),FadeOut(plt11), FadeIn(plt12))
-        self.play(mh.rtransform(plt12, plt13, plt_line14, plt_line17, ticky0, ticksy6[-2]),
+        self.play(FadeOut(plt_line12, plt_line16, eq1))
+        self.play(mh.rtransform(plt11, plt13, plt_line14, plt_line17, ticky0, ticksy6[-2]),
                   FadeOut(ticksy5, eq2), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
 
         self.wait(0.1)
@@ -522,6 +551,17 @@ class PiPlot2(PiPlot1):
         self.add(plt15)
         self.play(mh.rtransform(plt15, plt17, ticks5[2:], ticks6[:-2], ticksy7[:], ticksy8[1:-1],
                                 run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
+        # tracker1, obj1 = animation_scale_redraw(scalex6 / scalex5, scaley7 / scaley6, plt15,
+        #                                         # obj1x=ticks5[2:], obj2x=ticks6[:-2].copy(),
+        #                                         origin=ax.c2p(0,0.7),
+        #                                         # obj2_scale=plt17
+        #                                         )
+        # self.add(obj1)
+        # self.play(tracker1.animate(rate_func=mh.rate_func_quad(0.2, 0.2)).set_value(1),
+        #           run_time=3)
+        # self.remove(obj1)
+
+        # self.play(plt15.animate.scale(0.1, about_point=ax.c2p(0,0.7)), run_time=3)
 
         scalex7 = 1/1e6
         scaley8 = 1.4/100
@@ -546,9 +586,9 @@ class PiPlot2(PiPlot1):
         plt18 = ax.plot_line_graph(xvals9*scalex6, yvals16*scaley7+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt19 = ax.plot_line_graph(xvals10*scalex7, yvals17*scaley8+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
 
+        self.add(plt18)
         self.wait(0.1)
         self.remove(plt17)
-        self.add(plt18)
 
         self.play(mh.rtransform(plt18, plt19, ticks6[2:], ticks7[:], ticksy8, ticksy9[1:],
                                 run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
