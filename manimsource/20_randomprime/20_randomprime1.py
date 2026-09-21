@@ -389,6 +389,10 @@ class PiPlot2(PiPlot1):
                   FadeIn(eq2))
         self.wait(0.1)
 
+        """
+        first zoom out
+        """
+
         scalex4 = 1/1000
         scaley4 = 5/1000
         xvals3 = np.linspace(4., 1001., 4000)
@@ -399,13 +403,13 @@ class PiPlot2(PiPlot1):
         i = np.searchsorted(x, 1050., side='right')
 
         plt8 = ax.plot_line_graph(x[:i]*scalex3, y[:i]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-        plt9 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
+        # plt9 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
         plt_line5 = ax.plot_line_graph(xvals3 * scalex3, yvals5 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREEN).set_z_index(0.49)
-        plt_line6 = ax.plot_line_graph(xvals3 * scalex4, yvals5 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=GREEN).set_z_index(0.49)
+        # plt_line6 = ax.plot_line_graph(xvals3 * scalex4, yvals5 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=GREEN).set_z_index(0.49)
         plt_line7 = ax.plot_line_graph(xvals3 * scalex3, yvals6 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
-        plt_line8 = ax.plot_line_graph(xvals3 * scalex4, yvals6 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
+        # plt_line8 = ax.plot_line_graph(xvals3 * scalex4, yvals6 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
         plt_line9 = ax.plot_line_graph(xvals4 * scalex3, xvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
-        plt_line10 = ax.plot_line_graph(xvals4 * scalex4, xvals4 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
+        # plt_line10 = ax.plot_line_graph(xvals4 * scalex4, xvals4 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
 
         ticks4 = get_xticks(ax, [50, 100, 500, 1000, 5000, 10000], ['50', '100', '500', r'1\,000', r'5\,000', r'10\,000'], scalex4)
         ticks4[:1].set_opacity(0)
@@ -424,7 +428,7 @@ class PiPlot2(PiPlot1):
         tracker1, obj1 = animation_scale_redraw(scalex4 / scalex3, scaley4 / scaley3,
                                                 VGroup(plt8, plt_line5, plt_line7, plt_line9),
                                                 obj1x=ticks3[:], obj2x=ticks4[:-2].copy(),
-                                                obj1y=ticksy3[:], obj2y=ticksy4[:-1],
+                                                obj1y=ticksy3[:], obj2y=ticksy4[:-2],
                                                 origin=origin,
                                                 # obj2_scale=plt17
                                                 )
@@ -496,12 +500,18 @@ class PiPlot2(PiPlot1):
                   rate_func=mh.rate_func_quad(0.2, 0.2),
                   run_time=3)
         self.remove(obj1)
-
         self.add(plt_line12, plt_line16, eq1, plt11, plt_line14, ticks5, ticksy5)
         self.wait(0.1)
+
+        """
+        diff between pi and Li
+        """
+        eq3 = MathTex(r'\pi(x) - {\rm Li}(x)', color=BLUE)
+        eq3.next_to(ax.c2p(0.2, 0.2), RIGHT, buff=0)
         self.play(FadeOut(plt_line12, plt_line16, eq1))
         self.play(mh.rtransform(plt11, plt13, plt_line14, plt_line17, ticky0, ticksy6[-2]),
-                  FadeOut(ticksy5, eq2), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
+                  FadeOut(ticksy5, eq2),
+                  Succession(Wait(0.5), FadeIn(ticksy6[:-2], eq3)))
 
         self.wait(0.1)
         yvals11 = -(expi(np.log(xvals5)/2)-expi(np.log(2)))/2 # -Li(sqrt x)/2
@@ -511,25 +521,54 @@ class PiPlot2(PiPlot1):
         plt_line19 = ax.plot_line_graph(xvals5 * scalex5, yvals12 * scaley6 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
         plt_line17_ = plt_line17.copy().set_stroke(color=GREY).set_opacity(0.48)
+
+        eq4 = MathTex(r'-{\frac12}', r'{\rm Li}(\sqrt x)', color=ORANGE)
+        mh.font_size_sub(eq4, 0, 40)
+        eq4.move_to(ax.c2p(0.6, 0.55))
+
         self.add(plt_line17_)
-        self.play(mh.rtransform(plt_line17, plt_line18))
+        self.play(mh.rtransform(plt_line17, plt_line18),
+                  Succession(Wait(0.4), FadeIn(eq4)))
         self.wait(0.1)
-        self.play(mh.rtransform(plt_line18.copy(), plt_line19))
+
+        eq5 = MathTex(r'-{\frac12}', r'{\rm Li}(\sqrt x)-', r'\frac13', r'{\rm Li}(\sqrt[3] x)', color=ORANGE, font_size=50)
+        eq5.set_z_index(5)
+        mh.font_size_sub(eq5, 0, 35)
+        mh.font_size_sub(eq5, 2, 35)
+        eq5.move_to(ax.c2p(0.8, 0.2))
+        eq5 = mh.eq_shadow(eq5, fg_z_index=6, bg_z_index=5, bg_stroke_width=14)
+        self.play(mh.rtransform(plt_line18.copy(), plt_line19, run_time=1),
+                  Succession(Wait(0.4), FadeIn(eq5)))
         self.wait(0.1)
-        self.play(FadeOut(plt_line19))
+        self.play(FadeOut(plt_line19, eq5))
         self.wait(0.1)
+
+        """
+        include bias
+        """
 
         yvals13 = yvals10 - yvals11
         plt14 = ax.plot_line_graph(xvals5*scalex5, yvals13*scaley6+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt_line20 = ax.plot_line_graph(xvals5 * scalex5, xvals5 * 0 + 0.7, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
+        eq6 = MathTex(r'\pi(x)-{\rm Li}(x)-', r'\frac12', r'{\rm Li(\sqrt x)}', color=BLUE)
+        mh.font_size_sub(eq6, 1, 40)
+        eq6.move_to(ax.c2p(0.5, 0.35))
         self.play(mh.rtransform(plt13, plt14, plt_line18, plt_line20, ticksy6, ticksy7),
+                  mh.rtransform(eq3[0][:], eq6[0][:-1], eq4[:], eq6[1:]),
+                  FadeIn(eq6[0][-1], shift=mh.diff(eq3[0][:], eq6[0][:-1])),
                                 plt_line17_.animate.shift(ax.c2p(0, 0.7 - 0.8)-origin))
         self.remove(plt_line17_)
 
         self.wait(0.1)
 
-        scalex6 = 1/100000
-        scaley7 = 3/100
+        """
+        final zoom out
+        """
+        scalex7 = 1/1e6
+        scaley8 = 1.4/100
+
+        scalex6 = 1/1e5
+        scaley7 = np.sqrt(scaley6*scaley8)
         xvals7 = np.linspace(0., 100100, nplt*10)
         xvals8 = np.linspace(4., 100100, nplt)
         xvals7 = xvals7 * (xvals5[1] - xvals5[0]) / xvals7[1] + 4
@@ -545,26 +584,24 @@ class PiPlot2(PiPlot1):
         yvals15 = (np.interp(xvals8+0.5, x, y, left=0, right=y[-1])
                    - expi(np.log(xvals8)) + expi(np.log(xvals8)/2)/2 + expi(np.log(2))/2)  # pi-Li+Li_2 up to 100k
         plt15 = ax.plot_line_graph(xvals7*scalex5, yvals14*scaley6+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+        plt16 = ax.plot_line_graph(xvals8*scalex5, yvals15*scaley6+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt17 = ax.plot_line_graph(xvals8*scalex6, yvals15*scaley7+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
-        self.wait(0.1)
-        self.remove(plt14)
-        self.add(plt15)
-        self.play(mh.rtransform(plt15, plt17, ticks5[2:], ticks6[:-2], ticksy7[:], ticksy8[1:-1],
-                                run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
-        # tracker1, obj1 = animation_scale_redraw(scalex6 / scalex5, scaley7 / scaley6, plt15,
-        #                                         # obj1x=ticks5[2:], obj2x=ticks6[:-2].copy(),
-        #                                         origin=ax.c2p(0,0.7),
-        #                                         # obj2_scale=plt17
-        #                                         )
-        # self.add(obj1)
-        # self.play(tracker1.animate(rate_func=mh.rate_func_quad(0.2, 0.2)).set_value(1),
-        #           run_time=3)
-        # self.remove(obj1)
+        self.remove(plt14, ticks5, ticksy7)
+        # self.play(mh.rtransform(plt15, plt17, ticks5[2:], ticks6[:-2], ticksy7[:], ticksy8[1:-1],
+        #                         run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
+        tracker1, obj1 = animation_scale_redraw(scalex6 / scalex5, scaley7 / scaley6, plt15,
+                                                obj1x=ticks5[2:], obj2x=ticks6[:-2].copy(),
+                                                obj1y = ticksy7[:], obj2y=ticksy8[1:-1],
+                                                origin=ax.c2p(0,0.7),
+                                                obj2_scale=plt16
+                                                )
+        self.add(obj1)
+        self.play(tracker1.animate(rate_func=mh.rate_func_quad(0.2, 0.),
+                  run_time=3.6).set_value(1),
+                  eq6.animate(run_time=1).move_to(ax.c2p(0.4, 0.12)))
+        self.remove(obj1)
 
         # self.play(plt15.animate.scale(0.1, about_point=ax.c2p(0,0.7)), run_time=3)
-
-        scalex7 = 1/1e6
-        scaley8 = 1.4/100
 
         xvals9 = np.linspace(0., 1001000, nplt*10)
         xvals10 = np.linspace(4., 1001000, nplt)
@@ -584,29 +621,41 @@ class PiPlot2(PiPlot1):
         VGroup(ticksy9[-4], ticksy9[-2]).set_opacity(0)
 
         plt18 = ax.plot_line_graph(xvals9*scalex6, yvals16*scaley7+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+        plt19_ = ax.plot_line_graph(xvals10*scalex6, yvals17*scaley7+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
         plt19 = ax.plot_line_graph(xvals10*scalex7, yvals17*scaley8+0.7, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
 
-        self.add(plt18)
-        self.wait(0.1)
+        # self.add(plt18)
         self.remove(plt17)
 
-        self.play(mh.rtransform(plt18, plt19, ticks6[2:], ticks7[:], ticksy8, ticksy9[1:],
-                                run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
+        # self.play(mh.rtransform(plt18, plt19, ticks6[2:], ticks7[:], ticksy8, ticksy9[1:],
+        #                         run_time=3., rate_func = mh.rate_func_quad(0.2, 0.2)))
 
+        tracker1, obj1 = animation_scale_redraw(scalex7 / scalex6, scaley8 / scaley7, plt18,
+                                                obj1x=ticks6[2:], obj2x=ticks7[:].copy(),
+                                                obj1y = ticksy8[:], obj2y=ticksy9[1:],
+                                                origin=ax.c2p(0,0.7),
+                                                obj2_scale=plt19_
+                                                )
+        self.add(obj1)
+        self.play(tracker1.animate().set_value(1),
+                  rate_func=mh.rate_func_quad(0., 0.2),
+                  run_time=3.6)
+        self.wait(1.1)
+        self.remove(obj1)
+
+        """
+        final diff
+        """
 
         scaley9 = 5/1000
         yvals18 = yvals17 - expi(np.log(xvals10)/2)/2 + expi(np.log(2))/2
         plt20 = ax.plot_line_graph(xvals10*scalex7, yvals18*scaley9+0.8, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
 
-        # ticksy10 = get_yticks(ax, [-150, -100, -50, -20, 0, 20], scaley=scaley9, center=0.8)
         ticksy10 = get_yticks(ax, [-100, -40, -20, 0, 20], scaley=scaley9, center=0.8)
         VGroup(ticksy10[-1], ticksy10[-4:-2]).set_opacity(0)
+        self.add(ticks7)
 
         self.play(mh.rtransform(plt19, plt20, ticksy9[:3], ticksy10[:3], ticksy9[-3::2], ticksy10[-2::]),
-                  #               ticksy9[:2], ticksy10[:2], ticksy9[3], ticksy10[3], ticksy9[-3],
-                  #               ticksy10[-2], ticksy9[-1], ticksy10[-1], ticksy9[2][0], ticksy10[2][0],
-                  #               ticksy9[2][1][0], ticksy10[2][1][0], ticksy9[2][1][2:], ticksy10[2][1][2:]),
-                  # mh.stretch_replace(ticksy9[2][1][1], ticksy10[2][1][1]),
                   plt_line20.animate.shift(ax.c2p(0, 0.8 - 0.7) - origin))
 
         self.wait()
@@ -1139,3 +1188,209 @@ class LiApprox(Logistic):
                   Succession(Wait(0.4), FadeIn(eq7[-2:])))
 
         self.wait()
+
+H = LabeledDot(Text("H", color=BLACK, font='Helvetica', weight=SEMIBOLD), radius=0.35, color=BLUE).scale(1.5)
+T = LabeledDot(Text("T", color=BLACK, font='Helvetica', weight=SEMIBOLD), radius=0.35, color=YELLOW).scale(1.5)
+def get_coin(face='H'):
+    global H, T
+    if face == 'H':
+        return H.copy()
+    elif face == 'T':
+        return T.copy()
+    raise Exception('invalid argument {}'.format(face))
+
+def animate_flip(coin, nflips=1, run_time=1.):
+    """
+    RETURNS a list of animations that animate the mobject "coin" being flipped
+    The "final" variable incidicates what you want it to be at the end of the flipping
+    To animate a coin, use a loop to play the animations:
+
+    for a in animate_flip(coins[i],coin_flips[i]):
+            self.play(a,run_time=0.2)
+
+    """
+
+    global H, T
+
+    final = coin.submobjects[0].text
+
+    offset = 0 if final == 'H' else 1  # Ensures the coin lands on the side requested
+
+    scale = coin.width/H.width
+
+    full_fc = [H.copy().move_to(coin.get_center()).scale(scale), T.copy().move_to(coin.get_center()).scale(scale)]
+
+    tracker = ValueTracker(1.)
+    def get_obj():
+        t = tracker.get_value() * nflips * math.pi
+        cos = np.cos(t)
+        coin = full_fc[offset if cos > 0 else 1-offset]
+        return coin.copy().stretch((abs(cos)+0.05)/1.05, dim=1)
+
+    obj = always_redraw(get_obj)
+
+    return tracker.animate(run_time=run_time, rate_func=linear).set_value(0.), obj
+
+def average_linear_interpolant(x, y, u, du):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    u = np.asarray(u, dtype=float)
+
+    dx = np.diff(x)
+    slopes = np.diff(y) / dx
+
+    # Integral of f from x[0] to each x knot
+    areas = np.concatenate((
+        [0.0],
+        np.cumsum((y[:-1] + y[1:]) * dx / 2),
+    ))
+
+    # First row: lower endpoints; second row: upper endpoints
+    z = np.stack((u - du, u + du))
+
+    j = np.searchsorted(x, z, side="right") - 1
+    j = np.clip(j, 0, len(x) - 2)
+
+    dz = z - x[j]
+
+    # Antiderivative evaluated at all endpoints simultaneously
+    F = areas[j] + dz * (y[j] + 0.5 * slopes[j] * dz)
+
+    return (F[1] - F[0]) / (2 * du)
+
+def zeros(i): return r'0' * (i % 3) + r'\,000' * (i // 3)
+
+def get_tick_strs(i): return [r'5' + zeros(i-1), r'1' + zeros(i)]
+
+class RandomWalk(Scene):
+    def construct(self):
+        nt = 12
+        nmax = 12000
+        scaley = 1. / (np.sqrt(nt) * 1.)
+        ax = Axes(x_range=[0, 1.05], y_range=[-1, 1],
+                  axis_config={'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.6 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  x_length=12,
+                  y_length=6
+                  ).shift(DOWN*0.2, RIGHT*0.6)
+
+        title = Tex(r'\sf Random Walk', font_size=60, stroke_width=2, color=col_txt)
+        title.next_to(ax.get_top(), DOWN, buff=-0.02, coor_mask=UP).shift(UP*0.2)
+
+        self.add(ax, title)
+
+        np.random.seed(4)
+        items = [ax, title]
+
+        y = 0
+        point = ax.c2p(0, y)
+        dot = Dot(point, fill_color=YELLOW).set_z_index(4)
+        self.play(FadeIn(dot), run_time=0.2)
+        scalex = 1/nt
+        tosses = np.random.choice([1, -1], size=nmax)
+        yvec = np.cumsum(tosses)
+        coins = []
+        dots = [dot]
+        lines = []
+
+        for i in range(nt):
+            y1 = yvec[i]
+            point1 = ax.c2p((i+1)*scalex, y1*scaley)
+            line = Line(point, point1, stroke_width=6, stroke_color=BLUE).set_z_index(3)
+            lines.append(line)
+            dot = Dot(point1, fill_color=YELLOW).set_z_index(4)
+            dots.append(dot)
+            run_time=0.37
+            if i == 0:
+                up = tosses[i] > 0
+                coin = get_coin('H' if up else 'T').scale(0.6) \
+                    .next_to(ax.c2p((i + 0.5) * scalex, 0) * RIGHT, DOWN, buff=0.4)
+                anim, obj = animate_flip(coin, nflips=2, run_time=run_time)
+                self.add(*obj)
+                self.play(anim)
+                obj.clear_updaters()
+                coins.append(obj)
+            anims = AnimationGroup(FadeIn(dot), Create(line, rate_func=linear), run_time=run_time)
+            if i < nt-1:
+                up = tosses[i+1] > 0
+                coin = get_coin('H' if up else 'T').scale(0.6) \
+                    .next_to(ax.c2p((i + 1.5) * scalex, 0) * RIGHT, DOWN, buff=0.4)
+                anim, obj = animate_flip(coin, nflips=2, run_time=run_time, flag=(i==0))
+                self.add(*obj)
+                self.play(anims, anim)
+                obj.clear_updaters()
+                coins.append(obj)
+            else:
+                self.play(anims)
+
+            point = point1
+        xvec = np.arange(nmax+1)
+        yvec = np.concatenate(([0], yvec))
+        xplot = np.linspace(0, 1, 4000)
+        tracker = ValueTracker(0)
+
+        def get_obj():
+            t = tracker.get_value()
+            x2 = np.exp(t*np.log(nmax/nt)) * nt
+            scaley2 = np.sqrt(nt / x2) * scaley
+            dx = x2 * xplot[1] * 2
+            yplot = average_linear_interpolant(xvec, yvec, xplot * x2, dx) * scaley2
+            plt = ax.plot_line_graph(xplot, yplot, add_vertex_dots=False, stroke_width=6, stroke_color=BLUE).set_z_index(3)
+            m = int(np.ceil(np.log(x2)/np.log(10)))
+            n = 10**m
+            xtvals = [n//200, n//100, n//20, n//10, n//2, n]
+            strs = np.concatenate([get_tick_strs(i) for i in [m-2, m-1, m]])
+            xticks = mh.get_xticks(ax, xtvals, strs, scalex=1/x2, label_color=col_num)
+            for i in range(6):
+                x = xtvals[i]
+                xticks[i][1] = mh.eq_shadow(xticks[i][1], fg_z_index=8, bg_z_index=7, bg_stroke_width=12)
+                if x < x2 / 10:
+                    op = max(20*x/x2 - 1,0)
+                    xticks[i].set_opacity(op)
+                if x > x2:
+                    op = max(1-(x/x2 - 1)*10,0)
+                    xticks[i].set_opacity(op)
+
+            m = int(np.ceil(np.log(1/scaley2)/np.log(10)))
+            n = 10**m
+            ytvals = [n//20, n//10, n//2, n]
+            ytvals = ytvals + [-_ for _ in ytvals]
+            strs = [str(_) for _ in np.concatenate([get_tick_strs(i) for i in [m-1,m]])]
+            strs = strs + [r'-' + _ for _ in strs]
+            yticks = mh.get_yticks(ax, ytvals, strs, scaley=scaley2, label_color=col_num, max_width=2)
+            for i in range(8):
+                y = abs(ytvals[i])
+                if y * scaley2 < 0.2:
+                    op = max((y * scaley2 - 0.1)*10,0)
+                    yticks[i].set_opacity(op)
+                if y * scaley2 > 1:
+                    op = max(1-(y*scaley2 - 1)*10,0)
+                    yticks[i].set_opacity(op)
+
+            return VGroup(plt, xticks, yticks)
+
+        obj = always_redraw(get_obj)
+
+        self.play(FadeOut(*coins, *dots), FadeIn(obj))
+        self.remove(*lines)
+        self.play(tracker.animate.set_value(1), run_time=4)
+        obj.clear_updaters()
+
+        xvec = np.linspace(0, 1, 1000)
+        yvec = np.sqrt(xvec * nt) * scaley
+        plt1 = ax.plot_line_graph(xvec, yvec, add_vertex_dots=False, stroke_width=6, stroke_color=RED).set_z_index(8)
+        plt2 = ax.plot_line_graph(xvec, -yvec, add_vertex_dots=False, stroke_width=6, stroke_color=RED).set_z_index(8)
+        eq1 = MathTex(r'\sqrt x', stroke_width=1.5, stroke_color=RED, font_size=60).set_z_index(5)
+        eq2 = MathTex(r'-\sqrt x', stroke_width=1.5, stroke_color=RED, font_size=60).set_z_index(5)
+        eq1.move_to(ax.c2p(0.7, 0.7))
+        mh.align_sub(eq2, eq2[0][1:], eq1).move_to(ax.c2p(0, -0.7), coor_mask=UP)
+
+        self.play(Create(plt1), Create(plt2), FadeIn(eq1, eq2), run_time=2)
+
+        self.wait()
+        # self.play(plot[1::2].animate.set_color(ManimColor(WHITE.to_rgb() * 0.5)).set_z_index(1),
+        #           plot[0::2].animate.set_color(ManimColor(YELLOW.to_rgb() * 0.5)).set_z_index(2),
+        #           FadeOut(*coins),
+        #           run_time=0.5)
