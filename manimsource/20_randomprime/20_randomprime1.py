@@ -1041,3 +1041,101 @@ class LogInt(Scene):
                   Succession(Wait(0.6), FadeOut(*eqs, *lines[1:-1], rate_func=linear)))
 
         self.wait()
+
+class LiApprox(Logistic):
+    bgcol = BLACK
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'{\rm Li}(x)', r'=', r'\int_2^x', r'\frac{du}{\log u}')
+        eq2 = MathTex(r'{\rm Li}(x)', r'=', r'\left[', r'\frac{u}{\log u}', r'\right]_{u=2}^x',
+                      r'-', r'\int_2^x', r'u\frac{d}{du}', r'\left(\frac{1}{\log u}\right)', r'du')
+        eq3 = MathTex(r'{\rm Li}(x)', r'=', r'\left[', r'\frac{u}{\log u}', r'\right]_{u=2}^x',
+                      r'+', r'\int_2^x', r'\left(\frac{1}{\log^2 u}\right)')
+        eq4 = MathTex(r'{\rm Li}(x)', r'=', r'\left[', r'\frac{u}{\log u}', r'\right]_{u=2}^x',
+                      r'+', r'\int_2^x', r'\frac{du}{\log^2 u}')
+        eq5 = MathTex(r'{\rm Li}(x)', r'\approx', r'\frac{x}{\log x}',
+                      r'+', r'\frac{x}{\log^2 x}')
+        eq6 = MathTex(r'{\rm Li}(x)', r'\approx', r'\frac{x}{\log x}',
+                      r'\left(1', r'+', r'\frac{1}{\log x}', r'\right)')
+        eq7 = MathTex(r'{\rm Li}(x)', r'\approx', r'\frac{x}{\log x}',
+                      r'\left(1', r'+', r'\frac{1}{\log x}', r'\right)',
+                      r'\sim', r'\frac{x}{\log x}')
+
+        mh.align_sub(eq3, eq3[1], eq2[1])
+        mh.align_sub(eq3[7], eq3[7][2], eq2[8][2])
+        mh.align_sub(eq4, eq4[1], eq3[1], coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], eq4[0])
+        mh.align_sub(eq5[2], eq5[2][1], eq4[3][1], coor_mask=RIGHT)
+        mh.align_sub(eq5[4], eq5[4][-6], eq4[7][-6], coor_mask=RIGHT)
+        mh.align_sub(eq6, eq6[1], eq5[1], coor_mask=UP)
+        mh.align_sub(eq7, eq7[1], eq6[1], coor_mask=UP)
+
+        VGroup(eq1[0][:2]).set_color(col_WVD)
+        VGroup(eq1[0][3], eq1[2][2], eq1[3][1], eq1[3][-1], eq2[4][1:3], eq2[7][-1], eq2[7][0]).set_color(col_x)
+        VGroup(eq1[2][0], eq1[3][0], eq1[3][2], eq2[2], eq2[4][0], eq2[7][1:4]).set_color(col_op)
+        VGroup(eq1[2][1], eq2[4][-1], eq2[8][1], eq3[7][-3], eq6[5][0], eq6[3][1]).set_color(col_num)
+        VGroup(eq1[3][-4:-1]).set_color(col_trig)
+        mh.copy_colors_eq(eq1[3][1:], eq7[-1][:])
+
+        sw = 15
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=sw)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=sw)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=sw)
+        eq4 = mh.eq_shadow(eq4, bg_stroke_width=sw)
+        eq5 = mh.eq_shadow(eq5, bg_stroke_width=sw)
+        eq6 = mh.eq_shadow(eq6, bg_stroke_width=sw)
+        eq7 = mh.eq_shadow(eq7, bg_stroke_width=sw)
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+
+        self.add(eq1)
+
+        self.play(AnimationGroup(mh.rtransform(eq1[:2], eq2[:2], eq1[3][1:].copy(), eq2[3][:],
+                                eq1[2], eq2[6], eq1[3][:2], eq2[9][:], eq1[3][2:], eq2[8][2:-1]),
+                  FadeIn(eq2[2], eq2[4][0], eq2[4], shift=mh.diff(eq1[3], eq2[3])*RIGHT),
+                  FadeIn(eq2[8][1], target_position=eq1[3][1]),
+                                 run_time=2.),
+                  Succession(Wait(1.2), FadeIn(eq2[7], eq2[8][0], eq2[8][-1], eq2[5]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:5], eq3[:5], eq2[6], eq3[6],
+                                eq2[8][1:6], eq3[7][1:6], eq2[8][6], eq3[7][7]),
+                  mh.fade_replace(eq2[5], eq3[5]),
+                  FadeOut(eq2[7], eq2[8][0], eq2[8][-1]),
+                  FadeIn(eq3[7][6]))
+        self.play(mh.rtransform(eq3[:7], eq4[:7],
+                                eq2[-1][:], eq4[7][:2], eq3[7][2:-1], eq4[7][2:]),
+                  FadeOut(eq3[7][1], shift=mh.diff(eq3[7][2], eq4[7][2])*RIGHT))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[:2], eq5[:2], eq4[3][1:5], eq5[2][1:5], eq4[1], eq5[1]),
+                  mh.stretch_replace(eq4[3][0], eq5[2][0]),
+                  mh.stretch_replace(eq4[3][-1], eq5[2][-1]),
+                  FadeOut(eq4[2], eq4[4]),
+                  run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[7][-6:-1], eq5[4][-6:-1]),
+                  mh.stretch_replace(eq4[7][-1], eq5[4][-1]),
+                  mh.stretch_replace(eq4[7][1], eq5[4][0]),
+                  FadeOut(eq4[7][0], eq4[6])
+                  )
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq5[:3], eq6[:3], eq4[5], eq6[4],
+                                eq5[4][1:5], eq6[5][1:5], eq5[4][-1], eq6[5][-1]),
+                  FadeOut(eq5[4][-2], shift=mh.diff(eq5[4][-3], eq6[5][-2])),
+                  mh.stretch_replace(eq5[4][0], eq6[5][0], copy_colors=False),
+                                 run_time=1.2),
+                  Succession(Wait(0.4), FadeIn(eq6[3], eq6[-1]))
+                  )
+        self.wait(0.1)
+        circ1 = mh.circle_eq(eq6[5], scale=0.5).set_z_index(5).shift(DOWN*0.05)
+        self.play(Create(circ1, run_time=0.6, rate_func=linear))
+        eq_ = MathTex(r'\to0', stroke_width=2).set_color(RED)
+        eq_.next_to(circ1, UP, buff=0.1).shift(RIGHT*0.6)
+        self.play(FadeIn(eq_))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[:], eq7[:-2]),
+                  VGroup(circ1, eq_).animate().shift(mh.diff(eq6[-2], eq7[-4])),
+                  Succession(Wait(0.4), FadeIn(eq7[-2:])))
+
+        self.wait()
