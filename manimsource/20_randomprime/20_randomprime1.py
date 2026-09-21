@@ -184,13 +184,18 @@ class PiPlot1(Scene):
         eq.move_to(mh.pos(LEFT*0.45 + DOWN*0.27))
         return eq
 
-    def setup(self):
+    @staticmethod
+    def get_ax():
         ax = Axes(x_range=[0, 1.05], y_range=[0, 1.05], x_length=12, y_length=6,
                   axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
                                "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
                                },
                   ).set_z_index(1).shift(RIGHT*0.2)
+        return ax
+
+    def setup(self):
+        ax = self.get_ax()
 
         xvals2 = np.linspace(4., 101., 1000)
         yvals3 = xvals2 / np.log(xvals2)
@@ -220,8 +225,31 @@ class PiPlot1(Scene):
         box5 = Rectangle(height=2, width=config.frame_width/4, stroke_width=0, stroke_opacity=0,
                          fill_color=BLACK, fill_opacity=1).set_z_index(0.4)
         box5.next_to(ax.c2p(0,0), DL, buff=0)
+        MathTex.set_default(stroke_width = 1.5, font_size = 60)
 
         return ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5
+
+    @staticmethod
+    def get_eq_pnt():
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        ax = PiPlot1.get_ax()
+        eq_pnt = MathTex(r'\pi(x)', r'\sim', r'\frac{x}{\log x}')
+        eq_pnt[0].set_color(BLUE)
+        eq_pnt[2].set_color(GREEN)
+        eq_pnt.move_to(ax.c2p(0.7, 0.3))
+        eq_pnt2 = MathTex(r'\pi(x)', r'/', r'\frac{x}{\log x}', r'\to', r'1').set_z_index(5)
+        eq_pnt2[0].set_color(BLUE)
+        eq_pnt2[1].set_color(col_op)
+        eq_pnt2[2].set_color(GREEN)
+        eq_pnt2[4].set_color(col_num)
+        mh.align_sub(eq_pnt2, eq_pnt2[0], eq_pnt[0]).move_to(eq_pnt, coor_mask=UP)
+        eq_pnt3 = MathTex(r'a\frac{x}{\log x}', r'<', r'\pi(x)', r'<', r'b\frac{x}{\log x}').set_z_index(5)
+        mh.align_sub(eq_pnt3, eq_pnt3[2], eq_pnt2[0]).align_to(eq_pnt2, LEFT).shift(LEFT*0.4)
+        VGroup(eq_pnt3[0][0], eq_pnt3[-1][0]).set_color(col_var)
+        VGroup(eq_pnt3[0][1:], eq_pnt3[-1][1:]).set_color(GREEN)
+        eq_pnt3[2].set_color(BLUE)
+
+        return eq_pnt, eq_pnt2, eq_pnt3
 
     def construct(self):
         ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5 = self.setup()
@@ -294,22 +322,44 @@ class PiPlot1(Scene):
                                  eq_pi.animate.shift(DOWN*0.2),
                                  run_time=3., rate_func=mh.rate_func_quad(0.2, 0.5)))
 
-        eq_yex = MathTex(r'x', stroke_width=1.5, font_size=60, color=GREY).move_to(ax.c2p(0.17, 0.6))
+        eq_yex = MathTex(r'x', color=GREY).move_to(ax.c2p(0.17, 0.6))
 
         self.play(Create(plt_line1, run_time=1.4, rate_func=linear),
                   FadeIn(eq_yex))
 
         plt_line2 = ax.plot_line_graph(xvals2 * scalex3, xvals2 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=GREY).set_z_index(0.49)
 
-        eq_pnt = MathTex(r'\pi(x)', r'\sim', r'\frac{x}{\log x}', stroke_width=1.5, font_size=60)
-        eq_pnt[0].set_color(BLUE)
-        eq_pnt[2].set_color(GREEN)
-        eq_pnt.move_to(ax.c2p(0.7, 0.3))
+        eq_pnt, eq_pnt2, eq_pnt3 = self.get_eq_pnt()
 
         self.play(mh.rtransform(plt_line2, plt_line3),
                   FadeOut(eq_yex),
                   mh.rtransform(eq_pi[0], eq_pnt[0]),
                   Succession(Wait(0.5), FadeIn(eq_pnt[1:])))
+        self.wait(0.1)
+
+        self.play(mh.rtransform(eq_pnt[0], eq_pnt2[0], eq_pnt[2], eq_pnt2[2], run_time=1),
+                  mh.fade_replace(eq_pnt[1], eq_pnt2[3], run_time=1),
+                  Succession(Wait(0.4), FadeIn(eq_pnt2[1], eq_pnt2[4], run_time=1)))
+        self.wait(0.1)
+
+        eq1 = MathTex(r'a', r'<', r'1', r'<', r'b').set_z_index(5)
+        VGroup(eq1[0], eq1[-1]).set_color(col_var)
+        eq1[2].set_color(col_num)
+        eq1.next_to(eq_pnt2, DOWN, buff=0.4)
+        self.play(FadeIn(eq1))
+        self.wait(0.1)
+
+        self.play(mh.rtransform(eq1[0][0], eq_pnt3[0][0], eq_pnt2[2][:], eq_pnt3[0][1:], eq_pnt2[0], eq_pnt3[2],
+                                eq1[1], eq_pnt3[1], eq1[3], eq_pnt3[3], eq1[-1][0], eq_pnt3[4][0],
+                                eq_pnt2[2][:].copy(), eq_pnt3[4][1:], run_time=1.6,
+                                copy_colors=True),
+                  FadeOut(eq_pnt2[1], eq_pnt2[-2:]),
+                  FadeOut(eq1[2], target_position=eq_pnt3[2], run_time=1.6))
+
+        eq2 = MathTex(r'{\sf for\ large\ }x').next_to(eq_pnt3, DOWN, buff=0.3).set_z_index(5)
+        eq2[0][:-1].set_color(col_txt)
+        eq2[0][-1].set_color(col_x)
+        self.play(FadeIn(eq2), FadeOut(eq_pnt3))
 
         self.wait()
 
@@ -318,6 +368,12 @@ class PiPlot2(PiPlot1):
         ax, xvals2, yvals3, scalex3, scaley3, plt_line3, prime_count, x, y, plt7, xvals1, yvals1, plt_line1, box1, box2, box3, box4, box5 = self.setup()
         origin = ax.coords_to_point(0,0)
         nplt = 1000
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        eq1 = MathTex(r'\frac{x}{\log x}', color=GREEN)
+        eq1.move_to(ax.c2p(0.8, 0.4))
+        eq2 = MathTex(r'{\rm Li}(x)', color=ORANGE)
+        eq2.move_to(ax.c2p(0.6, 0.72))
 
         yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
         ticky0 = get_yticks(ax, [0])[0].set_z_index(0.5).set_opacity(0)
@@ -325,11 +381,12 @@ class PiPlot2(PiPlot1):
         ticksy3 = get_yticks(ax, [prime_count[50], prime_count[100],
                                   prime_count[500], prime_count[1000]], scaley=scaley3)
 
-        self.add(ax, plt_line3, plt_line1, plt7, box1, box2, box3, box4, box5, ticks3, ticksy3)
+        self.add(ax, plt_line3, plt_line1, plt7, box1, box2, box3, box4, box5, ticks3, ticksy3, eq1)
 
         plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
-        self.play(mh.rtransform(plt_line3.copy(), plt_line4))
+        self.play(mh.rtransform(plt_line3.copy(), plt_line4),
+                  FadeIn(eq2))
         self.wait(0.1)
 
         scalex4 = 1/1000
@@ -413,9 +470,9 @@ class PiPlot2(PiPlot1):
                                 run_time=3., rate_func=mh.rate_func_quad(0.2, 0.2)))
 
         self.wait(0.1)
-        self.play(FadeOut(plt_line12, plt_line16),FadeOut(plt11), FadeIn(plt12))
+        self.play(FadeOut(plt_line12, plt_line16, eq1),FadeOut(plt11), FadeIn(plt12))
         self.play(mh.rtransform(plt12, plt13, plt_line14, plt_line17, ticky0, ticksy6[-2]),
-                  FadeOut(ticksy5), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
+                  FadeOut(ticksy5, eq2), Succession(Wait(0.5), FadeIn(ticksy6[:-2])))
 
         self.wait(0.1)
         yvals11 = -(expi(np.log(xvals5)/2)-expi(np.log(2)))/2 # -Li(sqrt x)/2
@@ -834,9 +891,113 @@ class PiDef(Logistic):
         box = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.7,
                                    buff=0.2, corner_radius=0.2)
 
-        eq_pi = PiPlot.eq_pi()
+        eq_pi = PiPlot1.eq_pi()
 
         self.add(box, eq1)
         self.play(mh.rtransform(eq1[0], eq_pi[0], run_time=2),
                   FadeOut(box, eq1[1:]))
+        self.wait()
+
+class PNTDef(Logistic):
+    def construct(self):
+        _, _, eq_pnt1 = PiPlot1.get_eq_pnt()
+
+        eq1 = MathTex(r'\pi(x)', r'\sim', r'\frac{x}{\log x}', font_size=80).set_z_index(2)
+        eq2 = MathTex(r'\delta', r'\pi(x)', r'\sim', r'\frac{\delta x}{\log x}', font_size=80).set_z_index(2)
+        eq3 = MathTex(r'\sum', r'\delta', r'\pi(x)', r'\sim', r'\sum', r'\frac{\delta x}{\log x}', font_size=80).set_z_index(2)
+        eq4 = MathTex(r'\pi(x)', r'\sim', r'\int_2^x', r'\frac{d u}{\log u}', font_size=80).set_z_index(2)
+        eq5 = MathTex(r'\pi(x)', r'\sim', r'\int_2^x', r'\frac{d u}{\log u}', r'=', r'{\rm Li}(x)', font_size=80).set_z_index(2)
+
+        VGroup(eq1[0][2], eq1[2][0], eq1[2][-1], eq4[2][1], eq4[3][1], eq4[3][-1],
+               eq5[5][3]).set_color(col_x)
+        VGroup(eq1[0][0], eq5[5][:2]).set_color(col_WVD)
+        VGroup(eq1[2][1], eq2[0], eq2[3][0], eq3[0], eq3[4], eq4[2][0], eq4[3][0]).set_color(col_op)
+        VGroup(eq1[2][-4:-1]).set_color(col_trig)
+        VGroup(eq4[2][2]).set_color(col_num)
+
+        eq1.to_edge(DOWN, buff=0.5)
+        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+        mh.align_sub(eq2, eq2[1], eq1[0], coor_mask=UP)
+        box2= SurroundingRectangle(eq2, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+        mh.align_sub(eq3, eq3[2], eq2[1], coor_mask=UP)
+        mh.align_sub(eq4, eq4[0], eq3[2], coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], eq4[0], coor_mask=UP)
+
+        self.add(eq_pnt1)
+
+        self.play(AnimationGroup(mh.rtransform(eq_pnt1[2], eq1[0], eq_pnt1[4][1:], eq1[2][:]),
+                  FadeIn(eq1[1], target_position=eq_pnt1[-2]), run_time=1.5),
+                  FadeOut(eq_pnt1[:2], eq_pnt1[3], eq_pnt1[4][0]),
+                  Succession(Wait(0.8), FadeIn(box1)))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1[:2], eq2[1:3], eq1[2][:], eq2[3][1:], copy_colors=True),
+                  Succession(Wait(0.4), FadeIn(eq2[0], eq2[3][0])),
+                  mh.rtransform(box1, box2))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[:3], eq3[1:4], eq2[3:], eq3[5:], copy_colors=True),
+                  Succession(Wait(0.4), FadeIn(eq3[0], eq3[4])))
+        self.wait(0.1)
+        self.play(FadeOut(eq3[:2], box2),
+                  Succession(Wait(0.3), AnimationGroup(
+                      mh.rtransform(eq3[2:4], eq4[:2],
+                                    eq3[5][2:-1], eq4[3][2:-1],
+                                    copy_colors=True),
+                      mh.fade_replace(eq3[4], eq4[2]),
+                      mh.fade_replace(eq3[5][0], eq4[3][0]),
+                      mh.fade_replace(eq3[5][1], eq4[3][1]),
+                      mh.fade_replace(eq3[5][-1], eq4[3][-1]),
+                  )))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[:], eq5[:-2], copy_colors=True),
+                  Succession(Wait(0.6), FadeIn(eq5[-2:])))
+        eq5_ = mh.eq_shadow(eq5, bg_stroke_width=16)
+        self.add(eq5_)
+        self.wait(0.1)
+        self.wait()
+
+
+class LogInt(Scene):
+    def construct(self):
+        xmax = 18.
+        ax = Axes(x_range=[0, xmax*1.05], y_range=[0, 0.55], x_length=10, y_length=4.5,
+                  axis_config={'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(2)
+        ax.to_edge(UP, buff=0.3)
+
+        plt = ax.plot(lambda x: 1/x, (2, xmax), stroke_width=6, stroke_color=col_WVD).set_z_index(1)
+        eq1 = MathTex(r'y=1/x', font_size=50, stroke_width=1.5)
+        eq1[0][::4].set_color(col_x)
+        eq1[0][2].set_color(col_num)
+        eq1[0][3].set_color(col_op)
+        eq1.next_to(ax.c2p(xmax/2, 2/xmax), UP, buff=0.45)
+        ticks = mh.get_xticks(ax, [2., xmax], [r'2', r'x'])
+        ticks[1][1].align_to(ticks[0][1], UP).set_color(col_x)
+        ticks[0][1].set_color(col_num)
+        eq2 = MathTex(r'\delta x', font_size=35, stroke_width=1.5).set_z_index(0.5)
+        eq2[0][0].set_color(col_op)
+        eq2[0][1].set_color(col_x)
+
+        n = 16
+        dx = (xmax-2) / n
+
+        eqs = [
+            eq2.copy().next_to(ax.c2p(2+(i+0.5)*dx), UP, buff=0.2) for i in range(n)
+        ]
+
+        lines = [
+            Line(ax.c2p(2+i*dx, 0), ax.c2p(2+i*dx,1/(2+i*dx)), stroke_width=3, stroke_color=WHITE*0.5).set_z_index(0.5) for i in range(n+1)
+        ]
+
+
+        self.add(ax, plt, eq1, ticks, *lines, *eqs)
+
+        area = ax.get_area(plt, (2, xmax), color=ORANGE, opacity=0.3).set_z_index(0.4)
+        self.play(FadeIn(area, rate_func=linear),
+                  Succession(Wait(0.6), FadeOut(*eqs, *lines[1:-1], rate_func=linear)))
+
         self.wait()
