@@ -6,6 +6,7 @@ import sys
 from manim import ManimColor
 from scipy.special import expi
 from common_randomprime import *
+
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
@@ -1626,7 +1627,10 @@ class RandomPiPlot1(Scene):
     def setup(self):
         ncount = 1200001
         np.random.seed(3)
-        is_prime = np.random.uniform(0., 1., size=ncount-1) * np.log(np.linspace(2, ncount, ncount-1)) < 1
+        is_prime = np.random.uniform(0., 1., size=1000)
+        np.random.seed(6)
+        is_prime = np.concatenate([is_prime, np.random.uniform(0., 1., size=ncount-1-1000)])
+        is_prime = is_prime * np.log(np.linspace(2, ncount, ncount-1)) < 1
         is_prime = np.concat([[False, False], is_prime])
         is_prime[:2] = False
 
@@ -1635,15 +1639,9 @@ class RandomPiPlot1(Scene):
         ax = self.get_ax()
 
         xvals2 = np.linspace(4., 101., 1000)
-        yvals3 = xvals2 / np.log(xvals2)
-        scalex3 = 1/100
-        scaley3 = 3./100
 
         x, y = prime_counting_vectors(prime_count, 1200001)
 
-        plt7 = ax.plot_line_graph(x[:127]*scalex3, y[:127]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-        xvals1 = np.linspace(0., 60., 1000)
-        yvals1 = xvals1
         box1 = Rectangle(width=2, height=config.frame_height, stroke_width=0, stroke_opacity=0,
                          fill_color=BLACK, fill_opacity=1).set_z_index(3)
         box1.next_to(ax.c2p(1., 0.), UR, buff=0).next_to(ax.x_axis.tip, UP, buff=0.01, coor_mask=UP)
@@ -1661,7 +1659,12 @@ class RandomPiPlot1(Scene):
         box5.next_to(ax.c2p(0,0), DL, buff=0)
         MathTex.set_default(stroke_width = 1.5, font_size = 60)
 
-        return ax, xvals2, yvals3, scalex3, scaley3, prime_count, x, y, plt7, xvals1, yvals1, box1, box2, box3, box4, box5
+        eq_pi = MathTex(r'\pi_R(x)', font_size=60, stroke_width=1.5, color=BLUE).set_z_index(4)
+        eq_pi.move_to(mh.pos(LEFT*0.45 + DOWN*0.23))
+        eq2 = MathTex(r'{\rm Li}(x)', color=ORANGE)
+        eq2.move_to(ax.c2p(0.45, 0.35))
+
+        return ax, eq_pi, eq2, xvals2, prime_count, x, y, box1, box2, box3, box4, box5
 
     @staticmethod
     def get_eq_pnt():
@@ -1686,73 +1689,52 @@ class RandomPiPlot1(Scene):
         return eq_pnt, eq_pnt2, eq_pnt3
 
     def construct(self):
-        ax, xvals2, yvals3, scalex3, scaley3, prime_count, x, y, _, xvals1, yvals1, box1, box2, box3, box4, box5 = self.setup()
+        ax, eq_pi, eq2, xvals2, prime_count, x, y, box1, box2, box3, box4, box5 = self.setup()
         eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
 
         scalex1 = 0.1
         scaley1 = 0.1
+        scalex3 = 1/100
+        scaley3 = 3./100
+        scalex4 = 1/1000
+        scaley4 = 5/1000
 
-        ticks = get_xticks(ax, [1, 5, 10, 15, 20], scalex=scalex1)
-        ticksy = get_yticks(ax, [0, 1, 5, 10], scaley=scaley1)
+        ticks = get_xticks(ax, [1, 5, 10, 50, 100], scalex=scalex1)
+        ticksy = get_yticks(ax, [0, 1, 5, 10, prime_count[50], prime_count[100]], scaley=scaley1)
         ticksy[0].set_z_index(0.5)
 
         m = 18
         plt1 = ax.plot_line_graph(x[:m+1]*scalex1, y[:m+1]*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
 
-        eq_pi = MathTex(r'\pi_R(x)', font_size=60, stroke_width=1.5, color=BLUE).set_z_index(4)
-        eq_pi.move_to(mh.pos(LEFT*0.45 + DOWN*0.23))
-
-        self.add(ax, eqx, box1, box2, box3, box4, box5, ticks, ticksy)
+        self.add(ax, eqx, box1, box2, box3, box4, box5, ticks, ticksy[1:])
 
 
         self.play(Create(plt1, rate_func=linear, run_time=2), FadeIn(eq_pi))
 
-
-        scalex2 = 1/20
-        scaley2 = 0.08
-        # plt4 = ax.plot_line_graph(x[:32]*scalex1, y[:32]*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-        # plt5 = ax.plot_line_graph(x[:32]*scalex2, y[:32]*scaley2, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
         plt4 = ax.plot_line_graph(x[:137]*scalex1, y[:137]*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
         plt7 = ax.plot_line_graph(x[:137]*scalex3, y[:137]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-
-        ticks2 = get_xticks(ax, [1, 5, 10, 15, 20, 50, 100], scalex=scalex2)
-        ticksy2 = get_yticks(ax, [1, 5, 10, prime_count[50], prime_count[100]], scaley=scaley2)
 
         self.remove(plt1)
         self.add(plt4)
 
-        # self.play(mh.rtransform(plt4, plt5, ticks[:], ticks2[:-2], ticksy[1:], ticksy2[:-2]),
-        #           eq_pi.animate.shift(UP*0.45),
-        #           run_tim1=1.5)
-
-        # plt6 = ax.plot_line_graph(x[:127]*scalex2, y[:127]*scaley2, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
-
-        ticks3 = get_xticks(ax, [1, 5, 10, 15, 20, 50, 100], scalex=scalex3)
-        ticks3[:-2].set_opacity(0)
+        ticks3 = get_xticks(ax, [1, 5, 10, 50, 100, 500, 1000],
+                            ['1', '5', '10', '50', '100', '500', '1\,000'], scalex=scalex3)
+        ticks3[:-5].set_opacity(0)
         ticksy3 = get_yticks(ax, [1, 5, 10, prime_count[50], prime_count[100],
+                                  prime_count[500], prime_count[1000]
                                   ], scaley=scaley3)
-        ticksy3[:-2].set_opacity(0)
+        ticksy3[:3:2].set_opacity(0)
 
-        # self.remove(plt5)
-        # self.add(plt6)
-
-        self.play(AnimationGroup(mh.rtransform(plt4, plt7, ticks2, ticks3[:],
-                                               ticksy2[:], ticksy3[:]),
-                                 eq_pi.animate.shift(UP*0.35),
+        self.play(AnimationGroup(mh.rtransform(plt4, plt7, ticks[:], ticks3[:-2],
+                                               ticksy[1:], ticksy3[:5]),
+                                 eq_pi.animate.shift(UP*0.8),
                                  run_time=3., rate_func=mh.rate_func_quad(0.2, 0.5)))
 
         """
         plot Li
         """
 
-        eq2 = MathTex(r'{\rm Li}(x)', color=ORANGE)
-        eq2.move_to(ax.c2p(0.6, 0.72))
-
         yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
-        # ticky0 = get_yticks(ax, [0])[0].set_z_index(0.5).set_opacity(0)
-        # ticks3 = get_xticks(ax, [50, 100, 500, 1000], scalex=scalex3)
-        # ticksy3 = get_yticks(ax, [prime_count[50], prime_count[100],
-        #                           prime_count[500], prime_count[1000]], scaley=scaley3)
 
         plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
@@ -1764,11 +1746,7 @@ class RandomPiPlot1(Scene):
         first zoom out
         """
 
-        scalex4 = 1/1000
-        scaley4 = 5/1000
         xvals3 = np.linspace(4., 1001., 4000)
-        xvals4 = np.linspace(0., 250., 1000)
-        yvals5 = xvals3 / np.log(xvals3)
         yvals6 = expi(np.log(xvals3)) - expi(np.log(2.))
 
         i = np.searchsorted(x, 1050., side='right')
@@ -1776,35 +1754,29 @@ class RandomPiPlot1(Scene):
         plt8 = ax.plot_line_graph(x[:i]*scalex3, y[:i]*scaley3, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
         plt_line7 = ax.plot_line_graph(xvals3 * scalex3, yvals6 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
 
-        ticks4 = get_xticks(ax, [50, 100, 500, 1000, 5000, 10000], ['50', '100', '500', r'1\,000', r'5\,000', r'10\,000'], scalex4)
-        ticks4[:1].set_opacity(0)
-        ticksy4 = get_yticks(ax, [prime_count[50], prime_count[100], prime_count[500], prime_count[1000],
+        ticks4 = get_xticks(ax, [10, 50, 100, 500, 1000, 5000, 10000],
+                            ['10', '50', '100', '500', r'1\,000', r'5\,000', r'10\,000'], scalex4)
+        ticks4[:2].set_opacity(0)
+        ticksy4 = get_yticks(ax, [5, 10, prime_count[50], prime_count[100], prime_count[500], prime_count[1000],
                                   prime_count[5000], prime_count[10000]], scaley=scaley4)
-        ticksy4[0].set_opacity(0)
+        ticksy4[:3].set_opacity(0)
 
         self.remove(plt7, plt_line4, ticks3, ticksy3)
         origin = ax.c2p(0,0)
-        # self.add(plt_line5, plt_line7, plt_line9)
-
-        # self.play(mh.rtransform(plt8, plt9, plt_line5, plt_line6, plt_line7, plt_line8, plt_line9, plt_line10,
-        #                         ticks3[:], ticks4[:-2], ticksy3[:], ticksy4[:-2],
-        #                         run_time=0.5, rate_func=mh.rate_func_quad(0.2, 0.2)))
-
-        #
         tracker1, obj1 = animation_scale_redraw(scalex4 / scalex3, scaley4 / scaley3,
                                                 VGroup(plt8, plt_line7),
-                                                obj1x=ticks3[:], obj2x=ticks4[:-2].copy(),
-                                                obj1y=ticksy3[:], obj2y=ticksy4[:-2],
+                                                obj1x=ticks3[2:], obj2x=ticks4[:-2].copy(),
+                                                obj1y=ticksy3[1:], obj2y=ticksy4[:6],
                                                 origin=origin,
                                                 # obj2_scale=plt17
                                                 )
         self.add(obj1)
         self.play(tracker1.animate().set_value(1),
-                  eq2.animate.shift(DOWN*0.08),
+                  eq2.animate.shift(DOWN*0.2),
+                  eq_pi.animate.shift(DOWN*0.3),
                   rate_func=mh.rate_func_quad(0.2, 0.2),
                   run_time=3)
         self.wait(0.1)
-        # self.remove(obj1)
         self.wait()
 
 class RandomCount(Logistic):
@@ -1815,29 +1787,45 @@ class RandomCount(Logistic):
         eq2 = MathTex(r'\mathbb E[\pi_R(x)]', r'=', r'\sum_{n\le x}', r'\mathbb P(n{\sf\ is\ prime})')
         eq3 = MathTex(r'\mathbb E[\pi_R(x)]', r'=', r'1+',r'\sum_{2 < n\le x}', r'\frac{1}{\log n}')
         eq4 = MathTex(r'\mathbb E[\pi_R(x)]', r'\approx', r'\int_2^x', r'\frac{du}{\log u}')
-        eq5 = MathTex(r'\mathbb E[\pi_R(x)]', r'\approx', r'{\sf Li}(x)')
+        eq5 = MathTex(r'\mathbb E[\pi_R(x)]', r'\approx', r'{\rm Li}(x)')
+        eq6 = MathTex(r'{\rm Var}[\pi_R(x)]', r'\approx', r'{\rm Li}(x)')
+        eq7 = MathTex(r'{\rm std. dev}', r'[\pi_R(x)]', r'\approx', r'\sqrt{{\rm Li}(x)}')
+        eq8 = MathTex(r'{\rm std. dev}', r'[\pi_R(x)]', r'\approx', r'\sqrt{\frac{x}{\log x}}').set_z_index(1)
+        eq9 = MathTex(r'\lvert\pi_R(x)-{\rm Li}(x)\rvert', r'\lesssim', r'\sqrt{\frac{x}{\log x}}').set_z_index(1)
 
         mh.rtransform.copy_colors = True
-        VGroup(eq1[0][:2], eq5[2][:2]).set_color(col_WVD)
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq1[0][:2], eq5[2][:2], eq9[0][-6:-4]).set_color(col_WVD)
         VGroup(eq1[0][3], eq1[2][1], eq2[2][-1], eq2[2][1], eq2[3][2],
-               eq4[3][1], eq4[3][-1], eq5[2][3]).set_color(col_x)
+               eq4[3][1], eq4[3][-1], eq5[2][3], eq9[0][-3]).set_color(col_x)
         VGroup(eq1[1], eq1[2][0], eq2[3][3:-1]).set_color(col_txt)
-        VGroup(eq2[0][0], eq2[3][0]).set_color(col_txt2)
-        VGroup(eq2[2][0], eq3[4][1], eq4[2][0], eq4[3][0]).set_color(col_op)
+        VGroup(eq2[0][0], eq2[3][0], eq6[0][:3], eq7[0]).set_color(col_txt2)
+        VGroup(eq2[2][0], eq3[4][1], eq4[2][0], eq4[3][0], eq7[3][:-5],
+               eq8[3][-5], eq9[0][0], eq9[0][-1]).set_color(col_op)
         # VGroup().set_color(col_var)
         VGroup(eq3[2], eq3[3][1], eq3[4][0]).set_color(col_num)
-        VGroup(eq3[4][2:5]).set_color(col_trig)
+        VGroup(eq3[4][2:5], eq8[3][-4:-1]).set_color(col_trig)
 
+        eq1.to_edge(UP, buff=0.6)
         mh.align_sub(eq2, eq2[0][2], eq1[0][0]).next_to(eq1, DOWN, buff=0.4, coor_mask=UP)
+        eq1_ = eq1.copy()
+        eq1.move_to(VGroup(eq1, eq2))
         eq2.shift(RIGHT)
         mh.align_sub(eq3, eq3[1], eq2[1])
         mh.align_sub(eq4, eq4[0], eq3[0])
         mh.align_sub(eq4[2:], eq4[3][2], eq3[4][1], coor_mask=RIGHT)
         # eq5.move_to(eq4)
         mh.align_sub(eq5, eq5[1], eq4[1])
+        mh.align_sub(eq6, eq6[1], eq5[1]).align_to(eq5, LEFT)
+        mh.align_sub(eq7, eq7[1], eq6[1]).align_to(eq6, LEFT)
+        mh.align_sub(eq8, eq8[1], eq7[1])
+        eq9.to_edge(DOWN, buff=0.5)
+        box1 = SurroundingRectangle(eq9, stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.15, corner_radius=0.15)
 
         self.add(eq1)
-        self.play(mh.rtransform(eq1[0][:5].copy(), eq2[0][2:7], eq1[0][5].copy(), eq2[1][0], run_time=1.2),
+        self.play(mh.rtransform(eq1[0][:5].copy(), eq2[0][2:7], eq1[0][5].copy(), eq2[1][0],
+                                eq1, eq1_, run_time=1.2),
                   Succession(Wait(0.5), FadeIn(eq2[0][:2], eq2[0][2:], eq2[2:])),
                   )
         self.wait(0.1)
@@ -1859,4 +1847,250 @@ class RandomCount(Logistic):
         self.play(mh.rtransform(eq4[:2], eq5[:2]),
                   FadeOut(eq4[2:]), FadeIn(eq5_1))
         self.play(mh.rtransform(eq5_1, eq5[2]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[1:], eq6[1:], eq5[0][1:], eq6[0][3:]),
+                  mh.fade_replace(eq5[0][0], eq6[0][:3], coor_mask=RIGHT))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[0][3:], eq7[1][:], eq6[1], eq7[2],
+                                eq6[2][:], eq7[3][-5:]),
+                  mh.fade_replace(eq6[0][:3], eq7[0], coor_mask=RIGHT),
+                  Succession(Wait(0.3), FadeIn(eq7[3][:-5])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7[:3], eq8[:3], eq7[3][-2], eq8[3][-1],
+                                eq7[3][-2].copy(), eq8[3][-6]),
+                  mh.stretch_replace(eq7[3][:-5], eq8[3][:-6]),
+                  mh.fade_replace(eq7[3][-5:-3], eq8[3][-4:-1]),
+                  FadeOut(eq7[3][-3::2], shift=mh.diff(eq7[3][-2], eq8[3][-1])),
+                  Succession(Wait(0.3), FadeIn(eq8[3][-5])))
+        self.wait(0.1)
+
+        eq9_1 = eq9[0][6:-1]
+        pos = eq9_1.get_center()
+        eq9_1.shift(-mh.diff(eq8[1][-1], eq9[0][-1])).set_opacity(-4)
+        self.play(mh.rtransform(eq8[1][1:-1], eq9[0][1:6], eq8[3], eq9[2]),
+                  mh.fade_replace(eq8[2], eq9[1]),
+                  mh.fade_replace(eq8[1][0], eq9[0][0]),
+                  mh.fade_replace(eq8[1][-1], eq9[0][-1]),
+                  FadeOut(eq8[0], shift=mh.diff(eq8[1][0], eq9[0][0])),
+                  eq9_1.animate.move_to(pos).set_opacity(1),
+                  Succession(Wait(1), FadeIn(box1)),
+                  FadeOut(eq1_),
+                  run_time=2
+                  )
+        self.wait()
+
+class RandomPiPlot2(RandomPiPlot1):
+    def construct(self):
+        ax, eq_pi, eq2, xvals2, prime_count, x, y, box1, box2, box3, box4, box5 = self.setup()
+        eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
+        eq_pi.shift(UP*0.5)
+        eq2.shift(DOWN*0.2)
+
+        nplt = 1000
+        xvals3 = np.linspace(4., 1001., nplt)
+        yvals6 = expi(np.log(xvals3)) - expi(np.log(2.))
+
+        scalex4 = 1/1000
+        scaley4 = 5/1000
+
+        origin = ax.coords_to_point(0,0)
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        ticksy0 = get_yticks(ax, [0])[0].set_z_index(0.5).set_opacity(0)
+        ticks2 = get_xticks(ax, [100, 500, 1000], ['100', '500', r'1\,000'], scalex=scalex4)
+        ticksy2 = get_yticks(ax, [prime_count[100],
+                                  prime_count[500], prime_count[1000]], scaley=scaley4)
+
+        i = np.searchsorted(x, 1050., side='right')
+        plt_line2 = ax.plot_line_graph(xvals3 * scalex4, yvals6 * scaley4, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
+        plt2 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
+
+        self.add(ax, eq_pi, eq2, box1, box2, box3, box4, box5, ticks2, ticksy2, eqx, plt_line2, plt2)
+
+        """
+        pi - Li
+        """
+
+        eq3 = MathTex(r'\pi_R(x)', r'-', r'{\rm Li}(x)', font_size=60, stroke_width=1.5, color=BLUE)
+
+        scaley5 = 0.03
+        ticksy4 = mh.get_yticks(ax, [-10,0,10], scaley=scaley5, center=0.5, label_color=col_num)
+
+        mh.align_sub(eq3, eq3[0], eq_pi[0]).shift(DOWN*0.7)
+        yvals7 = np.interp(xvals3, x, y) - yvals6
+
+        plt_line3 = ax.plot_line_graph(xvals3 * scalex4, xvals3 * 0 + 0.5, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
+        plt3 = ax.plot_line_graph(xvals3*scalex4, yvals7 * scaley5 + 0.5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+
+
+        self.play(mh.rtransform(plt_line2, plt_line3, plt2, plt3),
+                  mh.rtransform(eq_pi[0], eq3[0], eq2[0], eq3[2]),
+                  FadeOut(ticksy2),
+                  FadeIn(ticksy4[:1], ticksy4[2:]),
+                  mh.rtransform(ticksy0, ticksy4[1]),
+                  Succession(Wait(0.4), FadeIn(eq3[1]))
+                  )
+        self.wait(0.1)
+
+        """
+        first zoom out
+        """
+
+        xvals_old = xvals3
+        scalex_old = scalex4
+        scaley_old = scaley5
+        ytickvals = [10, 25, 50, 100, 250]
+        ytickvals = ytickvals + [-_ for _ in ytickvals[::-1]]
+        yticks_old = mh.get_yticks(ax, ytickvals, scaley=scaley_old, label_color=col_num, center=0.5)
+        ticksy4[::2].set_opacity(0)
+        self.remove(plt3, ticks2)
+
+        anims = [eq3.animate(run_time=1, rate_func=smooth).move_to(ax.c2p(0,0.15), coor_mask=UP)]
+
+        for i, rate_func, dt, i_y in [(4, mh.rate_func_quad(0.2, 0.), 3.6, 1),
+                              (5, mh.rate_func_quad(0., 0.), 3, 2),
+                              (6, mh.rate_func_quad(0., 0.2), 3.6, 3)]:
+            x1 = 10**i
+            scalex_new = 1/x1
+            # scaley_new = scaley_old / 3
+            scaley_new = scaley5 * np.sqrt(expi(np.log(1e3)) / expi(np.log(x1)))
+            xvals_new1 = np.linspace(0., x1*1.001, nplt*10)
+            xvals_new2 = np.linspace(4., x1*1.001, nplt)
+            xvals_new1 = xvals_new1 * (xvals_old[1] - xvals_old[0]) / xvals_new1[1] + 4.
+            yvals_new1 = (np.interp(xvals_new1, x, y)
+                       - expi(np.log(xvals_new1)) + expi(np.log(2)))
+            yvals_new2 = (np.interp(xvals_new2, x, y)
+                       - expi(np.log(xvals_new2)) + expi(np.log(2)))
+            plt_new1 = ax.plot_line_graph(xvals_new1*scalex_old, yvals_new1*scaley_old+0.5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+            plt_new2 = ax.plot_line_graph(xvals_new2*scalex_old, yvals_new2*scaley_old+0.5, line_color=BLUE, stroke_width=6, add_vertex_dots=False).set_z_index(2)
+            tickvals = [10**(i-2), 5 * 10**(i-2), 10**(i-1), 5 * 10**(i-1), 10**i]
+            strs = get_tick_strs(i-2)[1:] + get_tick_strs(i-1) + get_tick_strs(i)
+            xticks_new1 = mh.get_xticks(ax, tickvals, strs=strs, scalex=scalex_old, label_color=col_num)
+            xticks_new2 = mh.get_xticks(ax, tickvals, strs=strs, scalex=scalex_new, label_color=col_num)
+            xticks_new2[:2].set_opacity(0)
+            if i > 4:
+                xticks_new1[2][1].next_to(box2, LEFT, buff=0.03, coor_mask=RIGHT)
+            xticks_new2[-1][1].next_to(box2, LEFT, buff=0.03, coor_mask=RIGHT)
+
+            yticks_new = mh.get_yticks(ax, ytickvals, scaley=scaley_new, label_color=col_num, center=0.5)
+            yticks_new[:i_y].set_opacity(0)
+            yticks_new[-i_y:].set_opacity(0)
+
+            tracker1, obj1 = animation_scale_redraw(scalex_new / scalex_old, scaley_new / scaley_old, plt_new1,
+                                                    obj1x=xticks_new1, obj2x=xticks_new2,
+                                                    obj1y = yticks_old, obj2y=yticks_new,
+                                                    origin=ax.c2p(0,0.5),
+                                                    obj2_scale=plt_new2
+                                                    )
+            self.add(obj1)
+            self.play(tracker1.animate(rate_func=rate_func,
+                      run_time=dt).set_value(1),
+                      *anims
+                      # eq6.animate(run_time=1).move_to(ax.c2p(0.4, 0.12))
+                      )
+            self.remove(obj1)
+
+            xvals_old = xvals_new2
+            scalex_old = scalex_new
+            scaley_old = scaley_new
+            yticks_old = yticks_new
+            anims=[]
+
+        self.add(obj1)
+        obj1.clear_updaters()
+
+        self.wait()
+
+class TwinPrimes(Scene):
+    def construct(self):
+        eq = MathTex(r'3,\!5', r' 5,\!7', r' 11,\!13',
+                     r' 17,\!19', r' 29,\!31', r' 41,\!43',
+                     r' 59,\!61', r' 71,\!73', r' 101,\!103',
+                     r' 107,\!109', r' 137,\!139', r' 149,\!151',
+                     r' 179,\!181', r' 191,\!193', r' 197,\!199',
+                     r' 227,\!229', r' 239,\!241', r' 269,\!271',
+                     r' 281,\!283', r' 311,\!313', r' 347,\!349',
+                     r' 419,\!421', r' 431,\!433', r' 461,\!463',
+                     color=col_num, stroke_width=2, font_size=80)
+        eq = mh.eq_shadow(eq, bg_stroke_width=14)
+
+        for i in range(1, len(eq)):
+            eq[i:].shift(RIGHT*0.8)
+        eq.next_to(mh.pos(RIGHT), RIGHT)
+
+        self.play(eq.animate.next_to(mh.pos(RIGHT), LEFT, coor_mask=RIGHT),
+                  run_time=22, rate_func=linear)
+        self.wait()
+
+class Goldbach(Scene):
+    def construct(self):
+        eq = MathTex(r'4=2+2 ', r'6=3+3 ', r'8=3+5 ',
+                     r'10=5+5 ', r'12=7+5 ', r'14=7+7 ',
+                     r'16=11+5 ', r'18=11+7 ', r'20=13+7 ',
+                     r'22=11+11 ', r'24=13+11 ', r'26=13+13 ',
+                     r'28=17+11 ', r'30=17+13 ', r'32=19+13 ',
+                     color=col_num, stroke_width=2, font_size=80)
+        eq = mh.eq_shadow(eq, bg_stroke_width=14)
+
+        for i in range(1, len(eq)):
+            eq[i:].shift(RIGHT)
+        eq.next_to(mh.pos(RIGHT), RIGHT)
+
+        self.play(eq.animate.next_to(mh.pos(RIGHT), LEFT, coor_mask=RIGHT),
+                  run_time=18, rate_func=linear)
+        self.wait()
+
+class PrimeLiNoise(Logistic):
+    def construct(self):
+        eq = MathTex(r'\pi(x)', r'=', r'{\rm Li}(x)', r'+', r' {\sf random\ noise}',
+                     font_size=80, stroke_width=1.5)
+
+        VGroup(eq[0][0], eq[2][:2]).set_color(col_WVD)
+        VGroup(eq[0][2], eq[2][3]).set_color(col_x)
+        eq[-1].set_color(col_txt)
+
+        eq = mh.eq_shadow(eq, bg_stroke_width=14)
+
+        eq_1 = eq[0].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        eq_2 = eq[:3].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.add(eq_1)
+        self.play(mh.rtransform(eq_1, eq_2[0]),
+                  Succession(Wait(0.5), FadeIn(eq_2[1:])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq_2, eq[:3]),
+                  Succession(Wait(0.5), FadeIn(eq[3:])))
+        self.wait()
+
+class CramerError(Logistic):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'(', r'\pi_R(x)-{\rm Li}(x)', r')', r'/{\sqrt{ {\rm Li}(x)} }',
+                      r'\sim', r'{\sf normal}')
+        eq2 = MathTex(r'{\sf\ mean\ }', r'0', r'{\sf,\ variance\ }',
+                      r'1')
+        mh.font_size_sub(eq1, 5, 70)
+
+        eq2.next_to(eq1[-1], DOWN, buff=0.6)#.align_to(eq1, RIGHT).shift(RIGHT)
+        VGroup(eq1, eq2).move_to(ORIGIN).to_edge(DOWN, buff=0.4)
+
+        VGroup(eq1[1][:2], eq1[1][6:8], eq1[3][-5:-3]).set_color(col_WVD)
+        VGroup(eq1[1][3], eq1[1][9], eq1[3][-2]).set_color(col_x)
+        eq1[3][:-5].set_color(col_op)
+        VGroup(eq1[5]).set_color(col_txt)
+        eq2[-3::2].set_color(col_num)
+        VGroup(eq2[::2]).set_color(col_txt*0.5+WHITE*0.5)
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=14)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=14)
+
+        eq1_1 = eq1[1].copy().scale(1.2).move_to(ORIGIN, coor_mask=RIGHT)
+        eq1_2 = eq1[:4].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.add(eq1_1)
+        self.play(mh.rtransform(eq1_1, eq1_2[1]),
+                  Succession(Wait(0.3), FadeIn(eq1_2[0], eq1_2[2:])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq1_2, eq1[:4], run_time=1.2),
+                  Succession(Wait(0.4), FadeIn(eq1[4:])))
+        self.wait(0.1)
+        self.play(FadeIn(eq2))
         self.wait()
