@@ -401,6 +401,12 @@ class NormalUniform(Scene):
         self.play(sample_tracker.animate.set_value(1500), run_time=15, rate_func=linear)
 
 
+class CramerHistogramUniformTitle(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=70)
+        eq1 = Tex(r'\sf Cram\'er model empirical distribution', color=col_txt)
+        self.add(eq1)
+
 class CramerHistogramUniform(ThreeDScene):
     counter = CramerCount(seed=1, n_min=2, n_max=1_000_000, nstep=1000, uniform=True, store=True)
 
@@ -435,9 +441,9 @@ class CramerHistogramUniform(ThreeDScene):
         n_max = 1000
         tracker = ValueTracker(n_max)
         bar_shift_val = ValueTracker(0.)
-        counter_label = MathTex(r"n=", font_size=50, stroke_width=2).rotate(90*DEGREES, RIGHT)
+        counter_label = MathTex(r"N=", font_size=50, stroke_width=2).rotate(90*DEGREES, RIGHT)
         counter_label[0][0].set_color(col_var)
-        counter_label.move_to(axes.c2p(-1.4, 0.2))
+        counter_label.move_to(axes.c2p(-1.5, 0.2))
         counter_value = always_redraw(
             lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
             .rotate(90 * DEGREES, axis=RIGHT).next_to(counter_label, RIGHT, buff=0.12).set_z_index(10)
@@ -468,8 +474,17 @@ class CramerHistogramUniform(ThreeDScene):
         self.counter.init()
         bars = always_redraw(update_bars)
 
+        label = Tex(r'\sf normal density', color=ORANGE, stroke_width=1.5, font_size=60)
+        label.next_to(axes.c2p(1, 0.7), RIGHT, buff=0).rotate(PI/2, RIGHT)
+        label = mh.eq_shadow(label, bg_stroke_width=14)
+        arr = Arrow(label[0][:1].get_edge_center(IN), axes.c2p(0.7, normal_density(0.7)),
+                    color=ORANGE, stroke_width=8, buff=0.1)
+        arr.rotate(PI/2, axis=arr.get_end()-arr.get_start(), about_point=arr.get_center())
+
         self.add(axes.x_axis, counter_label, counter_value, normal_curve, area, bars, ticks, xlabels)
+        self.add(arr, label)
         self.add(ax2)
+        self.wait()
 
         rate_func=rate_func_log(n_max, n_max_end)
         self.play(
@@ -485,6 +500,7 @@ class CramerHistogramUniform(ThreeDScene):
                            rect1.animate.shift(bar_shift).set_fill(opacity=0.3)
                            # run_time=2.
                        )),
+            FadeOut(arr, label)
         )
         # self.remove(bars)
         # bars = update_bars()
@@ -498,6 +514,18 @@ class CramerHistogramUniform(ThreeDScene):
         self.wait(1)
 
 
+class CramerHistogramLogTitle(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=2, font_size=60)
+        eq1 = Tex(r'\sf Cram\'er model empirical distribution')
+        eq2 = Tex(r'log weighting ', r'($N_0=500$)')
+        eq2.next_to(eq1, DOWN, buff=0.3)
+        VGroup(eq1).set_color(col_txt)
+        VGroup(eq2[0], eq2[1][0], eq2[1][-1]).set_color(col_txt*0.4 + WHITE*0.6)
+        VGroup(eq2[1][1:3]).set_color(col_x)
+        VGroup(eq2[1][4:-1]).set_color(col_num)
+        self.add(eq1, eq2)
+
 class CramerHistogramLog(Scene):
     animation_seconds = 14
     y_max = 0.7
@@ -510,6 +538,8 @@ class CramerHistogramLog(Scene):
     rel_width = 0.9
     xlen = 12
     ylen = 5.5
+    labels = True
+    normal_op = 0.2
 
     def do_histogram(self, axes):
         x_scale = self.xlen / (self.bin_max - self.bin_min)
@@ -518,7 +548,7 @@ class CramerHistogramLog(Scene):
         hist.bars.shift(axes.c2p(self.bin_min, 0))
 
         tracker = ValueTracker(self.n_max)
-        counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
+        counter_label = MathTex(r"N=", font_size=50, stroke_width=2)
         counter_label[0][0].set_color(col_var)
         counter_label.move_to(axes.c2p(0.9 * self.bin_min + 0.1 * self.bin_max, 5/7 * self.y_max))
         counter_value = always_redraw(
@@ -534,7 +564,9 @@ class CramerHistogramLog(Scene):
         self.counter.init()
 
         update_bars(hist.bars)
-        self.play(FadeIn(counter_label, counter_value, hist.bars))
+        objs = [hist.bars]
+        if self.labels: objs += [counter_label, counter_value]
+        self.play(FadeIn(*objs))
 
         hist.bars.add_updater(update_bars)
         print('running histogram')
@@ -561,11 +593,22 @@ class CramerHistogramLog(Scene):
         normal_curve = axes.plot(normal_density,
             x_range=[self.bin_min, self.bin_max, 0.02],
             color=ORANGE, stroke_width=4).set_z_index(4)
-        area = axes.get_area(normal_curve, (self.bin_min, self.bin_max), color=ORANGE, opacity=0.2).set_z_index(4)
+        area = axes.get_area(normal_curve, (self.bin_min, self.bin_max), color=ORANGE, opacity=self.normal_op).set_z_index(4)
 
-        self.add(axes.x_axis, ticks, xlabels, normal_curve, area)
+        objs = [axes.x_axis, normal_curve, area]
+        if self.labels: objs += [ticks, xlabels]
+        self.add(*objs)
         self.do_histogram(axes)
         self.wait(1)
+
+class EmpiricalHistogramLogTitle(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=70, stroke_width=2)
+        eq1 = Tex(r'\sf Empirical distribution (', r'$N_0=500$', r')')
+        eq1[::2].set_color(col_txt)
+        eq1[1][:2].set_color(col_x)
+        eq1[1][3:].set_color(col_num)
+        self.add(eq1)
 
 class EmpiricalHistogramLog(CramerHistogramLog):
     animation_seconds = 14
@@ -577,6 +620,12 @@ class EmpiricalHistogramLog(CramerHistogramLog):
     bin_max = 1.5
     rel_width = 0.8
     counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=500)
+
+class HistogramIntro(EmpiricalHistogramLog):
+    bin_min = -3
+    bin_max = 3.
+    labels = False
+    normal_op = 0.5
 
 class EmpiricalHistogramNew(CramerHistogramLog):
     bin_max = 0.1
@@ -677,9 +726,9 @@ class EmpiricalVarPlot(Scene):
         ).set_z_index(5)
 
         labelx = MathTex(r'N', stroke_width=1.5, font_size=40, color=col_x)
-        labely = MathTex(r'\mathbb E[Z^2]', stroke_width=1.5, font_size=40)
-        labely[0][0].set_color(col_WVD)
-        labely[0][2:4].set_color(col_p)
+        labely = MathTex(r'\mathbb E[\mathcal E^2]', stroke_width=1.5, font_size=40)
+        labely[0][0].set_color(col_txt2)
+        labely[0][2:4].set_color(col_WVD)
         labely.next_to(axes.y_axis.get_end(), RIGHT, buff=0.2)
         labelx.next_to(axes.x_axis.get_end(), UR, buff=0.14)
         title = Tex(r'\sf Expected Square Error ', r'$(N_0=500)$', stroke_width=2, font_size=60)
@@ -923,7 +972,7 @@ class EmpiricalPath1(Scene):
 
         n_max = 1000
         tracker = ValueTracker(n_max)
-        counter_label = MathTex(r"n=", font_size=50, stroke_width=2)
+        counter_label = MathTex(r"N=", font_size=50, stroke_width=2)
         counter_label[0][0].set_color(col_var)
         counter_value = always_redraw(
             lambda: Integer(round(tracker.get_value()), color=col_num, group_with_commas=True, stroke_width=2)
@@ -954,49 +1003,24 @@ class EmpiricalPath1(Scene):
         )
         self.wait(1)
 
-def count_mean(x):
-    return expi(np.log(x)) - expi(np.log(x)/2)/2 - expi(np.log(x)/3)/3 - expi(np.log(2)) * (1-1/2-1/3)
-
 
 def zeros(i): return r'0' * (i % 3) + r'\,000' * (i // 3)
 
 def get_tick_strs(i): return [r'5' + zeros(i-1), r'1' + zeros(i)]
 
-def animation_scale_redraw(x_scale=1., y_scale=1., obj_scale=None, obj1x=None, obj2x=None, obj1y=None, obj2y=None,
-                           origin=ORIGIN, y_scale_func=None, x_scale_func=None, obj2_scale=None):
-    anim_tracker = ValueTracker(0.)
-    if obj1x is not None:
-        animationx = ReplacementTransform(obj1x, obj2x, rate_func=linear)
-        animationx.begin()
-    if obj1y is not None:
-        animationy = ReplacementTransform(obj1y, obj2y, rate_func=linear)
-        animationy.begin()
-    if obj2_scale is not None:
-        animation = ReplacementTransform(obj_scale, obj2_scale, rate_func=linear)
-        animation.begin()
-
-    def obj_func1():
-        res = VGroup()
-        u = anim_tracker.get_value()
-        scalex = np.exp(np.log(x_scale) * u) if x_scale_func is None else x_scale_func(u)
-        scaley = np.exp(np.log(y_scale) * u) if y_scale_func is None else y_scale_func(u)
-        scale = np.array([scalex, scaley, 1])
-        if obj2_scale is not None:
-            animation.interpolate(u)
-        res.add(obj_scale.copy().apply_points_function_about_point(lambda p: p * scale, origin))
-        if obj1x is not None:
-            tx = (1 - scalex) / (1 - x_scale)
-            animationx.interpolate(tx)
-            res.add(obj1x.copy())
-        if obj1y is not None:
-            ty = (1 - scaley) / (1 - y_scale)
-            animationy.interpolate(ty)
-            res.add(obj1y.copy())
-        return res
-
-    return anim_tracker, always_redraw(obj_func1)
 
 class EmpiricalPath(Scene):
+    @staticmethod
+    def li(x):
+        return expi(np.log(x)) - expi(np.log(2))
+
+    @staticmethod
+    def count_mean(x):
+        return expi(np.log(x)) - expi(np.log(x) / 2) / 2 - expi(np.log(x) / 3) / 3 - expi(np.log(2)) * (
+                    1 - 1 / 2 - 1 / 3)
+
+    li_str = r'{\rm Li}'
+
     def construct(self):
         nplt = 1000
         ax_args = {'x_range': [0, 1.05], 'y_range': [0, 1.05], 'x_length': 12,
@@ -1040,16 +1064,16 @@ class EmpiricalPath(Scene):
 
         label_size = 55
         eq_pi1 = MathTex(r'\pi(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.7, 0.45))
-        eq_li1 = MathTex(r'{\rm Li}(x)', stroke_width=1.5, color=ORANGE, font_size=label_size).move_to(ax.c2p(0.4, 0.58))
+        eq_li1 = MathTex(self.li_str + r'(x)', stroke_width=1.5, color=ORANGE, font_size=label_size).move_to(ax.c2p(0.4, 0.58))
         eq_pi1 = mh.eq_shadow(eq_pi1, bg_z_index=5, fg_z_index=6)
         eq_li1 = mh.eq_shadow(eq_li1, bg_z_index=5, fg_z_index=6)
 
         self.play(Create(plt7, rate_func=linear), FadeIn(eq_pi1))
 
         xvals2 = np.linspace(4., 101., 1000)
-        yvals4 = expi(np.log(xvals2)) - expi(np.log(2.))
+        yvals4 = self.li(xvals2)
 
-        plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.49)
+        plt_line4 = ax.plot_line_graph(xvals2 * scalex3, yvals4 * scaley3, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
 
         self.wait(0.1)
         self.play(Create(plt_line4), FadeIn(eq_li1))
@@ -1064,7 +1088,7 @@ class EmpiricalPath(Scene):
         scaley4 = np.sqrt(scaley5/scaley3)*scaley3
 
         xvals3 = np.linspace(4., 1001., 4000)
-        yvals6 = expi(np.log(xvals3)) - expi(np.log(2.))
+        yvals6 = self.li(xvals3)
 
         i = np.searchsorted(x, 1050., side='right')
 
@@ -1099,7 +1123,7 @@ class EmpiricalPath(Scene):
         """
 
         xvals_new = np.linspace(4., 10010, nplt)
-        yvals8 = expi(np.log(xvals_new)) - expi((np.log(2)))  # Li up to 10k
+        yvals8 = self.li(xvals_new)  # Li up to 10k
 
         i = np.searchsorted(x, 10050., side='right')
         plt10 = ax.plot_line_graph(x[:i]*scalex4, y[:i]*scaley4, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(0.2)
@@ -1113,6 +1137,8 @@ class EmpiricalPath(Scene):
         ticksy5 = mh.get_yticks(ax, [prime_count[100], prime_count[500], prime_count[1000],
                                   prime_count[5000], prime_count[10000]], scaley=scaley5)
         ticksy5[:2].set_opacity(0)
+
+        self.remove(ticks4, ticksy4)
 
         tracker, plt = animation_scale_redraw(scalex_new/scalex4, scaley5/scaley4, VGroup(plt_line13, plt10),
                                                  ticks4[1:], ticks5[:-2].copy(),
@@ -1142,7 +1168,7 @@ class EmpiricalPath(Scene):
         ticksy6 = mh.get_yticks(ax, [-20, -10, 0, 10], scaley=scaley6, center=0.8)
         ticksy6[-1].set_opacity(0)
 
-        eq_pi2 = MathTex(r'\pi(x)', r'-', r'{\rm Li}(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.4, 0.2))
+        eq_pi2 = MathTex(r'\pi(x)', r'-', self.li_str + r'(x)', stroke_width=1.5, color=BLUE, font_size=label_size).move_to(ax.c2p(0.4, 0.2))
         eq_pi2 = mh.eq_shadow(eq_pi2, bg_z_index=5, fg_z_index=6)
 
         self.play(AnimationGroup(mh.rtransform(plt11, plt13, plt_line14, plt_line17, ticksy[0], ticksy6[-2]),
@@ -1160,11 +1186,11 @@ class EmpiricalPath(Scene):
 
         pos1 = ax.c2p(0.67, 0.9)
         pos2 = ax.c2p(0.67, 0.55)
-        eq_li2 = MathTex(r'-\frac12{\rm Li}(\sqrt{x})-\frac13{\rm Li}(\sqrt[3]{x})', stroke_width=1.5, color=ORANGE,
+        eq_li2 = MathTex(r'-\frac12' + self.li_str + r'(\sqrt{x})-\frac13' + self.li_str + r'(\sqrt[3]{x})', stroke_width=1.5, color=ORANGE,
                          font_size=label_size).move_to(pos2)
         eq_li2 = mh.eq_shadow(eq_li2, bg_z_index=5, fg_z_index=6)
 
-        yvals11 = count_mean(xvals_new) - yvals8
+        yvals11 = self.count_mean(xvals_new) - yvals8
 
         plt_line19 = ax.plot_line_graph(xvals_new * scalex_new, yvals11 * scaley6 + 0.8, add_vertex_dots=False, stroke_width=8, line_color=ORANGE).set_z_index(0.19)
 
@@ -1177,7 +1203,7 @@ class EmpiricalPath(Scene):
         subtract bias
         """
 
-        eq_pi3 = MathTex(r'\pi(x)', r'-', r'\left(', r'{\rm Li}(x)', r'-\frac12{\rm Li}(\sqrt{x})-\frac13{\rm Li}(\sqrt[3]{x})', r'\right)',
+        eq_pi3 = MathTex(r'\pi(x)', r'-', r'\left(', self.li_str + r'(x)', r'-\frac12' + self.li_str + r'(\sqrt{x})-\frac13' + self.li_str + r'(\sqrt[3]{x})', r'\right)',
                          stroke_width=1.5, color=BLUE, font_size=label_size)
         eq_pi3 = mh.eq_shadow(eq_pi3, bg_z_index=5, fg_z_index=6)
         eq_pi3.next_to(ax.c2p(0,0.8), RIGHT, buff=0.4)
@@ -1275,11 +1301,9 @@ class EmpiricalPath(Scene):
         gammas = load_gammas(nzeros)
         coeffs = 2.0 / np.sqrt(0.25 + gammas ** 2)
         thetas = [rng.uniform(0.0, 2.0 * np.pi, nzeros) for _ in path_cols]
-        # thetas = np.acos(coeffs/4)
         variance_explicit = 0.5 * np.sum(coeffs ** 2)
         variance_tail = variance_total - variance_explicit
         print('tail width', np.sqrt(variance_tail))
-        t = 1e4
         yvals_theory = [_*np.sqrt(variance_tail/variance_total) for _ in yvals_theory]
         for j, yval in enumerate(yvals_theory):
             yval *= np.sqrt(variance_tail/variance_total)
@@ -1298,7 +1322,7 @@ class EmpiricalPath(Scene):
         """
 
         first = True
-        for i_exp in [5, 6]:#, 6, 7, 8, 9, 10, 11]:
+        for i_exp in [5, 6, 7, 8, 9, 10, 11]:
             xvals_old = xvals_new
             ticks_old = ticks_new
             scalex_old = scalex_new
@@ -1328,7 +1352,7 @@ class EmpiricalPath(Scene):
                 yvals_new3 = np.interp(xvals_new2[nplt:]+0.5, x, y, left=0, right=y[-1])
             else:
                 yvals_new3 = np.fromiter((primecount.prime_pi(int(x)) for x in xvals_new2[nplt:]), dtype=np.int64)
-            yvals_new2 = np.concatenate((yvals_old, yvals_new3 - count_mean(xvals_new2[nplt:])))
+            yvals_new2 = np.concatenate((yvals_old, yvals_new3 - self.count_mean(xvals_new2[nplt:])))
             yvals_new = yvals_new2[::10]
             plt_new2 = ax2.plot_line_graph(xvals_new2*scalex_old, yvals_new2*scaley_old+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(.2)
             plt_new = ax2.plot_line_graph(xvals_new*scalex_old, yvals_new*scaley_old+0.5, line_color=BLUE, stroke_width=sw, add_vertex_dots=False).set_z_index(.2)
@@ -1381,6 +1405,17 @@ class EmpiricalPath(Scene):
 
         self.add(plt1, plt2)
         self.wait()
+
+class EmpiricalPath_twitter(EmpiricalPath):
+    @staticmethod
+    def li(x):
+        return expi(np.log(x))
+
+    @staticmethod
+    def count_mean(x):
+        return expi(np.log(x)) - expi(np.log(x) / 2) / 2 - expi(np.log(x) / 3) / 3
+
+    li_str = r'{\rm li}'
 
 def save_gammas(n):
     gammas = np.array([float(mp.im(mp.zetazero(k))) for k in range(1, n + 1)])
