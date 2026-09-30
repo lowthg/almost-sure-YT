@@ -424,3 +424,60 @@ class Explicit(Chebyshev):
                   mh.fade_replace(eq17[5][5:9], eq18[5][5].set_color(col_x), coor_mask=RIGHT))
 
         self.wait()
+
+
+class CountingErrorNormal(Chebyshev):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        eq1 = MathTex(r'\mathcal E(x)', r'=', r'\left(', r'\pi(x) - {\rm Li}(x) +', r'\frac12', r'{\rm Li}(\sqrt x)',
+                      r'\right)', r'\frac{\log x}{\sqrt x}')
+        mh.font_size_sub(eq1, 4, 50)
+        eq2 = MathTex(r'\mathcal E(x)', r'=', r'\pi(x) - {\rm Li}(x) +', r'\frac12', r'{\rm Li}(\sqrt x)')
+        mh.font_size_sub(eq2, 3, 50)
+
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.rtransform.copy_colors = True
+        VGroup(eq2[0][0], eq2[2][0], eq2[2][5:7], eq2[4][:2]).set_color(col_WVD)
+        VGroup(eq2[0][2], eq2[2][2], eq2[2][8], eq2[4][-2], eq1[7][3], eq1[7][-1]).set_color(col_x)
+        VGroup(eq2[3][::2]).set_color(col_num)
+        VGroup(eq2[3][1], eq2[4][3:-2], eq1[7][4:-1]).set_color(col_op)
+        VGroup(eq1[7][:3]).set_color(col_trig)
+
+        self.add(eq2)
+        self.play(mh.rtransform(eq2[:2], eq1[:2], eq2[2:5], eq1[3:6]),
+                  Succession(Wait(0.5), FadeIn(eq1[2], eq1[6:])))
+        # self.add(eq1[:2], eq1[3:6])
+        self.wait()
+
+
+class MeanSquareTheory(Chebyshev):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'\mathbb E[\mathcal E^2]', r'=', r'\frac1{\log(N/N_0)}',
+                      r'\int_{N_0}^N', r'\mathcal E(x)^2', r'\,\frac{dx}{x}')
+        eq2 = MathTex(r'\mathbb E[\mathcal E^2]', r'\sim', r'\sum_\rho\frac{2}{\lvert\rho\rvert^2}',
+                      r'=', r'0.046\cdots')
+
+        mh.align_sub(eq2, eq2[0], eq1[0])
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[4][0], eq1[0][2]).set_color(col_WVD)
+        VGroup(eq1[2][0], eq1[4][-1], eq1[0][-2], eq2[2][-1], eq2[2][2], eq2[-1]).set_color(col_num)
+        VGroup(eq1[2][1], eq1[2][-4], eq1[3][0], eq1[5][2], eq1[5][0], eq2[2][3:5], eq2[2][6],
+               eq2[2][0]).set_color(col_op)
+        VGroup(eq1[2][2:5]).set_color(col_trig)
+        VGroup(eq1[2][6], eq1[2][8:10], eq1[3][1:], eq1[4][2], eq1[5][1], eq1[5][-1]).set_color(col_x)
+        VGroup(eq1[0][0]).set_color(col_txt2)
+        VGroup(eq2[2][1], eq2[2][-3]).set_color(col_zero)
+
+        self.add(eq1)
+        eq2_1 = eq2[2].copy().shift(RIGHT*1.6)
+        self.play(mh.rtransform(eq1[0], eq2[0]),
+                  mh.stretch_replace(eq1[1], eq2[1]),
+                  FadeOut(eq1[2:]),
+                  FadeIn(eq2_1))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2_1, eq2[2]),
+                  Succession(Wait(0.5), FadeIn(eq2[3:])))
+        self.wait()
