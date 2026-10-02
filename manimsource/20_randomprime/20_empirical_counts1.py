@@ -521,7 +521,7 @@ class CramerHistogramLogTitle(Scene):
         eq2 = Tex(r'log weighting ', r'($N_0=500$)')
         eq2.next_to(eq1, DOWN, buff=0.3)
         VGroup(eq1).set_color(col_txt)
-        VGroup(eq2[0], eq2[1][0], eq2[1][-1]).set_color(col_txt*0.4 + WHITE*0.6)
+        VGroup(eq2[0]).set_color(col_txt*0.4 + WHITE*0.6)
         VGroup(eq2[1][1:3]).set_color(col_x)
         VGroup(eq2[1][4:-1]).set_color(col_num)
         self.add(eq1, eq2)
@@ -540,6 +540,7 @@ class CramerHistogramLog(Scene):
     ylen = 5.5
     labels = True
     normal_op = 0.2
+    label_normal = False
 
     def do_histogram(self, axes):
         x_scale = self.xlen / (self.bin_max - self.bin_min)
@@ -575,6 +576,7 @@ class CramerHistogramLog(Scene):
             run_time=self.animation_seconds,
             rate_func=rate_func_log(self.n_max, self.n_max_end),
         )
+        hist.bars.clear_updaters()
 
 
     def construct(self) -> None:
@@ -597,6 +599,13 @@ class CramerHistogramLog(Scene):
 
         objs = [axes.x_axis, normal_curve, area]
         if self.labels: objs += [ticks, xlabels]
+        if self.label_normal:
+            label = Tex(r'\sf normal density', color=ORANGE, stroke_width=1.5, font_size=60)
+            label.next_to(axes.c2p(0.5, 1.3), RIGHT, buff=0)
+            arr = Arrow(label[0][:1].get_bottom(), axes.c2p(0.3, normal_density(0.3)),
+                        color=ORANGE, stroke_width=8, buff=0.1)
+            self.add(label, arr)
+
         self.add(*objs)
         self.do_histogram(axes)
         self.wait(1)
@@ -605,7 +614,7 @@ class EmpiricalHistogramLogTitle(Scene):
     def construct(self):
         MathTex.set_default(font_size=70, stroke_width=2)
         eq1 = Tex(r'\sf Empirical distribution (', r'$N_0=500$', r')')
-        eq1[::2].set_color(col_txt)
+        eq1[0][:-1].set_color(col_txt)
         eq1[1][:2].set_color(col_x)
         eq1[1][3:].set_color(col_num)
         self.add(eq1)
@@ -620,6 +629,7 @@ class EmpiricalHistogramLog(CramerHistogramLog):
     bin_max = 1.5
     rel_width = 0.8
     counter = EmpiricalCount(n_min=500, n_max=1_000_000, nstep=500)
+    label_normal = True
 
 class HistogramIntro(EmpiricalHistogramLog):
     bin_min = -3
@@ -638,6 +648,7 @@ class EmpiricalHistogramNew(CramerHistogramLog):
     # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
     animation_seconds = 14
     # animation_seconds = 1
+    theory_shift = 0.
 
 
     def construct(self):
@@ -697,11 +708,17 @@ class EmpiricalHistogramNew(CramerHistogramLog):
                   Succession(Wait(0.8), FadeIn(plt_)))
         self.wait(0.1)
 
-        self.play(FadeIn(plt2))
+        self.play(Create(plt2, rate_func=linear, run_time=1.5))
         self.wait(0.1)
         self.play(FadeOut(plt2))
         self.wait(0.1)
         self.do_histogram(axes)
+        if abs(self.theory_shift ) > 1e-2:
+            plt3 = plt.copy().set_z_index(.9).set_stroke(color=PURPLE)
+            self.wait(0.1)
+            self.play(plt3.animate.shift(axes.c2p(self.theory_shift,0) - axes.c2p(0,0)))
+            self.wait(0.1)
+            self.play(FadeOut(plt3))
         self.wait()
 
 class EmpiricalHistogramNew2(EmpiricalHistogramNew):
@@ -710,9 +727,131 @@ class EmpiricalHistogramNew2(EmpiricalHistogramNew):
     counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=500, new_norm=True, offset=False)
     # counter = EmpiricalCount(n_min=500_000, n_max=1_000_000, nstep=5, new_norm=True)
     animation_seconds = 14
-    # animation_seconds = 1
     # print((li(np.sqrt(1e9))/2+li(np.cbrt(1e9))/3)/np.sqrt(1e9)*np.log(1e9)-1)
+    theory_shift = -0.21
 
+class EmpiricalHistogramTheory(EmpiricalHistogramNew2):
+    @staticmethod
+    def get_theory_density(xtheory, ntheory=100_000, theory_center=-1., seed=4, nzeros=100):
+        print('theory samples')
+        rng = np.random.default_rng(seed)
+        gammas = np.array([float(mp.im(mp.zetazero(k))) for k in range(1, nzeros + 1) ])
+        coeff = 2.0 / np.sqrt(0.25 + gammas ** 2)
+        print(coeff[0])
+        oscillation = np.zeros(ntheory, dtype=float)
+        for a in coeff:
+            theta = rng.uniform(0.0, 2.0 * np.pi, ntheory)
+            oscillation += a * np.cos(theta)
+        variance_total = 2.0 + np.euler_gamma - np.log(4.0 * np.pi)
+        variance_explicit = 0.5 * np.sum(coeff ** 2)
+        variance_tail = variance_total - variance_explicit
+        print('tail width', np.sqrt(variance_tail))
+        ytheory = np.zeros(len(xtheory), dtype=float)
+        xtheory2 = xtheory - theory_center
+        for x in oscillation:
+            ytheory += np.exp(-(xtheory2-x)**2 / (2*variance_tail))
+            ytheory += np.exp(-(xtheory2 + x) ** 2 / (2 * variance_tail))
+        ytheory /= np.sqrt(2*np.pi*variance_tail) * ntheory * 2
+        print('built curve')
+        return ytheory
+
+    def construct(self):
+        xlen = self.xlen
+        ylen = self.ylen
+        bin_max = self.bin_max
+        bin_min = self.bin_min
+        y_max = self.y_max
+
+        ntheoryplot = 200
+        xtheory = np.linspace(bin_min, bin_max, ntheoryplot, dtype=float)
+        ytheory = self.get_theory_density(xtheory)
+
+        axes0 = Axes(x_range=[bin_min+1, bin_max+1], y_range=[0, y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False, 'stroke_width': 4},
+        ).set_z_index(2)
+
+        axes = Axes(x_range=[bin_min, bin_max], y_range=[0, y_max],
+            x_length=xlen, y_length=ylen, tips=False,
+            axis_config={"include_ticks": False, 'stroke_width': 4},
+        ).set_z_index(2)
+        xticks0 = mh.get_xticks(axes0, vals=[-2, -1, 0, 1], label_color=col_num)
+        xticks = mh.get_xticks(axes, vals=[-2, -1, 0, 1], label_color=col_num)
+        yticks0 = mh.get_yticks(axes0, [1, 2, 3, 4], label_color=col_num, side=RIGHT)
+        yticks = mh.get_yticks(axes, [1, 2, 3, 4], label_color=col_num, side=RIGHT)
+        xticks[-1].set_opacity(-4)
+        xticks0[0].set_opacity(-4)
+
+        plt = axes.plot_line_graph(xtheory, ytheory, add_vertex_dots=False, stroke_width=6, stroke_color=ORANGE).set_z_index(4)
+        plt_ = axes.plot_line_graph(xtheory, ytheory, add_vertex_dots=False, stroke_width=0, stroke_opacity=0,
+                                   fill_color=ORANGE, fill_opacity=0.2).set_z_index(3.9)
+        self.add(axes0, plt, xticks0, yticks0)
+        self.play(Create(plt, rate_func=linear, run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(plt_)))
+        self.wait(0.1)
+        self.play(mh.rtransform(axes0, axes, yticks0, yticks, xticks0, xticks),
+                  run_time=2)
+        self.wait()
+
+col_zero = PINK * 0.7 + WHITE *0.3
+col_trig = PURPLE_A#*0.5+WHITE*0.5
+
+class EmpiricalDensityTitle(Scene):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = Tex(r'\sf Distribution of ', r'$\pi(x)-{\rm Li}(x)$', font_size=70, stroke_width=2)
+        eq2 = MathTex(r'\pi(x)-{\rm Li}(x)', r'\sim', r'-1+', r'{\sf noise}')
+        eq3 = MathTex(r'\pi(x)-{\rm Li}(x)', r'\sim', r'-1+',
+                      r'\sum_{\Re[\rho] > 0}', r'\frac{2}{\lvert\rho\rvert}', r'\cos U_\rho')
+        eq4 = MathTex(r'\sum', r'\frac{2}{\lvert\rho\rvert}', r'=', r'\infty')
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0], eq2[-1]).set_color(col_txt)
+        VGroup(eq1[1][2], eq1[1][-2]).set_color(col_x)
+        VGroup(eq1[1][0], eq1[1][5:7]).set_color(col_WVD)
+        VGroup(eq2[2][1], eq3[3][-1], eq3[4][0], eq3[2][1]).set_color(col_num)
+        VGroup(eq3[3][:2], eq3[4][1:3], eq3[4][-1]).set_color(col_op)
+        VGroup(eq3[3][3], eq3[4][-2], eq3[5][-1]).set_color(col_zero)
+        VGroup(eq3[5][3]).set_color(col_var)
+        VGroup(eq3[5][:3]).set_color(col_trig)
+        VGroup(eq4[-1]).set_color(col_special)
+
+        mh.copy_colors_eq(eq1[-1], eq3[0])
+
+        eq1.to_edge(UP, buff=0.4)
+        eq2.next_to(mh.pos(LEFT+UP*0.3), RIGHT, buff=0.5)
+        mh.align_sub(eq3, eq3[1], eq2[1])
+        eq4.next_to(eq3[-3:], DOWN, buff=0.3).shift(LEFT*1.5)
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=14)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=14)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=14)
+        eq4 = mh.eq_shadow(eq4, bg_stroke_width=14)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[1].copy(), eq2[0], run_time=1.7),
+                  Succession(Wait(1.2), FadeIn(eq2[1:]))
+                  )
+        circ = mh.circle_eq(eq2[2][1], scale=0.7).shift(LEFT*0.1)
+        self.play(Create(circ, rate_func=linear, run_time=0.6))
+        self.wait(0.1)
+        self.play(FadeOut(circ))
+        self.wait(0.1)
+        self.play(FadeOut(eq2))
+        self.wait(0.1)
+        self.play(FadeIn(eq3))
+        circ = mh.circle_eq(VGroup(eq3[3][0], eq3[4]), scale=0.7).set_z_index(10)
+        self.play(Create(circ, rate_func=linear, run_time=0.8))
+        self.wait(0.1)
+        # gp = VGroup(eq3.copy(), eq4).move_to(eq3, coor_mask=UP)
+        self.play(mh.rtransform(eq3[3][0].copy(), eq4[0][0], eq3[4].copy(), eq4[1]),
+                  circ.animate.shift(mh.diff(eq3[4], eq4[1])).set_opacity(0),
+                  Succession(Wait(0.6), FadeIn(eq4[-2:])))
+        self.wait(0.1)
+        self.play(FadeOut(eq1, eq3),
+                  eq4.animate.move_to(ORIGIN).to_edge(DOWN, buff=0.8).scale(1.2))
+
+        self.wait()
 
 class EmpiricalVarPlot(Scene):
     def construct(self):
@@ -855,9 +994,9 @@ class EmpiricalVarNew(Scene):
         ).set_z_index(5)
 
         labelx = MathTex(r'N', stroke_width=1.5, font_size=40, color=col_x)
-        labely = MathTex(r'\mathbb E[Z^2]', stroke_width=1.5, font_size=40)
-        labely[0][0].set_color(col_WVD)
-        labely[0][2:4].set_color(col_p)
+        labely = MathTex(r'\mathbb E[\mathcal E^2]', stroke_width=1.5, font_size=40)
+        labely[0][0].set_color(col_txt2)
+        labely[0][2:4].set_color(col_WVD)
         labely.next_to(axes.y_axis.get_end(), RIGHT, buff=0.2)
         labelx.next_to(axes.x_axis.get_end(), UR, buff=0.14)
         title = Tex(r'\sf Expected Square Error ', r'$(N_0=500)$', stroke_width=2, font_size=60)
