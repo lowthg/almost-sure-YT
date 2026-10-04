@@ -1,3 +1,5 @@
+from itertools import zip_longest
+
 import numpy as np
 from mpmath import nzeros
 from scipy.special import expi
@@ -1756,6 +1758,131 @@ class EmpiricalPath_twitter(EmpiricalPath):
         return expi(np.log(x)) - expi(np.log(x) / 2) / 2 - expi(np.log(x) / 3) / 3
 
     li_str = r'{\rm li}'
+
+def fade_by_digit(source: Integer, destination: Integer, **kwargs):
+    objs1 = source.submobjects
+    objs2 = destination.submobjects
+    ins = []
+    outs = []
+    tfrom = []
+    tto = []
+    for o1, o2 in zip_longest(objs1, objs2, fillvalue=None):
+        if o1 is None:
+            ins.append(o2)
+        elif o2 is None:
+            outs.append(o1)
+        elif o1.tex_string != o2.tex_string:
+            ins.append(o2)
+            outs.append(o1)
+        else:
+            tfrom.append(o1)
+            tto.append(o2)
+    anims = []
+    if len(ins) > 0:
+        anims.append(FadeIn(*ins))
+    if len(outs) > 0:
+        anims.append(FadeOut(*outs))
+    if len(tfrom) > 0:
+        anims.append(ReplacementTransform(VGroup(*tfrom), VGroup(*tto)))
+    return AnimationGroup(*anims, **kwargs)
+
+
+
+class PsiApprox(Scene):
+    def construct(self):
+        ax_args = {'x_range': [0, 1.05], 'y_range': [0, 1.05], 'x_length': 12,
+                   'axis_config': {'color': WHITE, 'stroke_width': 4, 'include_ticks': False,
+                                  "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                                  "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                                  },
+        }
+        ax = Axes(y_length=5, **ax_args).set_z_index(1).shift(RIGHT*0.2).to_edge(UP, 0.3)
+        eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
+
+        scalex1 = 0.1
+        scaley1 = 1./8
+
+        ticks = mh.get_xticks(ax, [2, 3, 4, 5, 7, 8, 9], scalex=scalex1, label_color=col_num)
+        ticksy = mh.get_yticks(ax, [0, 2, 4, 6, 8], scaley=scaley1, label_color=col_num)
+
+        primes = build_primes(120).astype(dtype=float)
+        primes[2:] *= np.log(np.arange(2, len(primes)))
+        for i in range(2, len(primes)):
+            j = i * i
+            while j < len(primes):
+                primes[j] = primes[i]
+                j *= i
+
+        prime_count = np.cumsum(primes)
+
+        x, y = prime_counting_vectors(prime_count, 10)
+
+
+        self.add(ax, eqx, ticksy, ticks)
+
+        plt1 = ax.plot_line_graph(x*scalex1, y*scaley1, line_color=BLUE, stroke_width=8, add_vertex_dots=False).set_z_index(2)
+        eqpsi = MathTex(r'\psi(x)', stroke_width=1.5, font_size=50, color=BLUE).next_to(ax.c2p(0.5, 0.3), DR, buff=0)
+        self.play(Create(plt1, rate_func=linear, run_time=1.),
+                  FadeIn(eqpsi))
+
+        xvec = np.linspace(1.5, 10., 1000)
+        yvec = xvec - np.log(2*np.pi) - np.log(1-1/xvec/xvec) / 2
+
+        plt2 = ax.plot_line_graph(xvec*scalex1, yvec*scaley1, line_color=ORANGE, stroke_width=8, add_vertex_dots=False).set_z_index(3)
+
+        eq1 = MathTex(r'x-', r'\frac12', r'\log(1-x^{-2})', r'-', r'\log2\pi', stroke_width=1.5, font_size=50)
+        mh.font_size_sub(eq1, 1, 40)
+        VGroup(eq1[0], eq1[2][6]).set_color(col_x)
+        VGroup(eq1[1][::2], eq1[2][-3:-1], eq1[2][4]).set_color(col_num)
+        VGroup(eq1[1][1]).set_color(col_op)
+        VGroup(eq1[2][:3], eq1[4][:3]).set_color(col_trig)
+        eq1[-1][-2:].set_color(col_pi)
+        eq1.next_to(ax.c2p(0.1, 0.7), RIGHT, buff=0)
+
+        self.play(Create(plt2, rate_func=linear, run_time=1.1),
+                  FadeIn(eq1))
+
+        txt1 = Tex(r'\sf num zeros:', font_size=50, color=col_txt, stroke_width=2)
+        txt1.next_to(eq1, DOWN, buff=0.5).align_to(eq1, LEFT)
+        num_args = {'color': col_num, 'font_size': 50, 'stroke_width': 2, 'edge_to_fix': LEFT}
+        num_val = Integer(2, **num_args)
+        self.add(num_val)
+        num_val0 = num_val.copy().next_to(txt1, RIGHT, buff=0.2).align_to(txt1[0][0], DOWN)
+        num_val.move_to(num_val0, aligned_edge=LEFT)
+
+        nzeros = 51
+        gammas = load_gammas(nzeros)
+
+        for i in range(nzeros):
+            rho = 0.5 + gammas[i] * 1j
+            yvec -= (2 * np.pow(xvec, rho) / rho).real
+            plt3 = ax.plot_line_graph(xvec*scalex1, yvec*scaley1, line_color=ORANGE, stroke_width=8, add_vertex_dots=False).set_z_index(3)
+            anims = [mh.rtransform(plt2, plt3)]
+            if i ==0:
+                anims.append(FadeIn(txt1, num_val))
+            else:
+                num_val1 = num_val
+                num_val = num_val.copy().set_value(2*i)
+                # num_val = Integer(2*i, **num_args).move_to(num_val).align_to(num_val, LEFT)
+                # anims += [FadeOut(num_val1), FadeIn(num_val)]
+                # anims += [TransformMatchingShapes(num_val1, num_val)]
+                anims += [fade_by_digit(num_val1, num_val)]
+            dt = 1. if i == 0 else 0.16
+            self.play(*anims, run_time=dt)
+            if i == 0:
+                self.play(FadeOut(eq1))
+
+            plt2 = plt3
+
+        pt1 = ax.c2p(7 * scalex1, (2* np.log(2) + np.log(3) + np.log(5) + np.log(7)/2) * scaley1)
+        pt2 = pt1 + RIGHT*2.5 + DOWN*0.7
+        arr = Arrow(pt2, pt1, stroke_width=8, color=RED, buff=0.1)
+        self.play(FadeIn(arr))
+        self.wait(0.1)
+        self.play(FadeOut(arr))
+
+        self.wait()
+
 
 def save_gammas(n):
     gammas = np.array([float(mp.im(mp.zetazero(k))) for k in range(1, n + 1)])
