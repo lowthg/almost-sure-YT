@@ -1,8 +1,12 @@
+import numpy as np
 from manim import *
 import sys
 from manim import ManimColor
 from scipy.special import expi
+from sympy import floor
+
 from common_randomprime import *
+import mpmath as mp
 
 sys.path.append('../../')
 import manimhelper as mh
@@ -12,6 +16,7 @@ col_pi = col_special * 0.5 + ORANGE * 0.5
 col_trig = PURPLE_A#*0.5+WHITE*0.5
 col_txt = ManimColor( r'#FFAC2B')
 col_prime = BLUE
+col_zero = PINK * 0.7 + WHITE *0.3
 
 def get_kwargs(**kwargs):
     return kwargs
@@ -481,3 +486,1121 @@ class MeanSquareTheory(Chebyshev):
         self.play(mh.rtransform(eq2_1, eq2[2]),
                   Succession(Wait(0.5), FadeIn(eq2[3:])))
         self.wait()
+
+class EmpiricalErrNew(Chebyshev):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        eq1 = MathTex(r'\mathcal E(x)', r'=', r'\pi(x)-{\rm Li}(x)')
+        eq2 = MathTex(r'\mathcal E(x)', r'=', r'\left(', r'\pi(x)-{\rm Li}(x)', r'\right)',
+                      r'\frac{\log x}{\sqrt x}')
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0], eq1[2][0], eq1[2][5:7], eq2[-1][3], eq2[-1][-1]).set_color(col_WVD)
+        VGroup(eq1[0][-2], eq1[2][2], eq1[2][-2]).set_color(col_x)
+        VGroup(eq2[-1][:3]).set_color(col_trig)
+        VGroup(eq2[-1][4:-1]).set_color(col_op)
+
+        mh.align_sub(eq1, eq1[1], eq2[1])
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=15)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=15)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2], eq2[3]),
+                  Succession(Wait(0.4), FadeIn(eq2[2], eq2[4:])),
+                  )
+        self.wait()
+
+class EmpiricalArcSinSum(Chebyshev):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        eq1 = MathTex(r'\sum_{\Re[\rho] > 0}', r'\frac{2}{\lvert\rho\rvert}', r'\cos U_\rho')
+        VGroup(eq1[0][:2], eq1[1][1:3], eq1[1][-1]).set_color(col_op)
+        VGroup(eq1[0][3], eq1[1][-2], eq1[2][-1]).set_color(col_zero)
+        VGroup(eq1[0][-1], eq1[1][0]).set_color(col_num)
+        VGroup(eq1[2][3]).set_color(col_var)
+        VGroup(eq1[2][:3]).set_color(col_trig)
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=14)
+
+        self.add(eq1)
+        circ = mh.circle_eq(eq1[-1], scale=0.7)
+        txt = Tex(r'\sf arcsine', color=RED, font_size=50)
+        txt.next_to(circ, DR, buff=-0.1)
+        self.play(Create(circ, rate_func=linear, run_time=0.6), FadeIn(txt))
+        self.wait()
+
+class TheoreticalBias(Chebyshev):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'\pi(x)', r'=', r'{\rm Li}(x)', r'-', r'\frac12', r'{\rm Li(\sqrt x)}', r'-', r'\frac13',
+                      r'{\rm Li}(\sqrt[3] x)', r'+\cdots')
+        mh.font_size_sub(eq1, 4, 50)
+        mh.font_size_sub(eq1, 7, 50)
+        eq2 = MathTex(r'\mathcal E(x)', r'=', r'\left(', r'-', r'\frac12', r'{\rm Li}(\sqrt x)', r'-', r'\frac13',
+                      r'{\rm Li}(\sqrt[3] x)', r'+\cdots', r'\right)', r'\frac{\log x}{\sqrt x}', r'+', r'{\sf noise}')
+        mh.font_size_sub(eq2, 4, 50)
+        mh.font_size_sub(eq2, 7, 50)
+        eq3 = MathTex(r'\mathcal E(x)', r'\approx', r'\left(', r'-', r'\frac{\sqrt x}{2\log\sqrt x}', r'-',
+                      r'\frac{\sqrt[3] x}{3\log\sqrt[3] x}', r'+\cdots', r'\right)', r'\frac{\log x}{\sqrt x}')
+        eq4 = MathTex(r'\mathcal E(x)', r'\approx', r'-', r'1', r'-', r'\frac{\sqrt[3] x}{\sqrt x}')
+        eq5 = MathTex(r'\mathcal E(x)', r'\approx', r'-', r'1', r'+', r'{\sf noise}')
+
+        mh.rtransform.copy_colors=True
+        VGroup(eq1[0][0], eq1[2][:2], eq1[5][:2], eq1[8][:2], eq2[0][0]).set_color(col_WVD)
+        VGroup(eq1[0][-2], eq1[2][-2], eq1[5][-2], eq1[8][-2], eq2[0][2], eq2[-3][3], eq2[-3][-1]).set_color(col_x)
+        VGroup(eq1[4][::2], eq1[7][::2], eq1[8][3], eq4[3]).set_color(col_num)
+        VGroup(eq1[4][1], eq1[5][3:-2], eq1[7][1], eq1[8][4:-2], eq2[-3][4:-1]).set_color(col_op)
+        VGroup(eq2[-1]).set_color(col_txt)
+        VGroup(eq2[-3][:3], eq3[4][5:8], eq3[6][6:9]).set_color(col_trig)
+
+        eq2[-2:].next_to(eq2[-3], DOWN, buff=0.3).align_to(eq2[-3], RIGHT).shift(RIGHT*0.5)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        eq2.move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq3, eq3[1], eq2[1], coor_mask=UP)
+        mh.align_sub(eq4, eq4[1], eq3[1])
+        for i in [2, 3, 4, 5]:
+            eq4[i].move_to(eq3[i+1], coor_mask=RIGHT)
+        mh.align_sub(eq5, eq5[1], eq4[1], coor_mask=UP)
+        eq5.align_to(eq4[3], RIGHT).shift(RIGHT*0.3)
+
+        eq3_1 = MathTex(r'\frac1{\log x}')
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=15)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=15)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=15)
+        eq4 = mh.eq_shadow(eq4, bg_stroke_width=15)
+        eq5 = mh.eq_shadow(eq5, bg_stroke_width=15)
+        eq3_1 = mh.eq_shadow(eq3_1, bg_stroke_width=15)[0]
+
+        self.add(eq1)
+        self.play(AnimationGroup(mh.rtransform(eq1[1], eq2[1], eq1[3:10], eq2[3:10]),
+                  mh.fade_replace(eq1[0], eq2[0], coor_mask=RIGHT),
+                  FadeOut(eq1[2], shift=mh.diff(eq1[2], eq2[0])*RIGHT),
+                                 run_time=1.5),
+                  Succession(Wait(1), FadeIn(eq2[-3:], eq2[2], eq2[10])),
+                  )
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq2[:4], eq3[:4], eq2[-4:-2], eq3[-2:],
+                                eq2[4][1], eq3[4][3], eq2[5][3:6], eq3[4][:3], eq2[5][3:6].copy(),
+                                               eq3[4][-3:], eq2[4][2], eq3[4][4],
+                                               eq2[6], eq3[5], eq2[7][1], eq3[6][4],
+                                               eq2[8][3:-1], eq3[6][:4], eq2[7][2], eq3[6][5],
+                                               eq2[8][3:-1].copy(), eq3[6][9:],
+                                               eq2[9], eq3[7]),
+                  FadeOut(eq2[4][0], shift=mh.diff(eq2[4][0], eq3[4][:3])*RIGHT),
+                  FadeOut(eq2[7][0], shift=mh.diff(eq2[7][0], eq3[6][:4]) * RIGHT),
+                                 run_time=1.6),
+                  FadeOut(eq2[5][:3], eq2[5][-1], eq2[8][:3], eq2[8][-1]),
+                  Succession(Wait(0.8), FadeIn(eq3[4][5:8], eq3[6][6:9]))
+                  )
+        self.wait(0.1)
+        eq3_2 = eq3_1.copy()
+        mh.align_sub(eq3_1, eq3_1[1], eq3[4][3])
+        mh.align_sub(eq3_2, eq3_2[1], eq3[6][4])
+        self.play(mh.rtransform(eq3[4][5:8], eq3_1[2:5], eq3[4][-1], eq3_1[-1],
+                                eq3[6][6:9], eq3_2[2:5], eq3[6][-1], eq3_2[-1]),
+                  FadeOut(eq3[4][4], eq3[4][8:-1], eq3[6][5], eq3[6][9:-1]))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[3], eq4[2], eq3[5], eq4[4], eq3[6][:5], eq4[5][:5],
+                                eq3[-1][-3:], eq4[5][-3:]),
+                  FadeOut(eq3[4][:4], eq3_1[2:], eq3_2[2:]),
+                  FadeOut(eq3[-1].copy(), shift=mh.diff(eq3[-1], eq3[4])*RIGHT),
+                  FadeOut(eq3[-1][:5], shift=mh.diff(eq3[-1][:5], eq3[6][:5])*RIGHT),
+                  FadeIn(eq4[3]),
+                  FadeOut(eq3[2], eq3[8]),
+                  run_time=2)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[:4], eq5[:4], eq2[-2:], eq5[-2:], run_time=2),
+                  FadeOut(eq4[4:], eq3[7]))
+
+        self.wait()
+
+class TheoreticalBias2(Chebyshev):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'\mathcal E(x)', r'=', r'\left(', r'-', r'\frac12', r'{\rm Li}(\sqrt x)', r'-', r'\frac13',
+                      r'{\rm Li}(\sqrt[3] x)', r'\right)', r'\frac{\log x}{\sqrt x}', r'+', r'{\sf noise}')
+        mh.font_size_sub(eq1, 4, 50)
+        mh.font_size_sub(eq1, 7, 50)
+        eq2 = MathTex(r'\mathcal E(x)', r'=', r'-1', r'+1+', r'\left(', r'-', r'\frac12', r'{\rm Li}(\sqrt x)', r'-', r'\frac13',
+                      r'{\rm Li}(\sqrt[3] x)', r'\right)', r'\frac{\log x}{\sqrt x}', r'+', r'{\sf noise}')
+        mh.font_size_sub(eq2, 6, 50)
+        mh.font_size_sub(eq2, 9, 50)
+        eq3 = MathTex(r'\to0', r'{\sf\ slowly...}', font_size=60, color=RED)
+        eq4 = MathTex(r'\approx', r'-0.13', r'{\sf\ at\ }', r'x=10\,000\,000\,000')
+        eq5 = MathTex(r'\mathcal E(x)', r'-1+', r'\left(', r'\frac12', r'{\rm Li}(\sqrt x)', r'+', r'\frac13',
+                      r'{\rm Li}(\sqrt[3] x)', r'\right)', r'\frac{\log x}{\sqrt x}')
+        mh.font_size_sub(eq5, 3, 50)
+        mh.font_size_sub(eq5, 6, 50)
+
+        eq2[-2:].next_to(eq2[-3], DOWN, buff=0.3).align_to(eq2[-3], RIGHT).shift(RIGHT*0.5)
+        eq2.move_to(ORIGIN)
+        mh.align_sub(eq2, eq2[1], eq1[1], coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], eq2[0]).shift(RIGHT)
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0], eq1[5][:2], eq1[8][:2]).set_color(col_WVD)
+        VGroup(eq1[0][2], eq1[-3][3], eq1[-3][-1], eq1[5][-2], eq1[8][-2], eq4[3][0]).set_color(col_x)
+        VGroup(eq1[4][::2], eq1[7][::2], eq1[8][3], eq2[2][-1], eq2[3][1], eq4[1], eq4[3][2:]).set_color(col_num)
+        VGroup(eq1[-3][4:-1], eq1[4][1], eq1[7][1], eq1[5][3:-2], eq1[8][4:-2]).set_color(col_op)
+        VGroup(eq1[-1], eq4[2]).set_color(col_txt)
+        VGroup(eq1[-3][:3]).set_color(col_trig)
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=14)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=14)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=14)
+        eq4 = mh.eq_shadow(eq4, bg_stroke_width=14)
+        eq5 = mh.eq_shadow(eq5, bg_stroke_width=14)
+
+        self.add(eq1)
+        self.play(mh.rtransform(eq1[:2], eq2[:2], eq1[2:], eq2[4:], run_time=1.5),
+                  Succession(Wait(0.6), FadeIn(eq2[2:4])))
+        self.wait(0.1)
+        circ = mh.circle_eq(VGroup(eq2[4:-2], eq2[3][1:]))
+        eq3.next_to(circ, UP, buff=0.2).shift(RIGHT)
+        self.play(Create(circ, rate_func=linear),
+                  Succession(Wait(0.6), FadeIn(eq3[0])))
+        self.play(FadeIn(eq3[1], rate_func=linear))
+        self.wait(0.1)
+        eq4.move_to(eq3).align_to(eq3, LEFT).to_edge(RIGHT, buff=0.2)
+        self.play(FadeOut(eq3), FadeIn(eq4))
+        self.wait(0.1)
+        self.play(FadeOut(circ, eq4),
+                  mh.rtransform(eq2[0], eq5[0], eq2[3][1:], eq5[1][1:],
+                                eq2[4], eq5[2], eq2[6:8], eq5[3:5],
+                                eq2[9:13], eq5[6:]),
+                  mh.fade_replace(eq2[3][0], eq5[1][0]),
+                  mh.fade_replace(eq2[8], eq5[5]),
+                  FadeOut(eq2[1:3], eq2[-2:]),
+                  FadeOut(eq2[5], shift=mh.diff(eq2[4], eq5[2])))
+
+        self.wait()
+
+class ReciprocalsSumToOne(Chebyshev):
+    bgcolor = BLACK
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq_zeros = []
+        eq_sum = []
+        eq_num = []
+        zero_sum = 0.
+        height = config.frame_height * 0.84 / 11 * UP
+        width0 = 0.6 * RIGHT
+        width1 = 3.9 * RIGHT
+        width2 = 2.2 * RIGHT
+        topleft1 = mh.pos(UP*0.75+LEFT*0.96)
+        topleft2 = topleft1 * UL - (width0 + width1 + width2)
+        nrows = 11
+        fs = 44
+        lines = [[], []]
+        lineargs = get_kwargs(stroke_width=4, stroke_color=WHITE)
+        eq_rho = []
+        eq_cumsum = []
+        for j, pos in [(0, topleft1), (1, topleft2)]:
+            eq1 = MathTex(r'\rho', font_size=50, color=col_zero, stroke_width=1.5)
+            eq1.next_to(pos+width0+width1/2, UP, buff=0.1)
+            eq_rho.append(eq1)
+            eq2 = Tex(r'$\sum 2/\lvert\rho\rvert$', font_size=50, stroke_width=1.5)
+            VGroup(eq2[0][0], eq2[0][2:4], eq2[0][-1]).set_color(col_op)
+            eq2[0][1].set_color(col_num)
+            eq2[0][-2].set_color(col_zero)
+            eq2.next_to(pos+width0+width1+width2/2, UP, buff=0.1)
+            eq1.move_to(eq2[0][-2], coor_mask=UP)
+            eq_cumsum.append(eq2)
+
+            for i in range(nrows+1):
+                lines[j].append(Line(pos - i * height, pos - i * height + width0 + width1 + width2, **lineargs))
+            for pos1 in [pos, pos + width0, pos+width0+width1, pos+width0+width1+width2]:
+                lines[j].append(Line(pos1, pos1 - nrows*height, **lineargs))
+
+        # eq_rho.next_to(top)
+
+        for i in range(1, 22):
+            pos0 = topleft1 if i <= nrows else topleft2
+            j = (i-1) % nrows
+            eq1 = MathTex(r'{}'.format(i), font_size=fs, color=RED)
+            eq_num.append(eq1)
+            pos1 = pos0 + width0/2 - height * (j+1/2)
+            eq1.move_to(pos1)
+
+            gamma = float(mp.im(mp.zetazero(i)))
+            eq2 = MathTex(r'1/2', r'+', r'i\,', '{:.4f}'.format(gamma), r'\cdots', font_size=fs)
+            VGroup(eq2[0][::2], eq2[3:]).set_color(col_num)
+            eq2[0][1].set_color(col_op)
+            eq2[2].set_color(col_i)
+            pos1 += (width0+width1)/2
+            eq2.move_to(pos1)
+            mh.align_sub(eq2, eq2[0][0], eq1[0][0].get_bottom(), UP, buff=0, coor_mask=UP)
+            eq_zeros.append(eq2)
+
+            zero_sum += 2./math.sqrt(gamma**2+0.25)
+            eq3 = MathTex(r'{:.4f}'.format(zero_sum), r'\cdots', color=col_p, font_size=fs)
+            eq_sum.append(eq3)
+            eq3.move_to(pos1 + (width1 + width2)/2)
+            mh.align_sub(eq3, eq3[-1][-1], eq2[-1][-1], coor_mask=UP)
+
+        # self.play(FadeIn(*eq_zeros[:nrows], *eq_sum[:nrows], *eq_num[:nrows]))
+
+        gp = VGroup(VGroup(eq_rho[0], eq_cumsum[0], *lines[0]), eq_zeros[:nrows], eq_sum[:nrows], eq_num[:nrows])
+        gp1 = VGroup(eq_rho[1], eq_cumsum[1], *lines[1])
+        pos = gp.get_center()
+        gp.move_to(ORIGIN, coor_mask=RIGHT)
+        self.add(gp[0])
+        anims = []
+        for i in range(nrows):
+            anims.append(Succession(Wait(i*0.2), FadeIn(eq_zeros[i], eq_sum[i], eq_num[i])))
+        self.play(*anims)
+        self.play(gp.animate.move_to(pos),
+                  mh.rtransform(gp[0].copy(), gp1))
+        anims = []
+        for i in range(nrows, 2*nrows-1):
+            anims.append(Succession(Wait((i-nrows)*0.2), FadeIn(eq_zeros[i], eq_sum[i], eq_num[i])))
+        self.play(*anims)
+        self.wait(0.1)
+
+        circ = mh.circle_eq(eq_sum[-1])
+        self.play(Create(circ, rate_func=linear, run_time=0.7))
+
+        self.wait()
+
+class ExtremeArcSinSum(Chebyshev):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+
+        eq1 = MathTex(r'\sum', r'\frac{2}{\lvert\rho\rvert}', r'\cos U_\rho').set_z_index(4)
+        VGroup(eq1[0], eq1[1][2:4], eq1[1][-1]).set_color(col_op)
+        VGroup(eq1[1][0]).set_color(col_num)
+        VGroup(eq1[1][-2], eq1[2][-1]).set_color(col_zero)
+        VGroup(eq1[2][:3]).set_color(col_trig)
+        VGroup(eq1[2][3]).set_color(col_var)
+
+        eq1.to_edge(DOWN, buff=0.4)
+        circ = mh.circle_eq(eq1[-1], scale=0.8).set_z_index(6)
+        eq2 = MathTex(r'\approx1', color=RED, stroke_width=1.5, font_size=60)
+
+        box1 = SurroundingRectangle(VGroup(eq1, circ, circ.copy().scale(-1, about_point=circ.get_center()*UP)),
+                                    stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
+                                    corner_radius=0.2, buff=0.2)
+        eq2.next_to(circ, UR, buff=0.1).set_z_index(6).align_to(box1, RIGHT).shift(LEFT*0.1)
+
+        self.add(box1, eq1)
+        self.play(Create(circ, rate_func=linear, run_time=0.6),
+                  Succession(Wait(0.5), FadeIn(eq2)))
+        self.wait(0.1)
+        self.play(FadeOut(circ, eq2))
+
+        self.wait()
+
+class ProbFlip(Chebyshev):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=80)
+
+        eq1 = MathTex(r'\mathbb P\left(\pi(x) > {\rm Li}(x)\right)', r'>', r'0')
+        eq2 = MathTex(r'\mathbb P\left(\pi(x) > {\rm Li}(x)\right)', r'\approx', r'0.00000026')
+        eq3 = MathTex(r'\mathbb P\left(\pi(x) < {\rm Li}(x)\right)', r'\approx', r'0.99999974')
+
+        mh.rtransform.copy_colors=True
+        VGroup(eq1[0][0]).set_color(col_txt2)
+        VGroup(eq1[0][2], eq1[0][7:9]).set_color(col_WVD)
+        VGroup(eq1[0][4], eq1[0][10]).set_color(col_x)
+        VGroup(eq1[-1], eq2[-1], eq3[-1]).set_color(col_num)
+
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=14)
+        eq2 = mh.eq_shadow(eq2, bg_stroke_width=14)
+        eq3 = mh.eq_shadow(eq3, bg_stroke_width=14)
+
+        eq1_1 = eq1[0].copy().move_to(eq1, coor_mask=RIGHT)
+        eq2.shift(LEFT*0.2)
+        self.add(eq1_1)
+        self.play(mh.rtransform(eq1_1, eq1[0]),
+                  Succession(Wait(0.4), FadeIn(eq1[1:])))
+        self.wait(0.1)
+        anims = []
+        for i in range(8):
+            anims.append(Succession(Wait(0.3*i+0.7), FadeIn(eq2[-1][2+i])))
+        self.play(mh.rtransform(eq1[0], eq2[0], eq1[-1][0], eq2[-1][0]),
+                  mh.fade_replace(eq1[1], eq2[1]),
+                  FadeIn(eq2[-1][1], shift=mh.diff(eq1[-1][0], eq2[-1][0])),
+                  *anims
+                  )
+
+        self.play(eq2.animate.move_to(ORIGIN).to_edge(DOWN, buff=0.4))
+        eq3.next_to(eq2, UP, buff=0.4).align_to(eq2, LEFT)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[0][:6].copy(), eq3[0][:6], eq2[0][7:].copy(), eq3[0][7:]),
+                  eq2[0][6].copy().animate.stretch(-1, dim=0).move_to(eq3[0][6]))
+        anims = []
+        for i in range(6):
+            anims.append(Succession(Wait(0.2*i+0.6), FadeIn(eq3[-1][4+i])))
+        self.play(FadeIn(eq3[-2], eq3[-1][:4]), *anims)
+        self.wait()
+
+
+class PathCalc(Scene):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq1 = MathTex(r'\pi(x)', r'\approx', r'{\rm Li}(x)', r'-', r'\frac12', r'{\rm Li}(\sqrt x)',
+                      r'-', r'\frac13', r'{\rm Li}(\sqrt[3] x)', r'+', r'\cdots',
+                      r'-', r'\frac{1}{\log x}', r'\sum_{\rho}', r'\frac{x^\rho}{\rho}')
+        mh.font_size_sub(eq1, 4, 50)
+        mh.font_size_sub(eq1, 7, 50)
+        eq2 = MathTex(r'\hat\pi(x)', r'=', r'{\rm Li}(x)', r'-', r'\frac12', r'{\rm Li}(\sqrt x)',
+                      r'-', r'\frac13', r'{\rm Li}(\sqrt[3] x)', r'+', r'\cdots')
+        eq3 = MathTex(r'\pi(x)-\hat\pi(x)', r'\approx', r'-', r'\frac{1}{\log x}', r'\sum_{\rho}', r'\frac{x^\rho}{\rho}')
+        eq4 = MathTex(r'\rho', r'=', r'\frac12', r'+i\gamma', r'=', r'-\lvert\rho\rvert e^{i\theta}')
+        mh.font_size_sub(eq4, 2, 50)
+        eq5 = MathTex(r'\pi(x)-\hat\pi(x)', r'\approx', r'\frac{\sqrt x}{\log x}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log x-\theta)')
+        eq6 = MathTex(r'\pi(e^tx)-\hat\pi(e^tx)', r'\approx', r'\frac{\sqrt {e^tx}}{\log e^tx}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log e^tx-\theta)')
+        eq7 = MathTex(r'\frac{e^{\frac t2}\sqrt {x}}{t+\log x}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log e^tx-\theta)')
+        eq8 = MathTex(r'\frac{e^{\frac t2} }t', r'\sqrt {x}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log e^tx-\theta)')
+        eq9 = MathTex(r'\frac t{e^{\frac t2} }', r'\left(', r'\pi(e^tx)-\hat\pi(e^tx)', r'\right)', r'\approx')
+        eq10 = MathTex(r'\sqrt {x}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log x + \gamma t -\theta)')
+        eq11 = MathTex(r'\sqrt {x}', r'\sum_{\rho\colon\gamma > 0}',
+                      r'\frac{2}{\lvert\rho\rvert}', r'\cos(\gamma\log x + U_\rho)')
+        eq12 = Tex(r'$U_\rho$', r' independent, uniform on ', r'$[0,2\pi]$')
+
+        mh.rtransform.copy_colors = True
+        VGroup(eq1[0][0], eq1[2][:2], eq1[5][:2], eq1[8][:2], eq2[0][:2]).set_color(col_WVD)
+        VGroup(eq1[0][-2], eq1[2][-2], eq1[5][-2], eq1[8][-2], eq1[12][-1], eq1[14][0],
+               eq2[0][-2]).set_color(col_x)
+        VGroup(eq1[4][::2], eq1[7][::2], eq1[8][3], eq4[2][::2], eq1[12][0], eq5[4][0],
+               eq5[3][-1], eq7[0][3], eq12[2][1]).set_color(col_num)
+        VGroup(eq1[5][3:-2], eq1[8][4:-2], eq1[13][0], eq1[14][2],
+               eq4[2][1], eq4[5][1], eq4[5][3], eq5[2][:2], eq7[0][2], eq1[-3][1]).set_color(col_op)
+        VGroup(eq1[12][-4:-1], eq5[5][:3], eq5[5][5:8]).set_color(col_trig)
+        VGroup(eq1[13][1], eq1[14][1], eq1[14][-1], eq4[0], eq4[-1][2], eq11[-1][-2], eq12[0][1]).set_color(col_zero)
+        VGroup(eq4[3][1], eq4[-1][-2]).set_color(col_i)
+        VGroup(eq4[3][-1], eq5[3][3], eq5[5][4]).set_color(col_p)
+        VGroup(eq4[-1][-3], eq6[0][2], eq6[0][10], eq6[2][-10], eq6[2][-3], eq6[5][8]).set_color(col_special)
+        VGroup(eq4[-1][-1], eq5[5][-2]).set_color(col_angle)
+        VGroup(eq6[0][3], eq6[0][11], eq6[2][-9], eq6[2][-2], eq6[5][9]).set_color(col_txt2)
+        VGroup(eq11[-1][-3], eq12[0][0]).set_color(col_var)
+        VGroup(eq12[1]).set_color(col_txt)
+        VGroup(eq12[2][-3:-1]).set_color(col_pi)
+        mh.copy_colors_eq(eq1[2:11], eq2[2:])
+
+        eq1[-4:].next_to(eq1[:-4], DOWN, buff=0.2).align_to(eq1[-5], RIGHT).shift(RIGHT)
+        eq1.move_to(ORIGIN)
+        mh.align_sub(eq2, eq2[1], eq1[1]).next_to(eq1, DOWN, buff=0.2, coor_mask=UP)
+        gp1 = VGroup(eq1.copy(), eq2).move_to(ORIGIN, coor_mask=UP)
+        eq2_2 = eq2.copy().to_edge(DOWN, buff=0.4).set_opacity(0.5)
+        eq3.next_to(eq2, UP, buff=0.5, coor_mask=UP)
+        mh.align_sub(eq4, eq4[1], eq2[1], coor_mask=UP)
+        mh.align_sub(eq5, eq5[1], eq3[1], coor_mask=UP)
+        eq4.next_to(eq2_2, UP, buff=0.3, coor_mask=UP)
+        eq6[:2].to_edge(LEFT, buff=0.4)
+        eq6[2:].to_edge(RIGHT, buff=0.8).shift(DOWN*1.5)
+        # eq6.next_to(eq4, UP, buff=0.4, coor_mask=UP)
+        mh.align_sub(eq6, eq6[-1][-1], eq5[-1][-1], coor_mask=UP)
+        mh.align_sub(eq7, eq7[-1], eq6[-1])
+        mh.align_sub(eq8, eq8[-1], eq7[-1])
+        mh.align_sub(eq9, eq9[-1], eq6[1]).align_to(eq6, LEFT)
+        mh.align_sub(eq10, eq10[-1][-1], eq8[-1][-1])
+        mh.align_sub(eq11, eq11[-1][-1], eq10[-1][-1])
+
+        self.add(eq1)
+        self.play(FadeIn(eq2),
+                  mh.rtransform(eq1, gp1[0]))
+        self.wait(0.1)
+        eq2_1 = eq2[0].copy()
+        self.play(FadeOut(gp1[0][2:11]),
+                  eq2_1.animate(run_time=1.6).move_to(eq1[2:6]).align_to(eq1[0], DOWN))
+        self.wait(0.1)
+        self.play(mh.rtransform(gp1[0][0][:], eq3[0][:4], eq2_1[:], eq3[0][-5:],
+                                gp1[0][1], eq3[1], gp1[0][-4:], eq3[-4:], run_time=1.6),
+                  Succession(Wait(0.8), FadeIn(eq3[0][4]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2, eq2_2),
+                  FadeIn(eq4))
+        self.wait(0.1)
+        self.play(AnimationGroup(FadeOut(eq3[2], shift=mh.diff(eq3[1], eq5[1])),
+                  FadeOut(eq3[3][0], shift=mh.diff(eq3[3][0], eq5[2][2])*RIGHT),
+                  FadeIn(eq5[2][:2], shift=mh.diff(eq3[3][0], eq5[2][2])),
+                  FadeIn(eq5[4][0], eq5[4][2], eq5[4][4], shift=mh.diff(eq3[5][3], eq5[4][3])),
+                  mh.fade_replace(eq3[5][1], eq5[5][4]),
+                  mh.rtransform(eq3[:2], eq5[:2], eq3[3][-5:], eq5[2][-5:],
+                                eq3[5][0].copy(), eq5[2][2], eq3[4][:], eq5[3][:2],
+                                eq3[5][2], eq5[4][1], eq3[5][3], eq5[4][3],
+                                eq3[5][0], eq5[5][8]),
+                                 run_time=1.7),
+                  Succession(Wait(1), FadeIn(eq5[3][2:], eq5[5][:4], eq5[5][5:8], eq5[5][9:]))
+                  )
+        self.play(AnimationGroup(mh.rtransform(eq5[0][:2], eq6[0][:2], eq5[0][2:8], eq6[0][4:10],
+                                               eq5[0][8:], eq6[0][12:], eq5[1], eq6[1]),
+                  eq5[2:].animate.shift(mh.diff(eq5[3][0], eq6[3][0])*UP)),
+                  eq4.animate.set_opacity(0.5),
+                  Succession(Wait(0.7), FadeIn(eq6[0][2:4], eq6[0][10:12])))
+        self.play(mh.rtransform(eq5[2][:-6], eq6[2][:-10], eq5[2][-6:-1], eq6[2][-8:-3],
+                                eq5[2][-1], eq6[2][-1], eq5[3:5], eq6[3:5],
+                                eq5[5][:8], eq6[5][:8], eq5[5][8:], eq6[5][10:]),
+                  Succession(Wait(0.7), FadeIn(eq6[2][-10:-8], eq6[2][-3:-1], eq6[5][8:10])),
+                  )
+        self.play(mh.rtransform(eq6[3:], eq7[1:], eq6[2][:-10], eq7[0][4:-8], eq6[2][-10:-8], eq7[0][:2],
+                                eq6[2][-8:-6], eq7[0][-8:-6], eq6[2][-2], eq7[0][-6],
+                                eq6[2][-6:-3], eq7[0][-4:-1], eq6[2][-1], eq7[0][-1]),
+                  FadeIn(eq7[0][2:4], shift=mh.diff(eq6[2][-9], eq7[0][1])),
+                  mh.rtransform(eq6[2][-3], eq7[0][-5])
+                  )
+        self.wait(0.1)
+        self.play(FadeOut(eq7[0][-5:]))
+        self.play(mh.rtransform(eq7[0][:4], eq8[0][:4], eq7[0][-7:-5], eq8[0][-2:], eq7[0][4:-7], eq8[1][:],
+                                eq7[1:], eq8[2:]))
+        circ = mh.circle_eq(eq8[0], scale=0.6).shift(DOWN*0.05)
+        self.play(Create(circ, rate_func=linear, run_time=0.7))
+        self.wait(0.1)
+        self.play(AnimationGroup(
+            mh.rtransform(eq6[0], eq9[2], eq6[1], eq9[4], eq8[0][:4], eq9[0][-4:], eq8[0][-1], eq9[0][0],
+                          eq8[0][-2], eq9[0][1]),
+            FadeOut(circ, shift=mh.diff(eq8[0], eq9[0])), run_time=1.6),
+            Succession(Wait(1), FadeIn(eq9[1], eq9[-2])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq8[1:4], eq10[:3], eq8[4][:8], eq10[3][:8], eq8[4][10], eq10[3][8],
+                                eq8[4][4].copy(), eq10[3][10], eq8[4][9], eq10[3][11],
+                                eq8[4][11:], eq10[3][12:]),
+                  mh.fade_replace(eq8[4][8], eq10[3][9]))
+        self.wait(0.1)
+        circ = mh.circle_eq(eq10[3][-5:-1], scale=0.6)
+        self.play(Create(circ, run_time=0.6, rate_func=linear))
+        self.wait(0.1)
+        eq11_1 = eq11[-1][-3:-1].copy().move_to(eq10[3][-5:-1], coor_mask=RIGHT)
+        self.play(eq10[3][-5:-1].animate.set_opacity(0), FadeIn(eq11_1))
+
+        # eq12.move_to((eq11.get_bottom()+eq4.get_top())/2, coor_mask=UP)
+        # eq12.next_to(eq11, DOWN, buff=0.4, coor_mask=UP)
+        eq12.move_to(eq4, coor_mask=UP),
+        self.wait(0.1)
+        self.play(Succession(Wait(0.5), FadeIn(eq12)),
+                  # VGroup(eq9, eq10[:-1], eq10, eq11_1, circ).animate.shift(UP*0.7),
+                  eq4.animate.move_to(eq2_2, coor_mask=UP),
+                  FadeOut(eq2_2))
+        mh.align_sub(eq11, eq11[0], eq10[0])
+        self.play(mh.rtransform(eq10[:-1], eq11[:-1], eq10[-1][:-5], eq11[-1][:-3],
+                                eq11_1, eq11[-1][-3:-1], eq10[-1][-1], eq11[-1][-1],
+                                ),
+                  FadeOut(circ))
+        self.wait()
+        circ = mh.circle_eq(eq11[-1], scale=0.7)
+        txt = Tex(r'\sf arcsine', color=RED, font_size=50)
+        txt.next_to(circ, UR, buff=-0.1)
+        self.play(Create(circ, rate_func=linear, run_time=0.6), FadeIn(txt))
+        self.wait(0.1)
+        self.play(FadeOut(circ, txt))
+
+
+        self.wait()
+
+class UniformInterval(Chebyshev):
+    def get_final(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq1 = MathTex(r'\psi(x)-x', r'\approx', r'\sqrt x', r'\sum_{\rho\colon\gamma > 0}', r'\frac2{\lvert\rho\rvert}',
+                      r'\cos(\gamma y-\theta)')
+        eq1[0][0].set_color(col_WVD)
+        VGroup(eq1[0][2], eq1[0][-1], eq1[5][5], eq1[2][-1]).set_color(col_x)
+        VGroup(eq1[3][0], eq1[4][1:3], eq1[4][-1], eq1[2][:-1]).set_color(col_op)
+        VGroup(eq1[3][1], eq1[4][3]).set_color(col_zero)
+        eq1[5][:3].set_color(col_trig)
+        VGroup(eq1[3][-1], eq1[4][0]).set_color(col_num)
+        VGroup(eq1[3][3], eq1[5][4]).set_color(col_p)
+        eq1[5][-2].set_color(col_angle)
+        eq1.to_edge(DOWN, buff=0.5)
+        eq1.set_z_index(10)
+        box = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                   buff=0.2, corner_radius=0.15)
+
+        return eq1, box
+
+
+    def construct(self):
+        NumberLine()
+        minx = 0.
+        maxx = 10.
+        ax = Axes(x_range=[0, 10.5], x_length=12, y_length=0.1, y_range=[0,1], axis_config={
+            'stroke_width': 6, 'color': WHITE, 'include_ticks': False, 'include_tip': True,
+            "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+            "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+        }).set_z_index(1)
+        ax.y_axis.set_opacity(0)
+        ticks = mh.get_xticks(ax, np.linspace(0, 10, 11), ['0']*11)
+        ticks = VGroup(*[_[0] for _ in ticks])
+        gp1 = VGroup(ax, ticks).move_to(ORIGIN).to_edge(DOWN, buff=1.4)
+
+        brace = Brace(ticks[3:5], DOWN, stroke_width=1.5, color=RED, buff=0.1).set_z_index(1)
+        bracelabel = Tex(r'\sf period', color=RED, stroke_width=1.5, font_size=50).set_z_index(1)
+        bracelabel.next_to(brace, DOWN, buff=0.2)
+
+        ymax = 8.3
+
+        line2 = Line(ax.c2p(1, 0), ax.c2p(ymax, 0), color=BLUE, stroke_width=8).set_z_index(1)
+        line2_ticks = [Line(p+0.15*DOWN, p+0.15*UP, stroke_width=8, stroke_color=BLUE).set_z_index(1)
+                       for p in [line2.get_start(), line2.get_end()]]
+        line2 = VGroup(line2, *line2_ticks)
+        yshift = UP*0.4
+        line2.shift(yshift)
+        eqy = MathTex(r'y', stroke_width=1.5, font_size=50, color=BLUE).set_z_index(1)
+        eqy.next_to(line2[0], UP, buff=0.15)
+        dot1 = Dot(radius=0.2, color=RED).set_z_index(7)
+        y1 = 5.7
+        p1 = ax.c2p(np.floor(y1), 0)
+        p2 = ax.c2p(y1, 0)
+        line3 = DashedLine(p1 + yshift, p1 + DOWN*0.6, color=RED, stroke_width=6).set_z_index(6)
+        line4 = DashedLine(p2 + yshift, p2 + DOWN*0.6, color=RED, stroke_width=6).set_z_index(6)
+        arr1 = Arrow(p1+DOWN*0.4, p2+DOWN*0.4+LEFT*0.05, stroke_width=6, color=RED, buff=0,
+                     max_stroke_width_to_length_ratio=20, max_tip_length_to_length_ratio=0.4).set_z_index(2)
+        txt1 = Tex(r'\sf $\sim$ ', r'uniform', stroke_width=1.5, font_size=50)
+        txt1[1].set_color(col_txt)
+        txt1.next_to(arr1, DOWN, buff=0.2)
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=14, bg_z_index=8, fg_z_index=9)
+
+        radius = 1.8
+        circ1 = Arc(radius=radius, stroke_width=10, stroke_color=WHITE, start_angle=-PI/2, angle=TAU).set_z_index(1)
+        circ1.move_to(UP*1.2)
+        circ2 = Circle(radius=radius).move_to(circ1)
+        p1 = circ1.get_start()
+        tick1 = Line(p1+UP*0.15, p1+DOWN*0.15, stroke_width=8, stroke_color=WHITE).set_z_index(1)
+        ax2 = Axes(x_range=[-1, 1], y_range=[-1, 1], x_length=2*radius, y_length=2*radius).set_opacity(0)
+        ax2.shift(circ1.get_center() - ax2.c2p(0,0))
+
+        box_args = get_kwargs(stroke_width=0, stroke_opacity=0, fill_opacity=0.6, fill_color=BLACK,
+                              buff=0.2, corner_radius=0.2)
+        box1 = SurroundingRectangle(VGroup(ax.x_axis, txt1, eqy), **box_args).set_z_index(0.1)
+        box2 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0,
+                         fill_color=BLACK, fill_opacity=1)
+
+        box3 = Difference(box2, circ2, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=1)
+
+
+        self.add(gp1, box1)
+
+        self.play(FadeIn(brace, bracelabel))
+        self.wait(0.1)
+        self.play(FadeIn(line2, eqy))
+        self.wait(0.1)
+        dot1.move_to(ax.c2p(1,0)+yshift)
+        self.play(FadeIn(dot1), FadeOut(brace, bracelabel), rate_func=linear, run_time=0.5)
+        self.play(dot1.animate(rate_func=mh.rate_func_quad(0, 0.15), run_time=2).move_to(ax.c2p(y1, 0)+yshift))
+        self.play(Create(line3), Create(line4), run_time=0.6)
+        self.play(FadeIn(arr1, txt1))
+        self.wait(0.1)
+        """
+        circle
+        """
+        self.play(FadeOut(line3, line4, arr1, txt1),
+                  FadeIn(tick1),
+                  Create(circ1, rate_func=linear, run_time=2))
+
+        def pos_func(theta):
+            scale = 1.04 + theta * 0.04
+            return np.sin(theta * TAU) * scale, -np.cos(theta * TAU) * scale
+
+        crv1 = ax2.plot_line_graph(*pos_func(np.linspace(0, ymax-1, 1000)), add_vertex_dots=False, stroke_width=5, stroke_color=BLUE)
+        crv1.set_z_index(6)
+        self.play(mh.rtransform(line2[0].copy(), crv1, run_time=2.5),
+                  FadeIn(box3, run_time=1, rate_func=linear))
+        self.remove(box1)
+        self.wait(0.1)
+        dot2 = dot1.copy()
+        yshift2 = -0.4
+        self.play(dot1.animate.move_to(ax.c2p(1,0) + yshift+yshift2),
+                  dot2.animate.move_to(ax2.c2p(*pos_func(0))),
+                  VGroup(ticks, ax, line2, eqy).animate.shift(yshift2))
+        self.wait(0.1)
+
+        y2 = 4.4
+        crv2 = ax2.plot_line_graph(*pos_func(np.linspace(0, y2-1, 1000)))
+        rate_func=mh.rate_func_quad(0.1, 0.15)
+        self.play(AnimationGroup(MoveAlongPath(dot2, crv2['line_graph'], rate_func=rate_func),
+                  dot1.animate(rate_func=rate_func).move_to(ax.c2p(y2,0)+yshift),
+                  run_time=4),
+                  FadeIn(box2))
+        self.remove(box3)
+        p1 = ax.c2p(np.floor(y2), 0)
+        p2 = ax.c2p(y2, 0)
+        line5 = DashedLine(p1 + yshift, p1 + DOWN*0.6, color=RED, stroke_width=6).set_z_index(6)
+        line6 = DashedLine(p2 + yshift, p2 + DOWN*0.6, color=RED, stroke_width=6).set_z_index(6)
+        arr2 = Arrow(p1+DOWN*0.4, p2+DOWN*0.4, stroke_width=6, color=RED, buff=0,
+                     max_stroke_width_to_length_ratio=20, max_tip_length_to_length_ratio=0.4).set_z_index(2)
+        p1 = circ1.get_center()
+        p2 = circ1.get_start()
+        p3 = dot2.get_center()
+        line7 = DashedLine(p1, p2, color=RED, stroke_width=8).set_z_index(7)
+        line8 = DashedLine(p1, p3, color=RED, stroke_width=8).set_z_index(7)
+        arc1 = Arc(radius = radius * 0.5, arc_center=circ1.get_center(), start_angle=-PI/2, angle=(y2 % 1) * TAU,
+                   stroke_width=8, stroke_color=RED).set_z_index(4)
+        tip1 = StealthTip(stroke_width=6, color=RED).rotate(y2*TAU-PI*0.04).set_z_index(4)
+        tip1.shift(arc1.get_end() - tip1.get_end())
+        eqU = MathTex(r'U', color=col_var, stroke_width=1.5, font_size=50).set_z_index(8)
+        eqU.move_to(arc1)
+
+        self.play(Create(line5), Create(line6), Create(line7), Create(line8))
+        self.play(FadeIn(arr2), Create(arc1),
+                  Succession(Wait(0.5), FadeIn(tip1)),
+                  Succession(Wait(0.8), FadeIn(txt1.next_to(arc1, RIGHT, buff=0.1), eqU)))
+        self.wait(0.1)
+
+        """
+        arcsine plot
+        """
+        gp2 = VGroup(ax2, arc1, tip1, txt1, line7, line8, dot2, circ1, tick1, crv1, eqU)
+        self.play(gp2.animate.to_edge(LEFT, buff=0.5))
+        self.wait(0.1)
+        p1 = circ1.get_top()
+        p2 = circ1.get_bottom()
+        p3 = p1 * UP
+        p4 = p2 * UP
+        p5 = ax2.c2p(np.sin(y2*TAU), -np.cos(y2*TAU))
+        p6 = p5 * UP
+        p7 = circ1.get_center()
+        p8 = p7 * UP
+        dx = RIGHT*0.2
+        line9 = Line(p3, p4, stroke_width=8, stroke_color=WHITE).set_z_index(1)
+        line10 = DashedLine(p1, p3+dx, stroke_width=6, stroke_color=WHITE).set_z_index(8)
+        line11 = DashedLine(p2, p4+dx, stroke_width=6, stroke_color=WHITE).set_z_index(8)
+        line12 = DashedLine(p5, p6+dx, stroke_width=6, stroke_color=RED).set_z_index(9)
+        line13 = DashedLine(p7, p8+dx, stroke_width=6, stroke_color=RED).set_z_index(9)
+        arr3 = Arrow(p8+dx, p6+dx, stroke_width=8, color=RED, buff=0,
+                     max_stroke_width_to_length_ratio=20, max_tip_length_to_length_ratio=0.4).set_z_index(9)
+        eq1 = MathTex(r'-\cos U', r'\sim', r'\sf arcsine', stroke_width=1.5, font_size=60).set_z_index(5)
+        eq1[0][1:4].set_color(col_trig)
+        eq1[0][-1].set_color(col_var)
+        eq1[2].set_color(col_txt)
+        eq1.next_to(arr3, RIGHT, buff=0)
+        rate_func = mh.rate_func_quad(0, 0.3)
+        self.play(AnimationGroup(Create(line10), Create(line11), Create(line12), Create(line13), rate_func=rate_func, run_time=1),
+                  FadeIn(line9, run_time=1),
+                  Succession(Wait(0.8), FadeIn(eq1[0], arr3, run_time=1)))
+        self.wait(0.1)
+        self.play(FadeIn(eq1[1:]))
+        self.wait(0.1)
+
+        ax3 = Axes(x_range=[-1, 1.1], y_range=[0, 1.5], x_length=5, y_length=2.5,
+                  axis_config={'color': WHITE, 'stroke_width': 6, 'include_ticks': False,
+                               "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+                               },
+                  ).set_z_index(5)
+        ax3.next_to(eq1[2], DOWN, buff=0.6)
+        ax3.move_to((arr3.get_center()+mh.pos(RIGHT))/2, coor_mask=RIGHT)
+        ticks2 = mh.get_xticks(ax3, [-1, 1], label_color=col_num, font_size=45).set_z_index(4)
+        def p(u):
+            return 1 / np.pi / np.sqrt(1-u*u)
+        xvec = np.sin(np.linspace(-0.85, 0.85, 1000) * PI/2)
+        yvec = p(xvec)
+        plt1 = ax3.plot_line_graph(xvec, yvec, add_vertex_dots=False, stroke_width=6, stroke_color=GREEN).set_z_index(7)
+        area1 = ax3.plot_line_graph(np.concatenate([[-1, -1, xvec[0]], xvec, [xvec[-1], 1, 1]]),
+                                    np.concatenate([[0, yvec[0], yvec[0]], yvec, [yvec[-1], yvec[-1], 0]]),
+                                                   add_vertex_dots=False, stroke_width=0, stroke_opacity=0,
+                                                   fill_color=GREEN, fill_opacity=0.5).set_z_index(6)
+        eq2 = MathTex(r'p(u)', r'=', r'\frac1{\pi\sqrt{1-u^2} }', font_size=50, stroke_width=1.5)
+        eq2[0][0].set_color(col_txt2)
+        VGroup(eq2[0][-2], eq2[2][-3:]).set_color(col_x)
+        VGroup(eq2[2][0], eq2[2][-4]).set_color(col_num)
+        eq2[2][1:-4].set_color(col_op)
+        eq2[2][2].set_color(col_pi)
+        eq2 = mh.eq_shadow(eq2, bg_z_index=8, fg_z_index=9, bg_stroke_width=10)
+        eq2.move_to(ax3.c2p(0, 1))
+        self.play(Create(plt1, rate_func=mh.rate_func_quad(0.2, 0.2)),
+                  FadeIn(area1),
+                  FadeIn(eq2),
+                  FadeIn(ax3, ticks2)
+                  )
+        self.wait(0.1)
+
+        eq3 = MathTex(r'\frac2{\lvert\rho\rvert}', r'\cos(\gamma y-\theta)', r'\sim', r'{\sf arcsine}',
+                      stroke_width=1.5, font_size=60).set_z_index(4)
+        eq3[0][-2].set_color(col_zero)
+        VGroup(eq3[0][1:3], eq3[0][1]).set_color(col_op)
+        eq3[0][0].set_color(col_num)
+        eq3[1][4].set_color(col_p)
+        eq3[1][5].set_color(col_x)
+        eq3[1][-2].set_color(col_angle)
+        mh.align_sub(eq3, eq3[1][:3], eq1[0][1:4])
+        self.play(mh.rtransform(eq1[0][1:4], eq3[1][:3], eq1[1:], eq3[2:], copy_colors=True),
+                  Succession(Wait(0.5), AnimationGroup(FadeOut(eq1[0][-1]), FadeIn(eq3[1][3:]))),
+                  FadeOut(eq1[0][0]))
+        self.wait(0.1)
+        eq3_1 = eq3.copy().next_to(arr3, RIGHT, buff=0, coor_mask=RIGHT)
+        self.play(FadeIn(eq3_1[0]), mh.rtransform(eq3[1:], eq3_1[1:]))
+        self.wait(0.1)
+
+        eq4, box4 = self.get_final()
+        self.add(box4)
+
+        self.play(FadeOut(ax, ticks, dot1, dot2, line2, circ1, tick1, line9, line10, line11, line12, line13, arr3, arc1,
+                          tip1, eqU, arr2, eqy, line7, line8, crv1, line5, line6, txt1, ax3, plt1, area1, eq2, ticks2,
+                          eq3_1[2:], box2, rate_func=linear),
+                  mh.rtransform(eq3_1[:2], eq4[-2:], run_time=2),
+                  Succession(Wait(1), FadeIn(eq4[:-2]))
+                  )
+
+        self.wait()
+
+class TwoDistribution(UniformInterval):
+    bgcolor = BLACK
+    def get_final(self, shifted=False):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        width = 4.5
+        ax = Axes(x_range=[0, 1], x_length=width, y_length=width, y_range=[0,1], axis_config={
+            'stroke_width': 6, 'color': WHITE, 'include_ticks': False, 'include_tip': False,
+        }).set_z_index(4)
+        xticks = mh.get_xticks(ax, [0, 1], label_color=col_num).set_z_index(4)
+        yticks = mh.get_yticks(ax, [0, 1], label_color=col_num).set_z_index(4)
+        eq3 = MathTex(r'\{ ay\}', r'\{ by \}', font_size=80).set_z_index(5)
+        VGroup(eq3[0][1], eq3[1][1]).set_color(PURPLE)
+        VGroup(eq3[0][0], eq3[0][-1], eq3[1][0], eq3[1][-1]).set_color(col_op)
+        VGroup(eq3[0][2], eq3[1][2]).set_color(col_x)
+        eq3_1 = eq3.copy()
+        eq3_1[1].scale(0.6).next_to(ax.c2p(0, 0.5), LEFT, buff=0.2),
+        eq3_1[0].scale(0.6).next_to(ax.c2p(0.5, 0), DOWN, buff=0.2),
+        origin = ax.c2p(0,0)
+        square1 = Rectangle(width=width, height=width, stroke_width=0, stroke_opacity=0, fill_color=BLUE, fill_opacity=0.8).set_z_index(3)
+        square1.next_to(origin, UR, buff=0)
+        gp = VGroup(ax, xticks, yticks, eq3_1, square1)
+        if not shifted:
+            gp = gp.copy()
+        gp.to_edge(LEFT, buff=0.2)
+
+        dot1 = Dot(radius=0.15, color=RED).move_to(gp[0].c2p(0,0)).set_z_index(8)
+
+        return ax, xticks, yticks, eq3, eq3_1, square1, dot1
+
+    def construct(self):
+        eq1, box1 = UniformInterval.get_final(self)
+        ax, xticks, yticks, eq3, eq3_1, square1, dot1 = self.get_final()
+
+        eq2 = MathTex(r'\cos(\gamma_1y-\theta_1)',
+                      r'\cos(\gamma_2y-\theta_2)').set_z_index(2)
+        eq2[1].shift(RIGHT*1.1)
+        txt1 = Tex(r'\sf fractional parts', color=RED).set_z_index(2)
+
+        mh.align_sub(eq2, eq2[0][:3], eq1[-1][:3]).move_to(ORIGIN, coor_mask=RIGHT)
+        mh.align_sub(eq3, eq3[0][2], eq2[0][6])
+        eq3[0].move_to(eq2[0], coor_mask=RIGHT)
+        eq3[1].move_to(eq2[1], coor_mask=RIGHT)
+        width = box1.width
+        height = 2 * (box1.get_top() - eq2.get_center())[1]
+        box2 = RoundedRectangle(width=width, height=height, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                corner_radius=0.15).move_to(eq2)
+
+        mh.rtransform.copy_colors=True
+        VGroup(eq2[0][5:13:4], eq2[1][5:13:4]).set_color(col_num)
+        txt1.next_to(eq3, UP, buff=0.2)
+
+        txt1 = mh.eq_shadow(txt1, bg_stroke_width=12)
+        arr1 = Arrow(txt1.get_bottom()+LEFT*0.2, eq3[0].get_corner(UR)+DL*0.1+DOWN*0.2, buff=0.1, color=RED, stroke_width=6).set_z_index(3)
+        arr2 = Arrow(txt1.get_bottom()-LEFT*0.2, eq3[1].get_corner(UL)+DR*0.1+DOWN*0.2, buff=0.1, color=RED, stroke_width=6).set_z_index(3)
+
+        self.add(eq1, box1)
+        eq_1 = eq1[-1].copy()
+        self.play(FadeOut(eq1[:5]), AnimationGroup(
+            mh.rtransform(eq1[-1][:5], eq2[0][:5], eq1[-1][5:8], eq2[0][6:9], eq1[-1][-1], eq2[0][-1],
+                          eq_1[:5], eq2[1][:5], eq_1[5:8], eq2[1][6:9], eq_1[-1], eq2[1][-1],
+                          box1, box2),
+            FadeIn(eq2[0][5], shift=mh.diff(eq1[-1][4], eq2[0][4])),
+            FadeIn(eq2[0][9], shift=mh.diff(eq1[-1][7], eq2[0][8])),
+            FadeIn(eq2[1][5], shift=mh.diff(eq1[-1][4], eq2[1][4])),
+            FadeIn(eq2[1][9], shift=mh.diff(eq1[-1][7], eq2[1][8])),
+            run_time=1.8)
+        )
+        self.wait(0.1)
+        self.play(FadeOut(eq2[0][:4], eq2[0][7:], eq2[1][:4], eq2[1][7:]),
+                  AnimationGroup(
+                      mh.rtransform(eq2[0][6], eq3[0][2], eq2[1][6], eq3[1][2]),
+                      mh.fade_replace(eq2[0][4:6], eq3[0][1], coor_mask=RIGHT),
+                      mh.fade_replace(eq2[1][4:6], eq3[1][1], coor_mask=RIGHT),
+                      run_time=1.5
+                  ),
+                  Succession(Wait(0.7), FadeIn(eq3[0][0], eq3[0][-1], eq3[1][0], eq3[1][-1])))
+        self.play(FadeIn(txt1, arr1, arr2))
+        self.wait(0.1)
+
+        """
+        square
+        """
+        box3 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0,
+                         fill_color=BLACK, fill_opacity=1)
+
+        self.play(FadeOut(arr1, arr2, txt1),
+                  Transform(eq3, eq3_1, run_time=1.6),
+                  Succession(Wait(1), FadeIn(ax, square1, xticks, yticks, run_time=1.6)),
+                  FadeIn(box3, run_time=2.6),
+                  )
+        self.remove(box2)
+        self.wait(0.1)
+        gp1 = VGroup(ax, xticks, yticks, eq3, square1)
+        self.play(gp1.animate(run_time=1.5).to_edge(LEFT, buff=0.2),
+                  FadeIn(dot1, run_time=1.5, target_position=ax.c2p(0,0)))
+
+
+        self.wait()
+
+# class TwoDistribution3(TwoDistribution):
+#     bgcolor = BLACK
+#     do_line = True
+#     run_time = 2.
+#     def construct(self):
+#         ax, xticks, yticks, _, eq3, square1, dot1 = self.get_final(shifted=True)
+#         self.add(ax, xticks, yticks, eq3, square1, dot1)
+#         line = Line(ax.c2p(0, 0), ax.c2p(1,1), color=RED, stroke_width=8).set_z_index(10)
+#         anims = [dot1.animate.move_to(ax.c2p(1,1))]
+#         if self.do_line:
+#             anims.append(Create(line))
+#         else:
+#             self.add(line)
+#         self.play(*anims, rate_func=linear, run_time=2)
+#         dot1.move_to(ax.c2p(0,0))
+#         self.wait()
+
+
+class TwoDistribution3(TwoDistribution):
+    bgcolor = BLACK
+    do_line = True
+    run_time = 2.
+    a = 1.
+    b = 1.
+    # a = 2.
+    # b = 3.
+    # run_time = 2
+
+    def construct(self):
+        ax, xticks, yticks, _, eq3, square1, dot1 = self.get_final(shifted=True)
+        self.add(ax, xticks, yticks, eq3, square1)
+        val = ValueTracker(0.)
+        eps = 1 - 1e-5
+        a = self.a * eps
+        b = self.b * eps
+
+        def get_obj():
+            t = val.get_value()
+            p1 = ax.c2p(t * a % 1, t * b % 1)
+            dot = dot1.copy().move_to(p1)
+            if not self.do_line:
+                return dot
+            lines = []
+            nx = ny = 0
+            t0 = 0.
+            while t0 < t:
+                x0 = t0*a - nx
+                y0 = t0*b - ny
+                p0 = ax.c2p(x0, y0)
+
+                t1 = (1 - x0)/a
+                t2 = (1 - y0)/b
+                t3 = min(t1, t2)
+                if t1 < t2: nx += 1
+                else: ny += 1
+                x1 = x0 + min(t3,t-t0) * a
+                y1 = y0 + min(t3,t-t0) * b
+                p1 = ax.c2p(x1, y1)
+                line = Line(p0, p1, stroke_width=8, stroke_color=RED).set_z_index(10)
+                lines.append(line)
+                t0 += t3
+
+            return VGroup(dot, *lines)
+
+        if not self.do_line:
+            self.do_line = True
+            val.set_value(1)
+            gp = get_obj()
+            val.set_value(0)
+            self.do_line = False
+            self.add(gp[1:])
+
+        obj = always_redraw(get_obj)
+        self.add(obj)
+        self.play(val.animate(rate_func=linear, run_time=self.run_time).set_value(1))
+        obj.clear_updaters()
+        self.wait()
+
+class TwoDistribution3_1(TwoDistribution3):
+    do_line = False
+
+class TwoDistribution4(TwoDistribution3):
+    a = 2.
+    b = 3.
+    run_time = 4.
+
+class TwoDistribution4_1(TwoDistribution4):
+    do_line = False
+
+class TwoDistribution5(TwoDistribution3):
+    a = 3.
+    b = 4.
+    run_time = 8.
+
+class TwoDistribution5_1(TwoDistribution5):
+    do_line = False
+
+class TwoDistribution6(TwoDistribution3):
+    a = 1 * 10
+    b = (1 + math.sqrt(5))/2 * 10
+    run_time = 12
+
+class TwoDistributionEq1(TwoDistribution3):
+    def construct(self):
+        eq = MathTex(r'a=b', stroke_width=1.5, font_size=80)[0]
+        eq[::2].set_color(PURPLE)
+        self.add(eq)
+
+class TwoDistributionEq2(TwoDistribution3):
+    def construct(self):
+        eq = MathTex(r'a:b=2:3', stroke_width=1.5, font_size=80)[0]
+        eq[:4:2].set_color(PURPLE)
+        eq[4::2].set_color(col_num)
+        eq[1::4].set_color(col_op)
+        self.add(eq)
+
+class TwoDistributionEq3(TwoDistribution3):
+    def construct(self):
+        eq = MathTex(r'a:b=3:4', stroke_width=1.5, font_size=80)[0]
+        eq[:4:2].set_color(PURPLE)
+        eq[4::2].set_color(col_num)
+        eq[1::4].set_color(col_op)
+        self.add(eq)
+
+class TwoDistributionEq4(TwoDistribution3):
+    def construct(self):
+        eq = MathTex(r'a:b=1:1.61803\cdots', r' ({\sf golden\ ratio})', stroke_width=1.5, font_size=80)
+        eq[0][:4:2].set_color(PURPLE)
+        eq[0][4:].set_color(col_num)
+        eq[0][1:9:4].set_color(col_op)
+        mh.font_size_sub(eq, 1, 60)
+        eq[1].next_to(eq[0], DOWN, buff=0.4)
+        eq.move_to(ORIGIN, coor_mask=RIGHT)
+        eq[1][1:-1].set_color(col_txt)
+        self.add(eq)
+
+class MultiDistribution(UniformInterval):
+    bgcolor = BLACK
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq1 = MathTex(r'a_1,a_2,a_3,\ldots, a_r', font_size=80)
+        eq2 = MathTex(r'n_1a_1+n_2a_2+n_3a_3+\cdots+n_ra_r', r'=', r'0', font_size=70)
+        eq3 = Tex(r'\sf do not satisfy any linear relation of the form')
+        eq4 = Tex(r'\sf for whole numbers ', r'$n_1,\ldots,n_r$', r' not all zero')
+        eq5 = MathTex(r'\left(', r'\{a_1y\}', r',', r'\{a_2y\}', r',\ldots,', r'\{a_ry\}', r'\right)', r'\sim',
+                      r'{\sf independent, uniform}')
+        eq7 = MathTex(r'\frac1{y_1-y_0}', r'\int_{y_0}^{y_1}', r'f', r'\left(', r'a_1y', r',', r'a_2y', r',\ldots,',
+                      r'a_ry', r'\right)', r'\,dy',
+                      r'\to', r'\mathbb E\left[', r'f', r'(', r'U_1', r',', r'U_2', r',\ldots,', r'U_r', r')', r'\right]')
+        eq8 = MathTex(r'\to', r'\int_0^1\!\!\cdots\!\int_0^1', r'f', r'(', r'u_1', r',', r'u_2', r',\ldots,', r'u_r', r')',
+                      r'\,du_1\ldots du_r')
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq1[0][:9:3], eq1[0][-2], *[eq5[_][1] for _ in (1,3,5)]).set_color(PURPLE)
+        VGroup(eq1[0][1:10:3], eq1[0][-1], eq2[0][1:16:5], eq4[1][1], eq4[1][-1], eq2[-1],
+               *[eq5[_][2] for _ in (1,3,5)], eq7[0][0],
+               eq7[15][1], eq7[17][1], eq7[19][1], eq8[1][1:3], eq8[1][-2:], eq8[-1][2], eq8[-1][-1]).set_color(col_num)
+        VGroup(eq2[0][:15:5], eq2[0][-4], eq4[1][0], eq4[1][-2],
+               eq7[15][0], eq7[17][0], eq7[19][0], eq8[-1][1], eq8[-1][-2]).set_color(col_var)
+        VGroup(eq3, eq4[0], eq4[2], eq5[-1]).set_color(col_txt)
+        VGroup(*[eq5[_][::4] for _ in (1,3,5)], eq7[1][0], eq7[10][0], eq8[1][0], eq8[1][-3],
+               eq8[-1][0], eq8[-1][-3]).set_color(col_op)
+        VGroup(*[eq5[_][3] for _ in (1,3,5)], eq7[0][2:4], eq7[0][-2:], eq7[1][1:], eq7[10][1]).set_color(col_x)
+        VGroup(eq7[2]).set_color(col_psi)
+        VGroup(eq7[12]).set_color(col_txt2)
+
+        eq3.next_to(eq2, UP, buff=0.2)
+        eq1_1 = eq1.copy().next_to(eq3, UP, buff=0.8)
+        eq4.next_to(eq2, DOWN, buff=0.2)
+        eq5.next_to(eq4, DOWN, buff=0.6)
+
+        gp1 = VGroup(eq1_1, eq2, eq3, eq4)
+        gp2 = gp1.copy().to_edge(UP, buff=0.4)
+        gp2[1:].next_to(gp2[0], DOWN, buff=0.3, coor_mask=UP)
+
+        mh.align_sub(eq7, eq7[2:10], gp2, DOWN, buff=1)
+        eq7[11:].next_to(eq7[2:11], DOWN, buff=1.).to_edge(RIGHT, buff=1.2)
+        mh.align_sub(eq8, eq8[0], eq7[11]).to_edge(RIGHT, buff=0.2)
+        # eq8.to_edge(RIGHT, buff=0.2).to_edge(DOWN, buff=0.5)
+
+        self.add(eq1)
+        self.play(AnimationGroup(mh.rtransform(eq1[0][:9:3].copy(), eq2[0][2:17:5], eq1[0][-2].copy(), eq2[0][-2],
+                                eq1[0][1:9:3].copy(), eq2[0][3:17:5], eq1[0][-1].copy(), eq2[0][-1],
+                                               eq1[0][-6:-3].copy(), eq2[0][-8:-5], eq1, eq1_1),
+                                 FadeIn(eq2[0][:2], shift=mh.diff(eq1[0][0], eq2[0][2])),
+                                 FadeIn(eq2[0][5:7], shift=mh.diff(eq1[0][3], eq2[0][7])),
+                                 FadeIn(eq2[0][10:12], shift=mh.diff(eq1[0][6], eq2[0][12])),
+                                 FadeIn(eq2[0][-4:-2], shift=mh.diff(eq1[0][-2], eq2[0][-2])),
+                                 FadeIn(eq2[0][4], shift=mh.diff(eq1[0][2], eq2[0][4])+DOWN*0.2),
+                                 FadeIn(eq2[0][9], shift=mh.diff(eq1[0][5], eq2[0][9])+DOWN*0.2),
+                                 FadeIn(eq2[0][14], shift=mh.diff(eq1[0][8], eq2[0][14])+DOWN*0.2),
+                                 FadeIn(eq2[0][-5], shift=mh.diff(eq1[0][-3], eq2[0][-5])+DOWN*0.2),
+                                 FadeIn(eq2[1:], shift=mh.diff(eq1[0][-2], eq2[0][-2])),
+                                 run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq3, eq4))
+                  )
+        self.play(FadeIn(eq5))
+        self.wait(0.1)
+        self.play(Succession(Wait(0.6), AnimationGroup(
+            mh.rtransform(eq5[0], eq7[3], eq5[-3], eq7[9], eq5[2:6:2], eq7[5:9:2]),
+            *[mh.rtransform(eq5[i][1:-1], eq7[i+3][:]) for i in (1, 3, 5)],
+            FadeIn(eq7[2], shift=mh.diff(eq5[0], eq7[3])),
+            mh.rtransform(gp1, gp2),
+            run_time=1.5)),
+                  *[FadeOut(eq5[i][::4]) for i in (1,3,5)],
+                  FadeOut(eq5[-2:])
+                  )
+        self.wait(0.1)
+        self.play(FadeIn(eq7[:2], eq7[10]))
+        self.wait(0.1)
+        eq7_1 = eq7.copy()
+        self.play(Succession(Wait(1), FadeIn(eq7[11:13], eq7[-1])),
+                  AnimationGroup(mh.rtransform(eq7_1[2], eq7[13], eq7_1[3:11:2], eq7[14:22:2]),
+                  mh.fade_replace(eq7_1[4], eq7[15]),
+                  mh.fade_replace(eq7_1[6], eq7[17]),
+                  mh.fade_replace(eq7_1[8], eq7[19]),
+                                 run_time=1.6
+                  ))
+        self.wait(0.1)
+        br1 = Brace(eq7[15:-2], DOWN, color=RED, buff=0.1)
+        txt1 = Tex(r'\sf independent uniform on ', r'$[0,1]$')
+        txt1[0].set_color(RED)
+        txt1[1][1::2].set_color(col_num)
+        txt1.next_to(br1, DOWN, buff=0.2).to_edge(RIGHT, buff=0.5)
+        self.play(FadeIn(br1, txt1))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq7[11], eq8[0], eq7[13:15], eq8[2:4],
+                                eq7[16:24:2], eq8[5:13:2], eq7[15][1], eq8[4][1],
+                                eq7[17][1], eq8[6][1], eq7[19][1], eq8[8][1]),
+                  mh.stretch_replace(eq7[15][0], eq8[4][0]),
+                  mh.stretch_replace(eq7[17][0], eq8[6][0]),
+                  mh.stretch_replace(eq7[19][0], eq8[8][0]),
+                  FadeOut(eq7[21], shift=mh.diff(eq7[20], eq8[9])),
+                  FadeOut(br1, txt1, shift=mh.diff(eq7[15:-2], eq8[4:-2])),
+                  mh.fade_replace(eq7[12], eq8[1]),
+                                 run_time=1.5),
+                  Succession(Wait(0.7), FadeIn(eq8[-1])))
+        self.wait()
+
+class Latexay(Scene):
+    eqstr = r'a'
+    def construct(self):
+        eq1 = MathTex(r'\{' + self.eqstr + r'y\}', stroke_width=1.5, font_size=50)
+        eq1[0][1].set_color(PURPLE)
+        eq1[0][2].set_color(col_x)
+        eq1[0][::3].set_color(col_op)
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=10)
+        self.add(eq1)
+
+class Latexby(Latexay):
+    eqstr = r'b'
+
+if __name__ == "__main__":
+    def li(x):
+        return expi(np.log(x)) - expi(np.log(2))
+
+    def f(x):
+        return 1 - (li(np.sqrt(x))/2 + li(np.pow(x, 1/3))/3)*np.log(x)/np.sqrt(x)
+        # return 1 - (li(np.sqrt(x))/2)*np.log(x)/np.sqrt(x)
+        # return (li(np.pow(x, 1 / 3)) / 3) * np.log(x) / np.sqrt(x)
+
+    print(f(10_000_000_000))
