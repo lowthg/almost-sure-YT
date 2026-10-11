@@ -195,11 +195,21 @@ def rate_func_quad(a=0., b=0.):
 
     def f(t):
         if t < a:
-            res = t * t / (2 - a - b) / a
+            res = t * t / (2 - a - b) / a if t > 0 else 0.
         elif t > 1 - b:
-            res = 1. - (1 - t) * (1 - t) / (2 - a - b) / b
+            res = 1. - (1 - t) * (1 - t) / (2 - a - b) / b if t < 1. else 1.
         else:
             res = (a + (t - a) * 2) / (2 - a - b)
         return res
 
     return f
+
+def eq_shadow(eq: VGroup, fg_z_index=4., bg_z_index=1., bg_color=BLACK, bg_stroke_width=10.):
+    res = VGroup()
+    for eq1 in eq:
+        elem = VGroup()
+        for eq2 in eq1:
+            elem.add(VGroup(eq2.set_z_index(fg_z_index),
+                            eq2.copy().set_z_index(bg_z_index).set_color(bg_color).set_stroke(width=bg_stroke_width)))
+        res.add(elem)
+    return res

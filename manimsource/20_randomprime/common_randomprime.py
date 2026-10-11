@@ -1,18 +1,19 @@
 import numpy as np
 from manim import always_redraw, VGroup, ValueTracker, ReplacementTransform, linear, ORIGIN
 
-def build_prime_count(limit=1_000_000):
+def build_primes(limit=1_000_000):
     # is_prime[n] is 1 if n is prime
     is_prime = np.ones(limit + 1, dtype=bool)
     is_prime[:2] = False
     is_prime[4::2] = False
-
     for p in range(3, int(np.sqrt(limit)) + 1, 2):
         if is_prime[p]:
             is_prime[p * p:: 2 * p] = False
+    return is_prime
 
+def build_prime_count(limit=1_000_000):
+    is_prime = build_primes(limit)
     count = np.cumsum(is_prime, dtype=np.int64)
-
     return count
 
 def prime_counting_step_vectors(pi):

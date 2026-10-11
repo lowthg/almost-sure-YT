@@ -21,6 +21,7 @@ import alganhelper as ah
 import manimhelper as mh
 
 LD = RenderSettings((854, 480), 15)
+LD2 = RenderSettings((854, 480), 30)
 HD = RenderSettings((1920, 1080), 30)
 HD2 = RenderSettings((1920, 1080), 10)
 
@@ -198,14 +199,19 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
     dashed = mn.DashedLine(ax3.c2p(1,0), ax3.c2p(1,ymax3), color=mn.GREY, stroke_width=6)
     dashed2 = mn.DashedLine(ax3.c2p(0,1), ax3.c2p(xmax*1.,1), color=mn.GREY, stroke_width=6)
     eqx = mn.MathTex(r'x', font_size=26, color=col_x).next_to(ax3.x_axis.get_right(), mn.RIGHT, buff=0.1)
+    eqs = mn.MathTex(r's', font_size=26, color=col_angle).move_to(eqx)
     eqy = mn.MathTex(r'y', font_size=26, color=col_x).next_to(yaxis.get_right(), mn.RIGHT, buff=0.1)
-    eqz = mn.MathTex(r'\zeta(x)', font_size=30, stroke_width=1.5).move_to(ax3.c2p(3., 2.5))
+    # eqz = mn.MathTex(r'\zeta(s)', r'=', r'1+2^{{-}s}\!+3^{-s}\!+4^{-s}\!+\cdots', font_size=30, stroke_width=1.5)
+    eqz = mn.MathTex(r'\zeta(s)', r'=', r'1+\frac{1}{2^s}+\frac{1}{3^s}+\frac{1}{4^s}\!+\cdots', font_size=30, stroke_width=1.5)
+    eqz.next_to(ax3.c2p(1.9, 2.5), mn.RIGHT, buff=0)
     gp2 = VGroup(yaxis, eqy)
     gp2.rotate(PI/2, mn.DOWN, about_point=ax3.c2p(0,0,0))
-    eqz[0][0].set_color(col_WVD)
-    eqz[0][2].set_color(col_x)
+    eqz[0][0].set_color(col_psi)
+    mn.VGroup(eqz[0][2], eqz[2][5:20:5]).set_color(col_angle)
+    mn.VGroup(eqz[2][0], eqz[2][2:17:5], eqz[2][4:19:5]).set_color(col_num)
+    mn.VGroup(eqz[2][3:18:5]).set_color(col_op)
 
-    gp = mn.VGroup(ax3, xticks, yticks, eqx, dashed, dashed2, eqz, xaxis, gp2)
+    gp = mn.VGroup(ax3, xticks, yticks, dashed, dashed2, eqz, eqs, xaxis, gp2, eqx)
     gp.rotate(90 * mn.DEGREES, mn.UP)
     gp.rotate(90 * mn.DEGREES, mn.RIGHT)
     gp.shift(origin0 - ax3.c2p(0, 0, 0))
@@ -224,10 +230,13 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
         crv = ah.curve_surface(pts, width=0.04, normals=up, closed=False, color=zeta_col(2.))
         crv2 = ah.curve_surface(pts2, width=0.04, normals=up, closed=False, color=zeta_col(2.))
 
-        ax3_ = ManimMob(gp[:-2])
+        ax3_ = ManimMob(gp[:-4])
+        eqs_ = ManimMob(eqs)
+        eqx_ = ManimMob(eqx)
         with Off():
             ax3_.spawn()
             crv.spawn()
+            eqs_.spawn()
 
         with Sync(run_time=1):
             cam.move(-shift)
@@ -235,6 +244,8 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
             crv.despawn()
             crv2.spawn()
             ManimMob(gp2).spawn()
+            eqs_.despawn()
+            eqx_.spawn()
 
         col2 = col.clone()
         col2[start.gt(0)] = 0
@@ -243,8 +254,8 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
         with Sync():
             with Sync(run_time=2):
                 crv2.despawn()
-                for i in range(4,7):
-                    ax3_.submobjects[i].despawn()
+                for _ in ax3_.submobjects[4:]:
+                    _.despawn()
             with Seq():
                 for frame in ah.FrameStepper(fps=quality.frames_per_second, run_time=2.):
                     col3 = col2.clone()
@@ -347,7 +358,7 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
             line1 = mn.Line(origin + yscale * ymin + xscale, origin + yscale * ymax + xscale, stroke_width=3, stroke_color=mn.WHITE)
             line1_ = ManimMob(line1)
             col2 = col.clone()
-            col2[...,-1] *= 0.5
+            # col2[...,-1] *= 0.5
             with Off():
                 line1_.spawn()
                 p.set_non_recursive(color=col2)
@@ -421,7 +432,6 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
                             y3 = y
 
 
-    print(gammas)
     Scene.wait(0.1)
 
     name = 'zeta_plot{}'.format(anim)
@@ -432,7 +442,7 @@ def zeta_plot(quality=LD, bgcol=BLACK, anim=0, part=0, **kwargs):
 
 if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
-    COMPUTING_DEFAULTS.max_cpu_memory_used *= 1
+    COMPUTING_DEFAULTS.max_cpu_memory_used *= 4
 
     # zeta_plot(quality=HD, bgcol=BLACK, anim=8, part=1)
     # zeta_plot(quality=HD, bgcol=BLACK, anim=8, part=2)
@@ -442,4 +452,4 @@ if __name__ == "__main__":
     # zeta_plot(quality=HD, bgcol=BLACK, anim=8, part=6)
     # zeta_plot(quality=HD, bgcol=BLACK, anim=8, part=7)
     # zeta_plot(quality=HD, bgcol=BLACK, anim=8, part=8)
-    zeta_plot(quality=HD, bgcol=BLACK, anim=7)
+    zeta_plot(quality=HD, bgcol=BLACK, anim=1)

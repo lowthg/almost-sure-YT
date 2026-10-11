@@ -10,8 +10,6 @@ from common_randomprime import *
 sys.path.append('../../')
 import manimhelper as mh
 from common.wigner import *
-import matplotlib
-import matplotlib.cm as cm
 
 col_pi = col_special * 0.5 + ORANGE * 0.5
 col_trig = PURPLE_A#*0.5+WHITE*0.5
@@ -1718,7 +1716,7 @@ class RandomPiPlot1(Scene):
         self.add(plt4)
 
         ticks3 = get_xticks(ax, [1, 5, 10, 50, 100, 500, 1000],
-                            ['1', '5', '10', '50', '100', '500', '1\,000'], scalex=scalex3)
+                            ['1', '5', '10', '50', '100', '500', r'1\,000'], scalex=scalex3)
         ticks3[:-5].set_opacity(0)
         ticksy3 = get_yticks(ax, [1, 5, 10, prime_count[50], prime_count[100],
                                   prime_count[500], prime_count[1000]
@@ -2094,3 +2092,157 @@ class CramerError(Logistic):
         self.wait(0.1)
         self.play(FadeIn(eq2))
         self.wait()
+
+class LogSampling(Logistic):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq1 = Tex(r'\sf sample ', r'$x$', r' uniformly on ', r'$[N_0,N]$')
+        eq2 = Tex(r'\sf sample ', r'$\log x$', r' uniformly on ', r'$[\log N_0,\log N]$')
+        eq3 = MathTex(r'{\sf sampling\ density\ }', r'p_{\log x}(u)', r'=', r'\frac1{\log N-\log N_0}')
+        eq4 = MathTex(r'{\sf sampling\ density\ }', r'p_{\log x}(u)', r'=', r'\frac1{\log(N/N_0)}')
+        eq5 = MathTex(r'{\sf sampling\ density\ }', r'p_{x}(u)', r'=', r'\frac1{\log(N/N_0)}', r'\frac1u')
+        eq6 = MathTex(r'{\sf prime\ counting\ error\ }', r'\mathcal E(x)', r'=', r'(\pi(x)-{\rm Li(x))/\sqrt{ {\rm Li}(x)}')
+        eq7 = MathTex(r'{\sf empirical\ probability\ }', r'a < \mathcal E(x) < b')
+        eq8 = MathTex(r'=', r'\frac1{\log(N/N_0)}', r'\int_{N_0}^N', r'I(a < \mathcal E(x) < b)\,', r'\frac{dx}{x}')
+        eq9 = MathTex(r'\mathcal E(x)', r'=', r'(', r'\pi(x)-{\rm Li}(x)', r'-', r'\frac12', r'{\rm Li}(\sqrt x)', r')/\sqrt{ {\rm Li}(x)}')
+        mh.font_size_sub(eq9, 5, 50)
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq6[1][0], eq6[3][1], eq6[3][6:8], eq6[3][-5:-3],
+               eq9[3][0], eq9[3][5:7], eq9[6][:2], eq9[7][-5:-3]).set_color(col_WVD)
+        VGroup(eq1[0], eq1[2], eq3[0], eq6[0], eq7[0]).set_color(col_txt)
+        VGroup(eq1[1]).set_color(col_x)
+        VGroup(eq1[3][1:3], eq1[3][4], eq6[1][2], eq6[3][3], eq6[3][9], eq6[3][-2],
+               eq8[2][1:], eq8[-1][-1], eq8[-1][1],
+               eq9[3][2], eq9[3][8], eq9[6][-2], eq9[7][-2]).set_color(col_x)
+        VGroup(eq2[1][:3], eq2[3][1:4], eq2[3][7:10]).set_color(col_trig)
+        VGroup(eq3[1][0]).set_color(col_txt2)
+        VGroup(eq3[1][-2], eq5[4][2]).set_color(col_p)
+        VGroup(eq3[3][0], eq5[4][0], eq9[5][::2]).set_color(col_num)
+        VGroup(eq3[3][1], eq3[3][6], eq5[4][1], eq6[3][11:-5], eq8[2][0], eq8[-1][0],
+               eq8[3][1], eq8[3][-1], eq9[5][1], eq9[6][3:-2], eq9[7][2:-5]).set_color(col_op)
+        VGroup(eq8[3][0]).set_color(col_special)
+        VGroup(eq7[1][0], eq7[1][-1]).set_color(col_var)
+
+        eq3.next_to(eq1, DOWN, buff=0.2)
+        mh.align_sub(eq2, eq2[0], eq1[0], coor_mask=UP)
+        mh.align_sub(eq4, eq4[-2], eq3[-2])
+        mh.align_sub(eq5, eq5[2], eq4[2], coor_mask=UP)
+        eq6.align_to(eq1, UP).shift(UP*0.2)
+        eq5_1 = eq5.copy().next_to(eq6, DOWN, buff=0.5, coor_mask=UP)
+        # eq5_1 = eq5.copy().align_to(eq1, UP)
+        # eq6.next_to(eq5_1, DOWN, buff=0.4)
+        mh.align_sub(eq8, eq8[0], eq5_1[2], coor_mask=UP)
+
+        gp = VGroup(eq1, eq2, eq3, eq4, eq5, eq5_1, eq6, eq7, eq8)
+        gp.set_z_index(4).to_edge(DOWN, buff=0.4)
+        eq9.set_z_index(1).move_to(gp, coor_mask=UP)
+
+        box1 = SurroundingRectangle(VGroup(eq1, eq2, eq3), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+        box2 = SurroundingRectangle(VGroup(eq6, eq5_1), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+        box3 = SurroundingRectangle(VGroup(eq5_1, eq7), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+        box4 = SurroundingRectangle(VGroup(eq5_1, eq7, eq9), stroke_width=0, stroke_opacity=0, fill_color=BLACK,
+                                    fill_opacity=0.6, buff=0.2, corner_radius=0.2)
+
+
+        self.add(eq1, box1)
+        self.play(mh.rtransform(eq1[0], eq2[0], eq1[1][0], eq2[1][3], eq1[2], eq2[2],
+                                eq1[3][0], eq2[3][0], eq1[3][1:4], eq2[3][4:7],
+                                eq1[3][4:], eq2[3][10:]),
+                  Succession(Wait(0.3), FadeIn(eq2[1][:3], eq2[3][1:4], eq2[3][7:10])))
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.stretch_replace(eq2[1][:].copy(), eq3[1][1:5]),
+                  mh.stretch_replace(eq2[3][1:6].copy(), eq3[3][-5:]),
+                  mh.stretch_replace(eq2[3][7:11].copy(), eq3[3][-10:-6]),
+                                 run_time=1.5),
+                  Succession(Wait(0.8), FadeIn(eq3[0], eq3[1][0], eq3[1][-3:], eq3[2], eq3[3][:2], eq3[3][-6]))
+                  )
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq3[:-1], eq4[:-1], eq3[-1][:5], eq4[-1][:5],
+                                eq3[-1][5], eq4[-1][6], eq3[-1][10:], eq4[-1][8:10]),
+                  mh.rtransform(eq3[-1][7:10], eq4[-1][2:5], eq3[-1][6], eq4[-1][7]),
+                                 run_time=1.3),
+                  Succession(Wait(0.5), FadeIn(eq4[-1][-6], eq4[-1][-1])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0], eq5[0], eq4[1][0], eq5[1][0], eq4[1][4:], eq5[1][1:],
+                                eq4[2:], eq5[2:4]),
+                  FadeOut(eq4[1][1:4], shift=mh.diff(eq4[1][0], eq5[1][0])),
+                  Succession(Wait(0.8), FadeIn(eq5[-1])))
+        self.wait(0.1)
+        self.play(Succession(Wait(0.4), AnimationGroup(FadeIn(eq6), FadeOut(eq2))),
+                  eq5.animate.move_to(eq5_1),
+                  mh.rtransform(box1, box2))
+        self.wait(0.1)
+        self.play(FadeOut(eq6[0], eq6[2:]),
+                  Succession(Wait(0.5), mh.rtransform(eq6[1][:], eq7[1][2:6], box2, box3)),
+                  Succession(Wait(1), FadeIn(eq7[0], eq7[1][:2], eq7[1][-2:]))
+                  )
+        self.wait(0.1)
+        self.play(FadeOut(eq5[:2]),
+                  Succession(Wait(0.6), AnimationGroup(
+                      mh.rtransform(eq5[2:4], eq8[:2], eq5[-1][1], eq8[-1][2],
+                                    eq7[1][:].copy(), eq8[3][2:-1]),
+                      mh.fade_replace(eq5[-1][0], eq8[-1][:2]),
+                      mh.stretch_replace(eq5[-1][2], eq8[-1][3], copy_colors=False),
+                      run_time=1.4
+                  )),
+                  Succession(Wait(1.2), FadeIn(eq8[2], eq8[3][:2], eq8[3][-1])))
+        self.wait(0.1)
+        eq9_1 = eq9[:4].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        eq9_2 = eq9[:7].copy().move_to(ORIGIN, coor_mask=RIGHT)
+        self.play(FadeOut(eq7[0], eq7[1][:2], eq7[1][-2:], eq8),
+                  mh.rtransform(eq7[1][2:-2], eq9_1[0][:], run_time=1.2),
+                  Succession(Wait(0.8), FadeIn(eq9_1[1], eq9_1[3]))
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq9_1[:2], eq9_2[:2], eq9_1[3], eq9_2[3]),
+                  Succession(Wait(0.4), FadeIn(eq9_2[4:])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq9_2[:2], eq9[:2], eq9_2[3:], eq9[3:7], box3, box4),
+                  Succession(Wait(0.45), FadeIn(eq9[2], eq9[7])))
+        self.wait()
+
+class MeanSquare(Logistic):
+    def construct(self):
+        MathTex.set_default(font_size=60, stroke_width=1.5)
+        eq1 = MathTex(r'{\sf mean\ square\ error}', r'=', r'\frac1{\log(N/N_0)}',
+                      r'\int_{N_0}^N', r'\mathcal E(x)^2', r'\,\frac{dx}{x}')
+        eq2 = MathTex(r'{}\to 1\,{\sf ???}', color=RED)
+
+        VGroup(eq1[0]).set_color(col_txt)
+        VGroup(eq1[4][0]).set_color(col_WVD)
+        VGroup(eq1[2][0], eq1[4][-1]).set_color(col_num)
+        VGroup(eq1[2][1], eq1[2][-4], eq1[3][0], eq1[5][2], eq1[5][0]).set_color(col_op)
+        VGroup(eq1[2][2:5]).set_color(col_trig)
+        VGroup(eq1[2][6], eq1[2][8:10], eq1[3][1:], eq1[4][2], eq1[5][1], eq1[5][-1]).set_color(col_x)
+
+        eq2.next_to(eq1, DOWN, buff=0.4).align_to(eq1[1], LEFT)
+
+        gp = VGroup(eq1, eq2).to_edge(DOWN, buff=0.4)
+        gp.set_z_index(4).to_edge(DOWN, buff=0.4)
+        eq1 = gp[0].copy().move_to(gp, coor_mask=UP)
+        box1 = SurroundingRectangle(gp, stroke_width=0, stroke_opacity=0, fill_opacity=1, fill_color=BLACK,
+                                    buff=0.2, corner_radius=0.2)
+
+        self.add(box1, eq1)
+        self.wait(0.1)
+        self.play(eq1.animate.move_to(gp[0]),
+                  FadeIn(eq2))
+        self.wait()
+
+class TwinPrimeRate(Logistic):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=65)
+        # 1.3203236316937392
+        eq = MathTex(r'{\sf number\ of\ twin\ primes}', r'{}\le x', r'\sim', r'1.3203\cdots\frac{x}{\log^2 x}')
+        eq[0].set_color(col_txt)
+        VGroup(eq[1][1], eq[3][-7], eq[3][-1]).set_color(col_x)
+        VGroup(eq[3][-6]).set_color(col_op)
+        eq[3][-5:-2].set_color(col_trig)
+        VGroup(eq[3][:-7], eq[3][-2]).set_color(col_num)
+        eq = mh.eq_shadow(eq, bg_stroke_width=14)
+        self.add(eq)

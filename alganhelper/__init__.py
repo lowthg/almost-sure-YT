@@ -32,22 +32,41 @@ def rotation_matrix(axis, theta):
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 def surface_mesh(col1=RED_C, col2=RED_D, fill_opacity=0.9, stroke_color=RED_C, stroke_opacity=0.8,
-                 num_recs=32, rec_size=10, **kwargs):
+                 num_recs=32, rec_size=10, include_right_edge=False, offsetx=-1, offsety=-1, **kwargs):
     col1 = col1.clone()
     col2 = col2.clone()
-    n = num_recs
+    col1[-1] = fill_opacity
+    col2[-1] = fill_opacity
+    if isinstance(num_recs, tuple):
+        nx, ny = num_recs
+    else:
+        nx, ny = (num_recs, num_recs)
     m = rec_size
-    t = torch.zeros(m * n - 1, m * n - 1, 5)
+
+    m2 = m if include_right_edge else m-1
+    nx2 = m * (nx-1) + m2
+    ny2 = m * (ny-1) + m2
+    t = torch.zeros(nx2, ny2, 5)
     sc = stroke_color.clone()
     sc[-1] = stroke_opacity
-    for i1 in range(n):
-        for j1 in range(n):
-            col = col1 if (i1 + j1) % 2 == 0 else col2
-            col[-1] = fill_opacity
-            for i2 in range(m if i1 < n-1 else m-1):
-                for j2 in range(m if j1 < n-1 else m-1):
-                    pixel = col if i2 < m-1 and j2 < m-1 else sc
-                    t[i1*m+i2, j1*m+j2, :] = pixel
+    for i in range(nx2):
+        i1 = i - offsetx
+        for j in range(ny2):
+            j1 = j - offsety
+            if i1 % m == 0 or j1 % m == 0:
+                t[i, j] = sc
+            else:
+                col = col1 if (i1 // m + j1 // m) % 2 == 0 else col2
+                t[i, j] = col
+
+    # for i1 in range(nx):
+    #     for j1 in range(ny):
+    #         col = col1 if (i1 + j1) % 2 == 0 else col2
+    #         col[-1] = fill_opacity
+    #         for i2 in range(m if i1 < nx-1 else m2):
+    #             for j2 in range(m if j1 < ny-1 else m2):
+    #                 pixel = sc if i2 == m -1 or j2 == m-1 else col
+    #                 t[i1*m+i2, j1*m+j2, :] = pixel
 
     mob = ImageMob(t, **kwargs)
     return mob
