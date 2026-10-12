@@ -653,7 +653,6 @@ class EmpiricalHistogramNew(CramerHistogramLog):
     # animation_seconds = 1
     theory_shift = 0.
 
-
     def construct(self):
         xlen = self.xlen
         ylen = self.ylen
@@ -706,7 +705,9 @@ class EmpiricalHistogramNew(CramerHistogramLog):
         ynormal = np.exp(-(xtheory-theory_center)**2/(2*var)) / np.sqrt(2*np.pi*var)
         plt2 = axes.plot_line_graph(xtheory, ynormal, add_vertex_dots=False, stroke_width=8, stroke_color=BLUE).set_z_index(5)
 
-        self.add(axes, plt, xticks, yticks)
+        self.add(axes, plt)
+        if self.labels:
+            self.add(xticks, yticks)
         self.play(Create(plt, rate_func=linear, run_time=1.5),
                   Succession(Wait(0.8), FadeIn(plt_)))
         self.wait(0.1)
@@ -732,6 +733,10 @@ class EmpiricalHistogramNew2(EmpiricalHistogramNew):
     animation_seconds = 14
     # print((li(np.sqrt(1e9))/2+li(np.cbrt(1e9))/3)/np.sqrt(1e9)*np.log(1e9)-1)
     theory_shift = -0.21
+
+class EmpiricalHistogramNew3(EmpiricalHistogramNew2):
+    labels = False
+    animation_seconds = 7
 
 class EmpiricalHistogramTheory(EmpiricalHistogramNew2):
     @staticmethod
@@ -1162,6 +1167,7 @@ class EmpiricalPath(Scene):
                     1 - 1 / 2 - 1 / 3)
 
     li_str = r'{\rm Li}'
+    show_labels = True
 
     def get_axes(self):
         ax_args = {'x_range': [0, 1.05], 'y_range': [0, 1.05], 'x_length': 12,
@@ -1193,6 +1199,8 @@ class EmpiricalPath(Scene):
         nplt = 1000
         origin = ax.coords_to_point(0,0)
         eqx = MathTex(r'x', stroke_width=1.5, font_size=60, color=col_x).next_to(ax.x_axis.get_right(), RIGHT, buff=0.2).set_z_index(4)
+        if not self.show_labels:
+            eqx.set_opacity(0)
 
         prime_count = build_prime_count(1200001)
 
@@ -1424,6 +1432,8 @@ class EmpiricalPath(Scene):
         txt2 = mh.eq_shadow(txt2, bg_z_index=5, fg_z_index=6)
         txt1.next_to(ax2.c2p(0,0.95), DR, buff=0).shift(RIGHT*0.3)
         txt2.next_to(ax3.c2p(0,0.95), DR, buff=0).shift(RIGHT*0.3)
+        if not self.show_labels:
+            VGroup(txt1, txt2, ax2, ax3, ticksy8, ticks_new, ticksy9).set_opacity(0)
 
         self.play(mh.rtransform(ax, ax2, plt14, plt_new, plt_line20, plt_line21, ticksy7, ticksy8, ticks5, ticks_new,
                                 ax.y_axis.copy(), ax3.y_axis, ticksy7.copy(), ticksy9, plt_line20.copy(), plt_line22),
@@ -1540,6 +1550,8 @@ class EmpiricalPath(Scene):
                                     stroke_width=sw, add_vertex_dots=False).set_z_index(z)
                 for yvals_, op, col, z in zip(yvals_theory, path_ops, path_cols, path_z)]
 
+            if not self.show_labels:
+                ticks_new.set_opacity(0)
             # self.remove(*plt_theory_old)
             def y_scale_func(t):
                 scalex_ = np.exp(np.log(scalex_new/scalex_old) * t/2)
@@ -1568,6 +1580,9 @@ class EmpiricalPath(Scene):
 
         self.add(plt1, plt2)
         self.wait(3)
+
+class EmpiricalPath2(EmpiricalPath):
+    show_labels = False
 
 class PathCalc(EmpiricalPath):
     def construct(self):
