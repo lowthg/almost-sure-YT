@@ -160,13 +160,13 @@ def font_size_sub(eq: Mobject, index: int, font_size: float):
     eq[index:].align_to(eq_1, LEFT)
     return eq.move_to(pos, coor_mask=RIGHT)
 
-def get_xticks(ax, vals, strs=None, scalex=1., label_color=WHITE, buff=0.3, font_size=50, length=0.2):
+def get_xticks(ax, vals, strs=None, scalex=1., label_color=WHITE, buff=0.3, font_size=50, length=0.2, dir=DOWN):
     if strs is None:
         strs = [r'{}'.format(_) for _ in vals]
     tick_eqs = MathTex(*strs, font_size=font_size, stroke_width=1.5, color=label_color)
     origin = ax.c2p(0, 0)
-    tick_eqs.next_to(origin, DOWN, buff=buff)
-    tick0 = Line(origin, origin + DOWN * length, stroke_width=6, stroke_color=WHITE)
+    tick_eqs.next_to(origin, dir, buff=buff)
+    tick0 = Line(origin, origin + dir * length, stroke_width=6, stroke_color=WHITE)
     ticks = [tick0.copy().shift(ax.c2p(_ * scalex, 0) - origin) for _ in vals]
     for _ in range(len(vals)): tick_eqs[_].move_to(ticks[_], coor_mask=RIGHT)
     return VGroup(*[VGroup(tick, eq) for tick, eq in zip(ticks, tick_eqs[:])]).set_z_index(0.5)
