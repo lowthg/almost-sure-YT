@@ -3,7 +3,6 @@ from manim import *
 import sys
 from manim import ManimColor
 from scipy.special import expi
-from sympy import floor
 
 from common_randomprime import *
 import mpmath as mp
@@ -38,7 +37,7 @@ class Chebyshev(Scene):
         eq5 = MathTex(r'\delta\pi(x)', r'\sim', r'\delta x/\log x')
         eq6 = MathTex(r'\delta\psi(x)', r'\sim', r'\delta x')
         eq7 = MathTex(r'{\sf prime\ number\ theorem\!\!:\ }', r'\psi(x)', r'\sim', r'x')
-        eq8 = MathTex(r'{\sf Cram\acute{e}r\ model\!\!:\ }', r'{\rm Var}[\pi_R(x)]', r'\sim', r'x\log x')
+        eq8 = MathTex(r'{\sf Cram\acute{e}r\ model\!\!:\ }', r'{\rm Var}[\psi_R(x)]', r'\sim', r'x\log x')
         eq9 = MathTex(r'\psi(x)', r'=', r'\sum_{p\le x}', r'\log p', r'+', r'\sum_{p^2\le x}', r'\log p',
                       r'+', r'\sum_{p^3\le x}', r'\log p', r'+\cdots')
         eq10 = MathTex(r'\psi(x)', r'=', r'\sum_{p^r\le x}', r'\log p')
@@ -496,8 +495,8 @@ class EmpiricalErrNew(Chebyshev):
                       r'\frac{\log x}{\sqrt x}')
 
         mh.rtransform.copy_colors = True
-        VGroup(eq1[0][0], eq1[2][0], eq1[2][5:7], eq2[-1][3], eq2[-1][-1]).set_color(col_WVD)
-        VGroup(eq1[0][-2], eq1[2][2], eq1[2][-2]).set_color(col_x)
+        VGroup(eq1[0][0], eq1[2][0], eq1[2][5:7]).set_color(col_WVD)
+        VGroup(eq1[0][-2], eq1[2][2], eq1[2][-2], eq2[-1][3], eq2[-1][-1]).set_color(col_x)
         VGroup(eq2[-1][:3]).set_color(col_trig)
         VGroup(eq2[-1][4:-1]).set_color(col_op)
 
@@ -2125,7 +2124,6 @@ class DistnFinal(RiemannJ):
                   FadeOut(arr1, txt1))
 
         self.wait()
-
 
 if __name__ == "__main__":
     def li(x):

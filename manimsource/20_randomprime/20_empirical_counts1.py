@@ -1898,6 +1898,41 @@ class PsiApprox(Scene):
 
         self.wait()
 
+class NoisePlotThumb(Scene):
+    def construct(self):
+        xmax = 10.
+        ymax = 1
+        ax = Axes(x_range=[0, xmax], x_length=config.frame_width, y_length=config.frame_height,
+                  y_range=[0, ymax*2], axis_config={'include_ticks': False, 'include_tip': False,
+        })
+
+        nplt = 1000
+        rng = np.random.default_rng(3)
+        xvals = np.linspace(0, xmax, nplt)
+        nzeros = 1000
+        gammas = load_gammas(nzeros)
+        coeffs = 2.0 / np.sqrt(0.25 + gammas ** 2)
+        thetas = rng.uniform(0.0, 2.0 * np.pi, nzeros)
+        variance_explicit = 0.5 * np.sum(coeffs ** 2)
+        variance_total = 2.0 + np.euler_gamma - np.log(4.0 * np.pi)
+        variance_tail = variance_total - variance_explicit
+        print('tail width', np.sqrt(variance_tail))
+        noise = np.cumsum(np.random.normal(0, 1, size=nplt-1) * np.sqrt((xvals[1] - xvals[0])*variance_tail))
+        yvals = np.concat(([0], noise)) + ymax
+
+        for i in range(nzeros):
+            yvals += coeffs[i]*np.cos(gammas[i]*xvals+thetas[i])
+            col = PURPLE
+        plt = ax.plot_line_graph(xvals, yvals, line_color=col, stroke_opacity=1,
+                                      stroke_width=6, add_vertex_dots=False).set_z_index(2)
+        xvals1 = np.concatenate(([0], xvals, [xmax]))
+        yvals1 = np.concatenate(([0], yvals, [0]))
+        area = ax.plot_line_graph(xvals1, yvals1, line_color=col, stroke_opacity=0,
+                                      stroke_width=0, fill_opacity=0.5, fill_color=col, add_vertex_dots=False).set_z_index(1)
+
+
+        self.add(plt, area)
+
 
 def save_gammas(n):
     gammas = np.array([float(mp.im(mp.zetazero(k))) for k in range(1, n + 1)])
