@@ -22,6 +22,7 @@ col_txt = (mn.BLUE-mn.WHITE) * 1.0 + mn.WHITE
 col_txt2 = (mn.YELLOW-mn.WHITE) * 0.5 + mn.WHITE
 col_ft = mn.YELLOW_B * 0.5 + mn.ORANGE * 0.5
 col_angle = mn.YELLOW
+col_trig = mn.PURPLE_A#*0.5+WHITE*0.5
 
 def gauss1d(a=1., b=0., c=1., shift=0.):
     """

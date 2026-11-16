@@ -151,9 +151,23 @@ def torus(quality=LD, bgcol=BLACK, anim=0, part=0):
                 if part == 0:
                     set_crv(u)
 
-
-
-    Scene.wait(0.1)
+    if anim == 0: # thumbnail image
+        u = 0.5
+        a = 5
+        b = 8
+        xvec = torch.linspace(-u, u, 10000).unsqueeze(-1)
+        pts = torus_pos(xvec * a, xvec * b)
+        normals = torus_norm(xvec * a, xvec * b)
+        crv = ah.curve_surface(pts, normals, width=0.12, color=RED)
+        with Off():
+            crvx.despawn()
+            crvy.despawn()
+            dot1.despawn()
+            crv.spawn()
+            cam: Camera = Scene.get_camera()
+            cam.orbit_around_point(ORIGIN, -3, cam.get_right_direction())
+    else:
+        Scene.wait(0.1)
 
     name='torus{}'.format(anim)
     if part > 0:
@@ -164,4 +178,5 @@ if __name__ == "__main__":
     COMPUTING_DEFAULTS.render_device = torch.device('cpu')
     COMPUTING_DEFAULTS.max_cpu_memory_used *= 20
     # torus(quality=LD, bgcol=BLACK, anim=6, part=0)
-    torus(quality=HD, bgcol=TRANSPARENT, anim=6, part=0)
+    # torus(quality=HD, bgcol=TRANSPARENT, anim=6, part=0)
+    torus(quality=HD, bgcol=TRANSPARENT, anim=0)
