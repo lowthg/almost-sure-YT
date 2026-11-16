@@ -675,7 +675,7 @@ class RandomTerms(IntroSum):
         self.wait()
 
 class Equidistribution(IntroSum):
-    bgcol = BLACK
+    bgcol = GREY
 
     def construct(self):
         nsteps = 5
@@ -692,8 +692,6 @@ class Equidistribution(IntroSum):
         ax.shift(DOWN*2.5-ax.c2p(nsteps/2, 0))
         ticks = mh.get_xticks(ax, range(nsteps+1), label_color=col_num)
 
-        self.add(ax.x_axis, ticks)
-
         x = (math.sqrt(5)-1)/2
         # add line segment of length x starting from origin, then repeatedly move to the end of the previous position
         dy = UP * 0.2
@@ -702,6 +700,13 @@ class Equidistribution(IntroSum):
         seg  = Line(p0, p1, stroke_width=8, color=RED).set_z_index(4)
         eqx = MathTex(r'x', color=col_p, font_size=50).next_to(seg, UP, buff=0.2)
         dot = Dot(ax.c2p(x, 0), color=RED, radius=0.12).set_z_index(5)
+
+        gp = VGroup(eqx, ticks, ax.x_axis)
+        h = gp.height + 0.8
+        w = gp.get_right()[0] * 2 + 0.8
+        box1 = RoundedRectangle(width=w, height=h, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                corner_radius=0.2).move_to(gp, coor_mask=UP)
+        self.add(ax.x_axis, ticks, box1)
         self.play(FadeIn(seg, eqx, dot))
 
         nx = int(nsteps / x)
@@ -746,7 +751,7 @@ class Equidistribution(IntroSum):
                 axes.append(VGroup(ax3.x_axis, ticks3[0][0], ticks3[1][0]))
 
         # move dots to new axis
-        eq4 = MathTex(r'{\sf fractional\ part\ of\ }', r'nx', stroke_width=1.5, font_size=60)
+        eq4 = MathTex(r'{\sf fractional\ part\ of\ }', r'nx', stroke_width=1.5, font_size=60).set_z_index(1)
         eq4[0].set_color(col_txt)
         eq4[1][-1].set_color(col_p)
         eq4[1][0].set_color(col_num)
@@ -766,8 +771,11 @@ class Equidistribution(IntroSum):
             i1 = int((i + 1) / x)
             anims.append(ReplacementTransform(VGroup(*dots_line[i0:i1]).copy(), VGroup(*dots2[i0:i1])))
             anims2.append(Succession(Wait(i*0.5), AnimationGroup(*anims, run_time=1.5)))
+
+        box2 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=1)
         self.play(FadeOut(*eqxs[1:]), *anims2,
-                  FadeIn(eq4))
+                  FadeIn(eq4, box2))
+        self.remove(box1)
         self.wait(0.1)
         op = [1] * (nx+1) + list(np.linspace(1, 0.5, ndots - nx))
         for i in range(ndots):
@@ -819,6 +827,7 @@ class Equidistribution(IntroSum):
         ax2.y_axis.set_opacity(0)
         gp1 = VGroup(ax2, *dots2, ticks2, eqx2)
         gp2 = gp1.copy().to_edge(LEFT, buff=1)
+        eq4_1 = eq4.copy()
         self.play(
             alphaval.animate.set_value(1),
             Transform(gp1, gp2),
@@ -848,7 +857,7 @@ class Equidistribution(IntroSum):
             dots2 = [dot.copy().move_to(ax2.c2p(i*x0 % 1)).set_opacity(op[i]) for i in range(1, ndots+1)]
             dots3 = [dot.copy().move_to(center+r*(DOWN*math.cos(i*x0*TAU)+RIGHT*math.sin(i*x0*TAU))).set_opacity(op[i]) for i in range(1, ndots+1)]
 
-            return VGroup(eqx, *dots, eqx2, eqx3, *dots2, *dots3).set_z_index(10)
+            return VGroup(VGroup(eqx, eqx2, eqx3), *dots, *dots2, *dots3).set_z_index(10)
 
         obj = get_obj()
         self.add(obj)
@@ -886,8 +895,70 @@ class Equidistribution(IntroSum):
                   run_time=2.)
         obj.clear_updaters()
         self.wait(0.1)
-        eq4.move_to(ax2.x_axis).shift(DOWN*2)
-        FadeIn(eq4)
+
+        eq5 = MathTex(r'\{nx\}', r'\sim', r'{\sf uniform\ on\ }', r'[0,1]', font_size=60).set_z_index(10)
+        eq5[0][::3].set_color(col_op)
+        eq5[0][1].set_color(col_x)
+        eq5[0][2].set_color(col_p)
+        eq5[2].set_color(col_txt)
+        eq5[3][1::2].set_color(col_num)
+        eq5.move_to(ax2.x_axis).shift(DOWN*1.4)
+        self.play(FadeIn(eq5), obj[0].animate.set_opacity(0))
+        circ = mh.circle_eq(eq5[0], scale=0.6).set_z_index(4)
+        self.wait(0.1)
+        eq4_1.move_to(ax2.x_axis).shift(UP*1)
+        line1 = Line(eq4_1[0][6].get_bottom()+DOWN*0.1, circ.get_top()+UP*0.1, stroke_width=8, color=YELLOW).set_z_index(30)
+        self.play(Create(circ, rate_func=linear, run_time=0.6),
+                  Succession(Wait(0.15),FadeIn(eq4_1, line1)))
+
+        eq6 = MathTex(r'f(', r'\{nx\}', r')', font_size=60).set_z_index(10)
+        eq6[0][0].set_color(col_psi)
+        mh.align_sub(eq6, eq6[1], eq5[0]).move_to(ax2.x_axis, coor_mask=RIGHT)
+
+        self.wait(0.1)
+        self.play(FadeOut(eq4_1, line1, eq5[1:]),
+                  mh.rtransform(eq5[0], eq6[1], run_time=1., copy_colors=True),
+                  FadeOut(circ, shift=mh.diff(eq5[0], eq6[1])),
+                  Succession(Wait(0.5), FadeIn(eq6[0], eq6[2])),)
+
+        eq7 = MathTex(r'\frac1N', r'\sum_{n=1}^N', r'f(', r'\{nx\}', r')', r'\to',
+                      r'\int_0^1', r'f(u)', r'\,du', font_size=60).set_z_index(10)
+        mh.align_sub(eq7, eq7[3], eq6[1])
+        VGroup(eq7[0][1], eq7[1][1], eq7[6][0], eq7[8][0]).set_color(col_op)
+        VGroup(eq7[0][0], eq7[1][4], eq7[6][1:]).set_color(col_num)
+        VGroup(eq7[0][2], eq7[1][0], eq7[1][2], eq7[7][2], eq7[8][1]).set_color(col_x)
+        eq7[7][0].set_color(col_psi)
+
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[:], eq7[2:5], copy_colors=True), FadeIn(eq7[0], eq7[1]), run_time=1.)
+        self.wait(0.1)
+        self.play(FadeIn(eq7[5:]))
+
+        eq8 = MathTex(r'\frac1N', r'\sum_{n=1}^N', r'f(', r'\{nx\}', r')', r'\to', r'\mathbb E[',
+                      r'f(U)', r']', font_size=60).set_z_index(10)
+        mh.align_sub(eq8, eq8[3], eq7[3])
+        eq8[6][0].set_color(col_txt2)
+        self.wait(0.1)
+
+        self.play(mh.rtransform(eq7[:6], eq8[:6], eq7[7][:2], eq8[7][:2], eq7[7][-1], eq8[7][-1], copy_colors=True),
+                  mh.stretch_replace(eq7[7][2], eq8[7][2], copy_colors=True),
+                  FadeIn(eq8[6]),
+                  FadeOut(eq7[6]),
+                  FadeOut(eq7[8], shift=mh.diff(eq7[7][-1], eq8[7][-1])),
+                  FadeIn(eq8[8], shift=mh.diff(eq7[7][-1], eq8[7][-1])),
+                  run_time=1.5)
+
+        self.wait(0.1)
+
+        circ = mh.circle_eq(eq8[7][2], scale=0.6).set_z_index(20).shift(RIGHT*0.15)
+
+        eq7 = MathTex(r'{\sf uniform\ on\ }', r'[0,1]', font_size=60).set_z_index(10)
+        eq7[0].set_color(col_txt)
+        eq7[1][1::2].set_color(col_num)
+        eq7.move_to(eq4_1).shift(RIGHT*2.6)
+        line = Line(eq7[0][6].get_bottom()+DOWN*0.1, circ.get_top()+UP*0.1, stroke_width=8, color=YELLOW).set_z_index(30)
+        self.play(Create(circ, rate_func=linear, run_time=0.6),
+                  Succession(Wait(0.15), FadeIn(eq7, line)))
 
         self.wait()
 
