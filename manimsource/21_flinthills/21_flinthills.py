@@ -34,9 +34,20 @@ class IntroSum(Scene):
     def construct(self):
         self.do_anim()
 
+    def get_series(self):
+        eq1 = MathTex(r'\sum_{n=1}^\infty', r'\frac{1}{n^3\sin^2n}')
+        VGroup(eq1[0][1], eq1[1][1]).set_color(col_op)
+        VGroup(eq1[1][-5:-2]).set_color(col_trig)
+        VGroup(eq1[0][2], eq1[1][-1], eq1[1][-7]).set_color(col_x)
+        VGroup(eq1[0][-1], eq1[1][0], eq1[1][3], eq1[1][-2]).set_color(col_num)
+        VGroup(eq1[0][0]).set_color(col_special)
+        VGroup(eq1[0][3]).set_color(WHITE*0.85)
+        return eq1
+
     def do_anim(self, just_eq=False):
         MathTex.set_default(font_size=100, stroke_width=2)
-        eq1 = MathTex(r'\sum_{n=1}^\infty', r'\frac{1}{n^3\sin^2n}')
+        eq1 = self.get_series()
+        # eq1 = MathTex(r'\sum_{n=1}^\infty', r'\frac{1}{n^3\sin^2n}')
         args = [r'\frac1{\sin^21}', r'+']
         for n in range(2, 6):
             args += [r'\frac1{{ {}^3\sin^2{} }}'.format(n, n), r'+']
@@ -45,12 +56,7 @@ class IntroSum(Scene):
         eq4 = MathTex(r'\sum_{n=1}^\infty', r'\frac{1}{n^3\sin^2n}', r'=', r'\infty\,', r'???')
 
         mh.rtransform.copy_colors = True
-        VGroup(eq1[0][1], eq1[1][1]).set_color(col_op)
-        VGroup(eq1[1][-5:-2]).set_color(col_trig)
-        VGroup(eq1[0][2], eq1[1][-1], eq1[1][-7]).set_color(col_x)
-        VGroup(eq1[0][-1], eq1[1][0], eq1[1][3], eq1[1][-2]).set_color(col_num)
-        VGroup(eq1[0][0], eq3[3]).set_color(col_special)
-        VGroup(eq1[0][3]).set_color(WHITE*0.85)
+        VGroup(eq3[3]).set_color(col_special)
         VGroup(eq3[-1]).set_color(RED)
 
         for i in [0,2,4,6, 8]:
@@ -491,6 +497,13 @@ class SumSeries(IntroSum):
             yscale1_2 = yscale2_2
             n1 = n2
 
+        total_old.clear_updaters()
+        print('total pos:', total_old.get_center())
+        print('eq pos', eq2.get_center())
+        self.wait(0.1)
+        self.remove(total_old)
+        eq2.set_opacity(0)
+
         self.wait()
 
 
@@ -531,6 +544,351 @@ class FHSum(Scene):
                                  stroke_width=6, stroke_color=BLUE).set_z_index(4)
 
         self.add(ax, plt)
+        self.wait()
+
+class SumTotal(IntroSum):
+    def construct(self):
+        eq1 = MathTex(r'\sum_{n\le N}', r'\frac1{n^3\sin^2 n}', stroke_width=1.5, font_size=50)
+        eq2 = DecimalNumber(30.31, num_decimal_places=2, color=BLUE, font_size=50, stroke_width=1.5).set_z_index(10)
+        MathTex.set_default(stroke_width=1.5, font_size=70)
+        eq3 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2n}', r'\approx', r'30.31', r'\,??').set_z_index(2)
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq1[1][0], eq1[1][3], eq1[1][-2]).set_color(col_num)
+        VGroup(eq1[1][1], eq1[0][0]).set_color(col_op)
+        VGroup(eq1[1][2], eq1[1][-1], eq1[0][1], eq1[0][-1]).set_color(col_x)
+        VGroup(eq1[1][-5:-2]).set_color(col_trig)
+        eq3[-1].set_color(RED)
+
+        eq1.move_to(0.37170545 *RIGHT + 1.52226026 * UP)
+        eq2.move_to(6.22086595  * RIGHT + 3.1586239 * UP)
+        mh.align_sub(eq3, eq3[:-1], ORIGIN)
+        eq3.to_edge(DOWN, buff=0.4)
+        eq1 = mh.eq_shadow(eq1, bg_stroke_width=10, bg_z_index=9.9, fg_z_index=10)
+        eq3_1 = mh.eq_shadow(eq3[:2], bg_stroke_width=0, bg_z_index=9.9, fg_z_index=10)
+
+        box1 = SurroundingRectangle(VGroup(eq3, eq3[-1].copy().next_to(eq3, LEFT)), stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2).move_to(ORIGIN, coor_mask=RIGHT)
+
+        self.add(eq1, eq2)
+        self.play(AnimationGroup(mh.rtransform(eq1[1], eq3_1[1], eq1[0][:3], eq3_1[0][1:4]),
+                  mh.fade_replace(eq1[0][3], eq3_1[0][4].set_color(col_num)),
+                  FadeIn(eq3_1[0][0].set_color(col_special), shift=eq3_1[0][1].get_top()-eq1[0][0].get_top()),
+                  ReplacementTransform(eq2, eq3[3].set_color(col_num)),
+                                 run_time=2),
+                  Succession(Wait(1.2), FadeIn(box1, eq3[2]))
+                  )
+        self.remove(eq3_1)
+        self.add(eq3[:2])
+        self.wait(0.1)
+        self.play(FadeIn(eq3[-1]))
+
+        self.wait()
+
+class RandomTerms(IntroSum):
+    def construct(self):
+        MathTex.set_default(stroke_width=1.5, font_size=70)
+        eq1 = self.get_series().set_z_index(2)
+        eq2 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2u_n}').set_z_index(2) # replace n with u_n in sine term
+        eq3 = MathTex(r'u_n', r'=', r'{\sf distance\ from\ }', r'n', r'{\sf\ to\ nearest\ multiple\ of\ }', r'\pi', font_size=60).set_z_index(2)
+        eq4 = MathTex(r'u_n', r'=', r'\min\nolimits_{q\in\mathbb Z}', r'\lvert', r'n-q\pi', r'\rvert', font_size=60).set_z_index(2)
+        eq5 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2U_n}').set_z_index(2) # replace n with u_n in sine term
+        eq6 = MathTex(r'u_n', r'{\sf\ is\ in\ interval\ }', r'[0,\pi/2]', font_size=60).set_z_index(2)
+        eq7 = MathTex(r'U_n', r'{\sf\ is\ uniform\ on\ }', r'[0,\pi/2]', font_size=60).set_z_index(2)
+
+        mh.rtransform.copy_colors     = True  # make rtransform copy colors from eq1 to eq2
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq2[1][-2], eq3[0][0]).set_color(col_p)
+        VGroup(eq2[1][-1], eq3[3], eq3[0][1], eq4[2][-3], eq4[4][2]).set_color(col_x)
+        VGroup(eq3[2], eq3[4], eq6[1], eq7[1]).set_color(col_txt)
+        VGroup(eq3[-1]).set_color(col_pi)
+        VGroup(eq4[3], eq4[5], eq6[2][4]).set_color(col_op)
+        VGroup(eq4[2][-1]).set_color(col_special)
+        VGroup(eq4[2][:3]).set_color(col_op)
+        VGroup(eq6[2][1], eq6[2][5]).set_color(col_num)
+        eq4[2][-2].set_color(WHITE*0.85)
+
+
+        eq1.to_edge(DOWN, buff=0.4)
+        mh.align_sub(eq2, eq2[0], eq1[0])  # align first term with first term of eq1
+        eq3.align_to(eq2, DOWN)
+        eq2_1 = eq2.copy().next_to(eq3, UP, buff=0.4, coor_mask=UP)
+        mh.align_sub(eq4, eq4[0], eq3[0], coor_mask=UP)
+        mh.align_sub(eq5, eq5[0], eq2_1[0])
+        mh.align_sub(eq6, eq6[0], eq3[0], coor_mask=UP)
+        mh.align_sub(eq7, eq7[0][1], eq6[0][1], coor_mask=UP)
+
+        box1 = SurroundingRectangle(eq2, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+
+        eq3 = mh.eq_shadow(eq3)
+        eq4 = mh.eq_shadow(eq4)
+        eq6 = mh.eq_shadow(eq6)
+        eq7 = mh.eq_shadow(eq7)
+
+        self.add(eq1, box1)
+
+        # put a red line round the sine term in manim to highlight it
+        circ1 = mh.circle_eq(eq2[1][-6:], scale=0.6).set_z_index(4).shift(DOWN*0.1)
+        self.play(Create(circ1, rate_func=linear, run_time=0.6))
+
+        self.wait(0.1)
+
+        # replace n with u_n in sine term
+        self.play(mh.rtransform(eq1[1][:-1], eq2[1][:-2], eq1[0], eq2[0], run_time=1.5),
+                  mh.fade_replace(eq1[1][-1], eq2[1][-2:], coor_mask=RIGHT),
+                  )
+
+        self.wait(0.1)
+        # fade in eq3 while shifting eq2 up to make room for eq3
+        self.play(mh.rtransform(eq2, eq2_1),
+                  VGroup(circ1, box1).animate.shift(mh.diff(eq2, eq2_1)),
+                  Succession(Wait(0.5), FadeIn(eq3)))
+        self.wait(0.1)
+        self.play(Succession(Wait(0.5), AnimationGroup(
+            mh.rtransform(eq3[:2], eq4[:2]),
+            mh.rtransform(eq3[3][0], eq4[4][0], eq3[5][0], eq4[4][3]),
+            run_time=1.7)),
+                  Succession(Wait(1.2), FadeIn(eq4[2:4], eq4[4][1:3], eq4[5])),
+              FadeOut(eq3[2], eq3[4]),
+              )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0], eq6[0], eq4[4][-1], eq6[2][3]),
+                  mh.fade_replace(eq4[3], eq6[2][0]),
+                  mh.fade_replace(eq4[5], eq6[2][-1]),
+                  mh.fade_replace(eq4[4][0], eq6[2][1], coor_mask=RIGHT),
+                  mh.fade_replace(eq4[4][1], eq6[2][2], coor_mask=RIGHT),
+                  FadeOut(eq4[4][2], shift=mh.diff(eq4[4][3], eq6[2][3])),
+                  FadeOut(eq4[1:3]),
+                  FadeIn(eq6[2][4:6]),
+                  FadeIn(eq6[1])
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2_1[0], eq5[0], eq2_1[1][:-2], eq5[1][:-2], eq2_1[1][-1], eq5[1][-1]),
+                  mh.stretch_replace(eq2_1[1][-2], eq5[1][-2]),
+                  )
+        self.play(mh.rtransform(eq6[0][1], eq7[0][1], eq6[2], eq7[2]),
+                  mh.stretch_replace(eq6[0][0], eq7[0][0]),
+                  mh.fade_replace(eq6[1], eq7[1], coor_mask=RIGHT),)
+
+        self.wait()
+
+class Equidistribution(IntroSum):
+    bgcol = BLACK
+
+    def construct(self):
+        nsteps = 5
+        MathTex.set_default(stroke_width=1.5, font_size=50)
+
+        ax = Axes(x_range=[0, nsteps * 1.05], x_length=12, y_length=0.1, y_range=[0, 1], axis_config={
+            'stroke_width': 6, 'color': WHITE, 'include_ticks': False, 'include_tip': True,
+            "tip_width": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+            "tip_height": 0.5 * DEFAULT_ARROW_TIP_LENGTH,
+        }).set_z_index(1)
+
+        xstep = ax.c2p(1,0) - ax.c2p(0,0)
+
+        ax.shift(DOWN*2.5-ax.c2p(nsteps/2, 0))
+        ticks = mh.get_xticks(ax, range(nsteps+1), label_color=col_num)
+
+        self.add(ax.x_axis, ticks)
+
+        x = (math.sqrt(5)-1)/2
+        # add line segment of length x starting from origin, then repeatedly move to the end of the previous position
+        dy = UP * 0.2
+        p0 = ax.c2p(0, 0) + dy
+        p1 = ax.c2p(x, 0) + dy
+        seg  = Line(p0, p1, stroke_width=8, color=RED).set_z_index(4)
+        eqx = MathTex(r'x', color=col_p, font_size=50).next_to(seg, UP, buff=0.2)
+        dot = Dot(ax.c2p(x, 0), color=RED, radius=0.12).set_z_index(5)
+        self.play(FadeIn(seg, eqx, dot))
+
+        nx = int(nsteps / x)
+        dx = ax.c2p(x, 0) - ax.c2p(0, 0)
+
+        # animate writing the multiples of x above each dot, and moving the line segment and dot to the next position
+        eqxs = [MathTex(r'x')] + [MathTex(r'{}x'.format(i), color=col_num) for i in range(1, nx)]
+        for i in range(nx):
+            mh.align_sub(eqxs[i], eqxs[i][0][-1].set_color(col_p), ax.c2p((i+1)*x, 0), UP, buff=0.3)
+
+        dots_line = [dot.copy()]
+        self.add(dots_line[-1])
+        for i in range(0, nx-1):
+            anims = [VGroup(seg, eqx, dot).animate.shift(RIGHT*dx)]
+            if i > 0: anims.append(FadeIn(eqxs[i-1]))
+            self.play(*anims, run_time=0.5)
+            dots_line.append(dot.copy())
+            self.add(dots_line[-1])
+        self.play(VGroup(seg, eqx).animate.shift(RIGHT*dx),
+            dot.animate.shift(RIGHT*dx).set_opacity(0),
+                  FadeIn(eqxs[-2]), run_time=0.5)
+        self.play(VGroup(seg, eqx, dot).animate(run_time=0.6).next_to(mh.pos(RIGHT), RIGHT, buff=0, coor_mask=RIGHT),
+                  FadeIn(eqxs[-1], run_time=0.5))
+        self.remove(seg, eqx, dot)
+
+        # draw numberline above the existing numberline, aligned to the left
+        ax2 = Axes(x_range=[0, 1], x_length=xstep[0]*3, y_length=0.1, y_range=[0, 1], axis_config={
+            'stroke_width': 6, 'color': WHITE, 'include_ticks': False, 'include_tip': False}).set_z_index(1)
+        ax2.shift(ax.c2p(0, 0) - ax2.c2p(0, 0) + UP * 2.75).move_to(ORIGIN, coor_mask=RIGHT)
+        ticks2 = mh.get_xticks(ax2, [0, 1], label_color=col_num)
+
+        # move each unit segment of the original x-axis to the new one,
+        axes = []
+        for i in range(nsteps):
+            ax3 = Axes(x_range=[0, 1], x_length=xstep[0], y_length=0.1, y_range=[0, 1], axis_config={
+                'stroke_width': 6, 'color': WHITE, 'include_ticks': False, 'include_tip': False}).set_z_index(1)
+            ax3.shift(ax.c2p(i, 0) - ax3.c2p(0, 0))
+            ticks3 = mh.get_xticks(ax3, [0, 1], label_color=col_num)
+            if i == 0:
+                axes.append(VGroup(ax3.x_axis, ticks3))
+            else:
+                axes.append(VGroup(ax3.x_axis, ticks3[0][0], ticks3[1][0]))
+
+        # move dots to new axis
+        eq4 = MathTex(r'{\sf fractional\ part\ of\ }', r'nx', stroke_width=1.5, font_size=60)
+        eq4[0].set_color(col_txt)
+        eq4[1][-1].set_color(col_p)
+        eq4[1][0].set_color(col_num)
+        eq4.next_to(ax2.x_axis, UP, buff=1)
+
+        dot.set_opacity(1)
+        ndots = 30
+        dots2 = [dot.copy().move_to(ax2.c2p((i+1) * x % 1)) for i in range(ndots)]
+        eqx1 = eqxs[0]
+        eqx2 = eqx1.copy().next_to(ax2.c2p(x % 1), UP, buff=0.3)
+
+        anims2 = []
+        for i in range(nsteps):
+            if i == 0: anims = [ReplacementTransform((axes[0] + eqx1).copy(), VGroup(ax2.x_axis, ticks2) + eqx2)]
+            else: anims = [ReplacementTransform(axes[i], VGroup(ax2.x_axis, ticks2[0][0], ticks2[1][0]))]
+            i0 = int(i / x)
+            i1 = int((i + 1) / x)
+            anims.append(ReplacementTransform(VGroup(*dots_line[i0:i1]).copy(), VGroup(*dots2[i0:i1])))
+            anims2.append(Succession(Wait(i*0.5), AnimationGroup(*anims, run_time=1.5)))
+        self.play(FadeOut(*eqxs[1:]), *anims2,
+                  FadeIn(eq4))
+        self.wait(0.1)
+        op = [1] * (nx+1) + list(np.linspace(1, 0.5, ndots - nx))
+        for i in range(ndots):
+            dots2[i].set_opacity(op[i+1])
+
+        self.play(FadeIn(*dots2[i1:]))
+
+        # wrap the axis into a circle, and move the dots to the circle
+        r = 1.8
+        # circle = Circle(radius=2, color=WHITE, stroke_width=6).set_z_index(1).rotate(-PI/2)
+        center = ax2.x_axis.get_center() * UP + mh.pos(RIGHT) + LEFT * (1 + r) + UP*0.5
+
+        p0 = ax2.c2p(0, 0)
+        p1 = ax2.c2p(1,0)
+
+        dr0 = (p0 - eqx2.get_center())[1]
+        ticks2_1 = ticks2[0].copy()
+        alphaval = ValueTracker(0.)
+        def bend():
+            alpha = alphaval.get_value()
+            theta = TAU * alpha
+            b = alpha**2
+            len = (p1-p0)[0] * (1-b) + TAU * r * b
+            c = 1 - (1-alpha)**3
+
+            if theta < 1e-6: return VGroup()
+
+            radius = len / theta
+            cent = p0 + UP * radius
+            cent += c * (center + r * DOWN + UP * 0.2 - p0)
+            dots = [dot.copy().move_to(cent + radius * np.array([np.sin(theta*(i*x % 1)), -np.cos(theta*(i*x % 1)), 0])).set_opacity(op[i]) for i in range(1, ndots + 1)]
+            dr = dr0 * (1-alpha) + 0.4 * alpha
+            posx = np.array([np.sin(theta*(x % 1)), -np.cos(theta*(x % 1)), 0]) * (radius + dr) + cent
+            eqx3 = eqx2.copy().move_to(posx)
+            shape = Arc(
+                radius=radius,
+                start_angle=-PI / 2,
+                angle=theta,
+                arc_center=cent,
+                num_components=64,
+                stroke_width=6,
+            )
+
+            return VGroup(shape, ticks2_1.copy().shift(shape.get_start() - p0), eqx3, *dots).set_z_index(10)
+
+        bendy = always_redraw(bend)
+        self.add(bendy)
+
+        ax2.y_axis.set_opacity(0)
+        gp1 = VGroup(ax2, *dots2, ticks2, eqx2)
+        gp2 = gp1.copy().to_edge(LEFT, buff=1)
+        self.play(
+            alphaval.animate.set_value(1),
+            Transform(gp1, gp2),
+            FadeOut(eq4, shift=mh.diff(gp1, gp2)),
+            VGroup(ax2, *dots2, ticks2, eqx2).animate.to_edge(LEFT, buff=1),
+            run_time=3,
+            rate_func=smooth,
+        )
+
+        bendy.clear_updaters()
+
+        self.remove(*dots_line, *dots2, *eqxs, eqx2, bendy)
+        self.add(bendy[:2])
+
+        xval = ValueTracker(x)
+
+        def get_obj():
+            x0 = xval.get_value()
+            center = bendy[0].get_center()
+            eqx.next_to(ax.c2p(x0, 0), UP, buff=0.3)
+            eqx2 = eqx.copy().next_to(ax2.c2p(x0, 0), UP, buff=0.3)
+            eqx3 = eqx.copy().move_to(center + (r+0.4)*(math.cos(x0*TAU)*DOWN + math.sin(x0*TAU)*RIGHT))
+            nx1 = int(nsteps/x0) + 1
+            dots = [dot.copy().move_to(ax.c2p(i*x0)) for i in range(1, nx1+1)]
+            dots[-1].set_opacity(1-(nx1*x0-nsteps)*4)
+
+            dots2 = [dot.copy().move_to(ax2.c2p(i*x0 % 1)).set_opacity(op[i]) for i in range(1, ndots+1)]
+            dots3 = [dot.copy().move_to(center+r*(DOWN*math.cos(i*x0*TAU)+RIGHT*math.sin(i*x0*TAU))).set_opacity(op[i]) for i in range(1, ndots+1)]
+
+            return VGroup(eqx, *dots, eqx2, eqx3, *dots2, *dots3).set_z_index(10)
+
+        obj = get_obj()
+        self.add(obj)
+        self.wait(0.1)
+        self.remove(obj)
+        obj = always_redraw(get_obj)
+        self.add(obj)
+        eq1 = MathTex(r'x', r'=', r'1/4', font_size=80, stroke_width=2).set_z_index(10)
+        eq1.move_to((ax.c2p(0,0) + ax2.c2p(0,0))/2, coor_mask=UP).shift(DOWN*0.2)
+        eq1.next_to(ax2.x_axis, UP*1.5, buff=1.2)
+        eq2 = MathTex(r'x', r'=', r'2/5', font_size=80, stroke_width=2).set_z_index(10)
+        eq3 = MathTex(r'x', r'=', r'1/\sqrt2', font_size=80, stroke_width=2).set_z_index(10)
+        eq1[0].set_color(col_p)
+        VGroup(eq1[2][::2], eq2[2][::2], eq3[2][0], eq3[2][-1]).set_color(col_num)
+        VGroup(eq1[2][1], eq2[2][1], eq3[2][1:-1]).set_color(col_op)
+        mh.align_sub(eq2, eq2[1], eq1[1])
+        mh.align_sub(eq3, eq3[1], eq1[1])
+
+        box = SurroundingRectangle(VGroup(eq1, eq2, eq3[-1][-1]), stroke_width=4, stroke_color=YELLOW,
+                                   fill_color=GREY*0.4, fill_opacity=1, buff=0.25, corner_radius=0.2)
+
+        self.play(xval.animate.set_value(0.25), FadeIn(eq1, box), run_time=2)
+        self.wait(0.1)
+        self.play(xval.animate.set_value(0.4),
+                  mh.rtransform(eq1[2][1], eq2[2][1]),
+                  mh.fade_replace(eq1[2][0], eq2[2][0]),
+                  mh.fade_replace(eq1[2][2], eq2[2][2]),
+                  run_time=1.5)
+        self.wait(0.1)
+        self.play(xval.animate.set_value(1/math.sqrt(2)),
+                  mh.rtransform(eq2[2][1], eq3[2][1]),
+                  mh.fade_replace(eq2[2][0], eq3[2][0]),
+                  mh.fade_replace(eq2[2][-1], eq3[2][-1]),
+                  FadeIn(eq3[2][2:-1], shift=mh.diff(eq2[2][-1], eq3[2][-1])),
+                  run_time=2.)
+        obj.clear_updaters()
+        self.wait(0.1)
+        eq4.move_to(ax2.x_axis).shift(DOWN*2)
+        FadeIn(eq4)
+
         self.wait()
 
 
