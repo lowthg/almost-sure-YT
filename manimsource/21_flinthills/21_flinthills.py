@@ -15,6 +15,7 @@ from common.wigner import *
 
 col_txt = ManimColor( r'#FFAC2B')
 col_pi = col_special * 0.5 + ORANGE * 0.5
+col_int = col_op
 
 def rate_func_log(x):
     """
@@ -962,6 +963,332 @@ class Equidistribution(IntroSum):
 
         self.wait()
 
+def SurroundingRectangleSym(mobject, buff=0.2, **kwargs):
+    p0 = mobject.get_corner(UR) + buff * UR
+    p1 = mobject.get_corner(DL) + buff * DL
+    rect = RoundedRectangle(width=max(p0[0], -p1[0]) * 2, height=p0[1] - p1[1], **kwargs)
+    return rect.move_to(mobject, coor_mask=UP)
+
+class RandomSum(IntroSum):
+    def construct(self):
+        self.do_anim()
+
+    def do_anim(self, final_eq=False):
+        MathTex.set_default(stroke_width=1.5, font_size=90)
+        eq1 = self.get_series().set_z_index(1)
+        eq2 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2(\pi\frac n\pi)}').set_z_index(1)
+        eq3 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2(\pi\{\frac n\pi\})}').set_z_index(1)
+        eq4 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2(\pi U_n)}').set_z_index(1)
+        eq5 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3\sin^2(\frac{\pi}2 U_n)}').set_z_index(1)
+        eq6 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3(\frac{\pi}2 U_n)^2}').set_z_index(1)
+        eq7 = MathTex(r'\frac4{\pi^2}', r'\sum_{n=1}^\infty', r'\frac1{n^3U_n^2}').set_z_index(1)
+        eq8 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3U_n^2}').set_z_index(1)
+        # eq9 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3U_n^2}', font_size=120).set_z_index(1)
+        eq10 = MathTex(r'\mathbb E\left[', r'\sum_{n=1}^\infty', r'\frac1{n^3U_n^2}', r'\right]').set_z_index(1)
+        eq11 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3}', r'\mathbb E\left[', r'U_n^{-2}', r'\right]').set_z_index(1)
+        eq12 = MathTex(r'\sum_{n=1}^\infty', r'\frac1{n^3}', r'\int_0^1', r'u^{-2}', r'\,du').set_z_index(1)
+        eq13 = MathTex(r'\sum_{n=1}^\infty', r'\min\left(', r'\frac1{n^3U_n^2}', r',1\right)').set_z_index(1)
+        eq14 = MathTex(r'\sum_{n=1}^\infty', r'\mathbb E\left[', r'\min\left(', r'\frac1{n^3U_n^2}', r',1\right)', r'\right]').set_z_index(1)
+        MathTex.set_default(stroke_width=1.5, font_size=60)
+        eq15 = MathTex(r'\sum_{n=1}^\infty', r'\mathbb E\left[', r'\min\left(', r'\frac1{n^3U_n^2}', r',1\right)', r'\right]').set_z_index(1)
+        eq16 = MathTex(r'=', r'\sum_{n=1}^\infty', r'\mathbb E\left[', r'\min\left(', r'\frac1{n^3U_n^2}', r',1\right)', r'\right]').set_z_index(1)
+
+        eq15.to_edge(UL, buff=0.8)
+        eq16.next_to(eq15, DOWN, buff=0.4).to_edge(RIGHT, buff=2)
+        VGroup(eq15, eq16).move_to(ORIGIN, coor_mask=UP)
+        if final_eq:
+            VGroup(eq15[0][1], eq15[2][:3], eq15[3][1]).set_color(col_op)
+            eq15[0][0].set_color(col_special)
+            VGroup(eq15[0][-1], eq15[3][0], eq15[3][3::2], eq15[4][1]).set_color(col_num)
+            VGroup(eq15[0][2], eq15[3][2::4]).set_color(col_x)
+            eq15[3][4].set_color(col_p)
+            eq15[1][0].set_color(col_txt2)
+            mh.copy_colors_eq(eq15[:], eq16[1:])
+            return eq15, eq16
+
+        eq1.to_edge(DOWN, buff=0.6)
+        mh.align_sub(eq2, eq2[0], eq1[0])  # align first term with first term of eq1
+        mh.align_sub(eq3, eq3[0], eq1[0])  # align first term with first term of eq1
+        mh.align_sub(eq4, eq4[0], eq1[0])  # align first term with first term of eq1
+        mh.align_sub(eq5, eq5[0], eq1[0])  # align first term with first term of eq1
+        mh.align_sub(eq6, eq6[0], eq1[0])  # align first term with first term of eq1
+        mh.align_sub(eq7, eq7[1], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq8, eq8[0], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq10, eq10[1], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq11, eq11[0], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq12, eq12[0], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq13, eq13[0], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+        mh.align_sub(eq14, eq14[0], eq1[0], coor_mask=UP)  # align first term with first term of eq1
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq2[1][-3], eq3[1][-6], eq3[1][-2], eq5[1][-5], eq12[4][0]).set_color(col_op)
+        VGroup(eq12[2][0]).set_color(col_int)
+        VGroup(eq2[1][-5], eq2[1][-2]).set_color(col_pi)
+        VGroup(eq4[1][-3], eq12[4][1]).set_color(col_p)
+        VGroup(eq4[1][-2]).set_color(col_x)
+        VGroup(eq5[1][-4], eq12[2][1:], eq13[3][1]).set_color(col_num)
+        VGroup(eq10[0][0], eq14[1][0]).set_color(col_txt2)
+        VGroup(eq13[1][:3]).set_color(col_op)
+
+
+        box1 = SurroundingRectangle(eq1, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box2 = SurroundingRectangle(eq2, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box3 = SurroundingRectangle(eq3, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box4 = SurroundingRectangle(eq4, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box6 = SurroundingRectangle(eq6, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box7 = SurroundingRectangle(eq7, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box8 = SurroundingRectangle(eq8, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box11 = SurroundingRectangle(VGroup(eq11, eq10), stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box12 = SurroundingRectangle(VGroup(eq12, eq10), stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box13 = SurroundingRectangle(eq13, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box14 = SurroundingRectangle(eq14, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=0.6,
+                                    corner_radius=0.2, buff=0.2)
+        box15 = Rectangle(width=config.frame_width, height=config.frame_height, stroke_width=0, stroke_opacity=0, fill_color=BLACK, fill_opacity=1)
+
+        self.add(eq1, box1)
+        self.play(mh.rtransform(eq1[1][:-1], eq2[1][:-6], eq1[0], eq2[0], eq1[1][-1], eq2[1][-4], box1, box2),
+                  Succession(Wait(0.5), FadeIn(eq2[1][-3:], eq2[1][-6:-4])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq2[1][:-5], eq3[1][:-7], eq2[0], eq3[0], eq2[1][-4:-1], eq3[1][-5:-2],
+                                eq2[1][-1], eq3[1][-1], eq2[1][-5], eq3[1][-7], box2, box3),
+                  Succession(Wait(0.4), FadeIn(eq3[1][-6], eq3[1][-2])))
+        self.wait(0.1)
+
+        circ = mh.circle_eq(eq3[1][-5:-1], scale=0.6).set_z_index(4).shift(LEFT*0.2)
+        txt1 = Tex(r'\sf uniform on ', r'$[0,1]$', font_size=60, color=RED, stroke_width=2)
+        txt1.next_to(circ, UR, buff=0.1).shift(LEFT * 1.5)
+        txt1 = mh.eq_shadow(txt1, bg_z_index=4.9, fg_z_index=5)
+        self.play(Create(circ, rate_func=linear, run_time=0.6),
+                  Succession(Wait(0.15), FadeIn(txt1)))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[0], eq4[0], eq3[1][:-7], eq4[1][:-4], eq3[1][-7], eq4[1][-4], eq3[1][-1], eq4[1][-1],
+                                box3, box4),
+                  mh.fade_replace(eq3[1][-6:-1], eq4[1][-3:-1], coor_mask=RIGHT),
+                  circ.animate.shift(LEFT*0.2))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq4[0], eq5[0], eq4[1][:-3], eq5[1][:-5], eq4[1][-3:], eq5[1][-3:]),
+                  Succession(Wait(0.3), FadeIn(eq5[-1][-5:-3])),
+                  FadeOut(circ, txt1))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[0], eq6[0], eq5[1][:4], eq6[1][:4], eq5[1][-7:], eq6[1][-8:-1],
+                                eq5[1][7], eq6[1][-1], box4, box6),
+                  FadeOut(eq5[1][4:7]),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq6[0], eq7[1], eq6[1][:4], eq7[2][:4], eq6[1][5], eq7[0][2], eq6[1][6], eq7[0][1],
+                                eq6[1][-4], eq7[2][-3], eq6[1][-3], eq7[2][-1], eq6[1][-1], eq7[2][-2],
+                                box6, box7),
+                  mh.stretch_replace(eq6[1][7], eq7[0][0]),
+                  FadeIn(eq7[0][3].set_color(col_num), shift=mh.diff(eq6[1][5], eq7[0][2])),
+                  FadeOut(eq6[1][4], shift=mh.diff(eq6[1][3], eq7[2][3])),
+                  FadeOut(eq6[1][-2]),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(mh.rtransform(eq7[1:], eq8[:], box7, box8), FadeOut(eq7[0]))
+        self.wait(0.1)
+        eq8_1 = eq8.copy()
+        self.play(mh.rtransform(eq8[:], eq10[1:-1], box8, box11, run_time=1.2),
+                  Succession(Wait(0.6), FadeIn(eq10[0], eq10[-1])))
+        eq8 = eq8_1
+        self.wait(0.1)
+        self.play(mh.rtransform(eq10[1], eq11[0], eq10[0], eq11[2],
+                                eq10[2][:4], eq11[1][:], eq10[2][-2:], eq11[3][-2:], eq10[2][-3], eq11[3][-4]),
+                  FadeIn(eq11[3][-3].set_color(col_op), shift=mh.diff(eq10[2][-3], eq11[3][-4])),
+                  mh.stretch_replace(eq10[-1], eq11[-1]))
+
+        # transform eq11 to eq12
+        self.play(mh.rtransform(eq11[:2], eq12[:2], eq11[3][1:3], eq12[3][1:3], box11, box12),
+                  mh.stretch_replace(eq11[3][0], eq12[3][0]),
+                  mh.fade_replace(eq11[2], eq12[2], coor_mask=RIGHT),
+                  mh.fade_replace(eq11[4], eq12[4], coor_mask=RIGHT),
+                  FadeOut(eq11[3][-1], shift=mh.diff(eq11[3][0], eq12[3][0])))
+
+        circ1 = mh.circle_eq(eq12[2:], scale=0.7).set_z_index(20).shift(DOWN*0.1)
+        txt1 = Tex(r'\sf infinite', font_size=70, color=RED, stroke_width=1.5)
+        txt1.next_to(circ1, UR, buff=-0.3)
+        txt1 = mh.eq_shadow(txt1, bg_z_index=20.9, fg_z_index=21)
+        self.wait(0.1)
+        self.play(Create(circ1, rate_func=linear, run_time=1.),
+                  Succession(Wait(0.4), FadeIn(txt1)))
+
+        self.wait(0.1)
+        self.play(mh.rtransform(eq12[0], eq8[0], eq12[1][:4], eq8[1][:4], eq12[3][-1], eq8[1][-2]),
+                  mh.stretch_replace(eq12[3][0], eq8[1][-3]),
+                  FadeOut(eq12[3][-2], shift=mh.diff(eq12[3][-1], eq8[1][-2])),
+                  FadeIn(eq8[1][-1], shift=mh.diff(eq12[3][-3], eq8[1][-4])),
+                  FadeOut(eq12[2], eq12[4]),
+                  FadeOut(circ1, txt1),)
+        self.wait(0.1)
+        # transform eq8 to eq13
+        self.play(mh.rtransform(eq8[0], eq13[0], eq8[1], eq13[2], box12, box13, run_rime=1.3),
+                  Succession(Wait(0.6), FadeIn(eq13[1], eq13[-1])))
+        self.wait(0.1)
+        # transform eq13 to eq14
+        self.play(mh.rtransform(eq13[0], eq14[0], eq13[1:4], eq14[2:5], box13, box14),
+                  Succession(Wait(0.5), FadeIn(eq14[1], eq14[-1])))
+        self.wait(0.1)
+
+        self.play(mh.rtransform(eq14[:].copy(), eq15[:], eq14[:], eq16[1:]),
+                  FadeIn(eq16[0], shift=mh.diff(eq14[0], eq16[0])),
+                  FadeIn(box15, rate_func=linear),
+                  run_time=2)
+
+        self.wait()
+
+class IntegrateSum(RandomSum):
+    bgcol = BLACK
+
+    def construct(self):
+        eq1, eq2 = self.do_anim(final_eq=True)
+        eq3 = MathTex(r'=', r'\sum_{n=1}^\infty', r'\mathbb E\left[', r'\frac1{\max(n^3U^2,1)}', r'\right]')
+        eq4 = MathTex(r'=', r'\sum_{n=1}^\infty', r'\int_0^1', r'\frac{du}{\max(n^3u^2,1)}')
+        eq5 = MathTex(r'\int_0^{n^{-3/2}}', r'\frac{du}{1}', r'+', r'\int_{n^{-3/2}}^1', r'\frac{du}{n^3u^2}')
+        eq6 = MathTex(r'n^{-3/2}', r'-', r'\left[', r'\frac1{n^3u}', r'\right]_{n^{-3/2}}^1')
+        eq7 = MathTex(r'n^{-3/2}', r'+', r'\frac1{n^{3/2}}', r'-', r'\frac1{n^3}')
+        eq8 = MathTex(r'\le', r'\sum_{n=1}^\infty', r'\frac2{n^{3/2}}')
+        eq9 = MathTex(r'\le', r'\sum_{n=1}^\infty', r'\frac2{n^{3/2}}', r'<', r'\infty')
+        eq10 = MathTex(r'\le', r'\sum_{n=1}^\infty', r'\frac2{n^{3/2}}', r'=2\zeta(', r'{\scriptstyle\frac32}', r')', r'<', r'\infty')
+        mh.font_size_sub(eq10, 4, 70)
+        eq10[4].move_to(eq10[5][0], coor_mask=UP)
+
+        mh.align_sub(eq3, eq3[0], eq2[0])
+        mh.align_sub(eq4, eq4[0], eq2[0])
+        gp1 = VGroup(eq1, eq4).copy().to_edge(UP, buff=0.8)
+        eq4_1 = gp1[1]
+        eq5.next_to(eq4_1, DOWN, buff=0.5).to_edge(RIGHT, buff=1)
+        mh.align_sub(eq6, eq6[1], eq5[2])
+        eq6[0].move_to(eq5[:2], coor_mask=RIGHT)
+        mh.align_sub(eq7, eq7[0], eq6[0])
+        mh.align_sub(eq8, eq8[1], eq4_1[1])
+        mh.align_sub(eq9, eq9[1], eq4_1[1])
+        mh.align_sub(eq10, eq10[1], eq4_1[1])
+
+        mh.rtransform.copy_colors = True
+        mh.stretch_replace.copy_colors = True
+        VGroup(eq3[2:5], eq4[2][0], eq4[3][0], eq10[4][1]).set_color(col_op)
+        VGroup(eq4[2][1:], eq10[3][1], eq10[4][::2]).set_color(col_num)
+        VGroup(eq4[3][1]).set_color(col_p)
+        eq10[3][2].set_color(col_psi)
+
+        self.add(eq1, eq2)
+        self.play(mh.rtransform(eq2[:3], eq3[:3], eq2[4][:2], eq3[3][:2], eq2[4][2:6], eq3[3][6:10],
+                                eq2[5][:2], eq3[3][10:12], eq2[-1][-1], eq3[-1][-1], eq2[3][0], eq3[3][2]),
+                  mh.fade_replace(eq2[3][1], eq3[3][3]),
+                  mh.fade_replace(eq2[3][2], eq3[3][4]),
+                  mh.stretch_replace(eq2[3][3], eq3[3][5]),
+                  FadeOut(eq2[4][-1], shift=mh.diff(eq2[4][-3], eq3[3][-5])),
+                          mh.stretch_replace(eq2[5][-1], eq3[3][-1]),
+                  )
+        self.wait(0.1)
+        self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[3][1:8], eq4[3][2:9], eq3[3][9:], eq4[3][10:]),
+                  mh.fade_replace(eq3[2], eq4[2], coor_mask=RIGHT),
+                  mh.fade_replace(eq3[3][0], eq4[3][:2]),
+                  mh.stretch_replace(eq3[3][8], eq4[3][9]),
+                  FadeOut(eq3[-1]))
+        self.wait(0.1)
+        box1 = SurroundingRectangle(eq4[2:], stroke_width=6, stroke_opacity=1, stroke_color=RED, fill_opacity=0,
+                                    buff=0.05, corner_radius=0.15).flip(UP)
+        self.play(Create(box1, rate_func=linear), run_time=0.8)
+        gp2 = VGroup(eq1, eq4)
+        self.play(gp2.animate.move_to(gp1), box1.animate.shift(mh.diff(gp2, gp1)))
+        self.wait(0.1)
+        eq4_ = eq4[2:].copy()
+        self.play(mh.rtransform(eq4_[0][0], eq5[0][0], eq4_[0][-1], eq5[0][-1], eq4_[1][:3], eq5[1][:3],
+                                eq4_[1][-2], eq5[1][-1], eq4_[1][7], eq5[0][1], eq4_[1][8], eq5[0][3],
+                                eq4_[1][10], eq5[0][5]),
+                  FadeIn(eq5[0][2].set_color(col_op), shift=mh.diff(eq4_[1][8], eq5[0][3])),
+                  FadeIn(eq5[0][4].set_color(col_op), shift=mh.diff(eq4_[1][10], eq5[0][5])),
+                  run_time=1.6)
+        self.wait(0.1)
+        eq4_ = eq4[2:].copy()
+        self.play(AnimationGroup(mh.rtransform(eq4_[0][:2], eq5[3][:2], eq4_[1][:3], eq5[4][:3], eq4_[1][7:11].copy(), eq5[4][3:],
+                                eq4_[1][7], eq5[3][2], eq4_[1][8], eq5[3][4], eq4_[1][10], eq5[3][6]),
+                  FadeIn(eq5[3][3].set_color(col_op), shift=mh.diff(eq4_[1][8], eq5[3][4])),
+                    FadeIn(eq5[3][5].set_color(col_op), shift=mh.diff(eq4_[1][10], eq5[3][6])),
+                  run_time=1.6),
+                  Succession(Wait(0.7), FadeIn(eq5[2])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq5[0][1:-1], eq6[0][:]),
+                  FadeOut(eq5[0][0], eq5[0][-1], eq5[1]),
+                  run_time=1.4)
+        self.wait(0.1)
+        self.play(mh.fade_replace(eq5[2], eq6[1]),
+                  mh.fade_replace(eq5[3][0], eq6[2], coor_mask=RIGHT),
+                  mh.rtransform(eq5[3][1], eq6[-1][1], path_arc=-45*DEGREES),
+                  mh.rtransform(eq5[3][2:], eq6[-1][2:], path_arc=45*DEGREES),
+                  mh.fade_replace(eq5[4][:2], eq6[3][0].set_color(col_num), coor_mask=RIGHT),
+                  mh.rtransform(eq5[4][2:6], eq6[3][1:5]),
+                  FadeOut(eq5[4][-1], shift=mh.diff(eq5[4][-2], eq6[3][-1])),
+                  FadeIn(eq6[-1][0], shift=(eq5[4][2].get_right() - eq6[3].get_right())*LEFT),
+                  run_time=1.6)
+        self.wait(0.1)
+        self.play(AnimationGroup(mh.rtransform(eq6[0], eq7[0], eq6[3][:4], eq7[2][:4]),
+                  mh.rtransform(eq6[4][2], eq7[2][2], eq6[4][4:], eq7[2][3:],
+                                eq6[1].copy(), eq7[3], eq6[3][:4].copy(), eq7[4][:4]
+                                ),
+                  mh.fade_replace(eq6[1], eq7[1]),
+                  FadeOut(eq6[3][4], target_position=eq7[2][2]),
+                  FadeOut(eq6[4][3], shift=mh.diff(eq6[4][4], eq7[2][3])),
+                  FadeOut(eq6[-1][1], target_position=eq7[4][3]),
+                                 run_time=1.7),
+                  FadeOut(eq6[2], eq6[-1][0])
+                  )
+        self.wait(0.1)
+        eq8[2].move_to(eq4[2:], coor_mask=RIGHT)
+        self.play(AnimationGroup(mh.stretch_replace(eq4[0], eq8[0]),
+                  mh.rtransform(eq4[1], eq8[1], eq7[2][1:], eq8[2][1:]),
+                  mh.rtransform(eq7[0][0], eq8[2][2], eq7[0][2:], eq8[2][3:]),
+                  mh.fade_replace(eq7[2][0], eq8[2][0].set_color(col_num)),
+                  FadeOut(eq7[0][1], shift=mh.diff(eq7[0][2], eq8[2][3])),
+                  FadeOut(eq4[2:]),
+                                 FadeOut(eq7[1], eq7[3:]),
+                  run_time=1.8),)
+        self.wait(0.1)
+        eq9[-1].set_color(col_special)
+        self.play(mh.rtransform(eq8[:3], eq9[:3]), FadeOut(box1),
+                  Succession(Wait(0.3), FadeIn(eq9[3:])))
+        self.wait(0.1)
+        self.play(mh.rtransform(eq9[:3], eq10[:3], eq9[3:], eq10[6:]),
+                  Succession(Wait(0.3), FadeIn(eq10[3:6])))
+        # self.play(mh.rtransform(eq3[:2], eq4[:2], eq3[2], eq4[3], eq3[-1], eq4[-1], eq3[3][:6], eq4[4][:6],
+        #                         eq3[3][1].copy(), eq4[2][1], eq3[3][8:11], eq4[4][6:9],
+        #                         eq3[3][-1], eq4[4][-1], eq3[3][6].copy(), eq4[4][-4], eq3[3][7].copy(), eq4[4][-2]),
+        #           FadeOut(eq3[3][-2], shift=mh.diff(eq3[3][-2], eq4[4][-4])*RIGHT),
+        #           mh.rtransform(eq3[3][6:8], eq4[2][2:], path_arc=-80*DEGREES),
+        #           mh.rtransform(eq3[3][0].copy(), eq4[2][0], path_arc=80*DEGREES),
+        #           FadeIn(eq4[4][-3].set_color(col_op), shift=mh.diff(eq3[3][7], eq4[4][-2])),
+        #           run_time=1.7
+        #           )
+        # self.wait(0.1)
+        # self.play(mh.rtransform(eq4[:4], eq5[:4], eq4[4][:7], eq5[4][:7], eq4[4][7], eq5[4][-1],
+        #                         eq4[4][8:12], eq5[4][7:11], eq4[-1], eq5[-1], eq4[4][-1], eq5[4][-2],
+        #                         eq4[4][7].copy(), eq5[4][-3]),
+        #           FadeIn(eq5[4][-4].set_color(col_op)),)
+        # self.wait(0.1)
+        # self.play(mh.rtransform(eq5[:3], eq6[:3], eq5[4][1:6], eq6[4][2:7], eq5[4][7:], eq6[4][8:]),
+        #           mh.fade_replace(eq5[3], eq6[3], coor_mask=RIGHT),
+        #           mh.fade_replace(eq5[4][0], eq6[4][:2], coor_mask=RIGHT),
+        #           FadeOut(eq5[-1]),
+        #           mh.stretch_replace(eq5[4][6], eq6[4][7]),)
+        # self.wait(0.1)
+        # # split up integral in eq6 into two integrals in eq7
+        # eq6_ = eq6[3:].copy()
+        # self.play(mh.rtransform(eq6_[0][0], eq7[0][0], eq6_[0][-1], eq7[0][-1],
+        #                         eq6_[1][:3], eq7[1][:3], eq6_[1][9:14], eq7[0][1:6],
+        #                         eq6_[1][9:12].copy(), eq7[1][3:]),)
+
+        self.wait(1)
 
 if __name__ == "__main__":
     n = 1_000_000
